@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Dashboard Despachos Live",
+  "schemaVersion": 1,
+  "description": "Dashboard Despachos · Live desde Google Sheets CSV · Filtro Preparando + En Tránsito",
+  "mcpTools": [],
+  "mcpServerNames": []
+}
+</script>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Despachos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fb;color:#1f2937}
+.hdr{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#fff;padding:20px 24px}
+.hdr h1{margin:0 0 4px;font-size:22px;font-weight:700}
+.hdr p{margin:0;opacity:.9;font-size:13px}
+.hdr-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn{background:#fff;color:#1e3a8a;border:none;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.btn:disabled{opacity:.6;cursor:wait}
+.updated{font-size:12px;opacity:.85}
+main{padding:16px 20px;max-width:1400px;margin:0 auto}
+.banner{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px}
+.banner.error{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.banner.loading{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #3b82f6}
+.kpi.preparando{border-left-color:#f59e0b}
+.kpi.transito{border-left-color:#10b981}
+.kpi.articulos{border-left-color:#8b5cf6}
+.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;font-weight:600}
+.kpi-value{font-size:26px;font-weight:700;margin-top:2px;color:#111827}
+.kpi-sub{font-size:11px;color:#6b7280;margin-top:2px}
+.grid{display:grid;gap:12px;margin-bottom:16px}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:900px){.grid-3{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:600;color:#374151}
+.chart-wrap{position:relative;height:220px}
+.bd-list{list-style:none;padding:0;margin:0}
+.bd-list li{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px}
+.bd-list li:last-child{border-bottom:none}
+.bd-name{color:#374151;flex:1}
+.bd-bar{flex:1;height:5px;background:#f3f4f6;border-radius:3px;margin:0 10px;overflow:hidden}
+.bd-bar>span{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#1e3a8a)}
+.bd-count{font-weight:600;color:#111827;min-width:22px;text-align:right}
+.fbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.fbar input,.fbar select{padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:12px;font-family:inherit;background:#fff}
+.fbar input{flex:1;min-width:180px}
+.btn-mini{padding:7px 12px;font-size:11px;border-radius:7px;border:none;cursor:pointer;font-weight:600}
+.btn-blue{background:#1e3a8a;color:#fff}
+.btn-gray{background:#e5e7eb;color:#374151}
+.small{font-size:11px;color:#6b7280}
+.tw{overflow:auto;max-height:540px;border:1px solid #e5e7eb;border-radius:8px}
+.pivot{width:100%;border-collapse:collapse;font-size:12px}
+.pivot thead th{background:#1e3a8a;color:#fff;padding:10px 12px;text-align:left;font-weight:700;font-size:11px;letter-spacing:.3px;border-right:1px solid #2c4a9c;position:sticky;top:0;z-index:2}
+.pivot thead th:last-child{border-right:none}
+.pivot td{padding:7px 12px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f1f5f9;vertical-align:middle}
+.pivot td:last-child{border-right:none}
+.r-mes{background:#1e3a8a;color:#fff;font-weight:700;cursor:pointer}
+.r-mes td{border-right:1px solid #2c4a9c}
+.r-est{background:#dbeafe;color:#1e3a8a;font-weight:700;cursor:pointer}
+.r-data:nth-child(even) td{background:#f9fafb}
+.r-data:hover td{background:#eff6ff}
+.r-data.urgent td{background:#fef2f2}
+.tg{display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;background:#fff;color:#1e3a8a;border-radius:3px;font-weight:900;font-size:10px;margin-right:6px;user-select:none}
+.r-est .tg{background:#1e3a8a;color:#fff}
+.in-1{padding-left:28px!important}
+.in-2{padding-left:48px!important}
+.empty-cell{color:#9ca3af;font-style:italic}
+.bm{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:600;margin-left:6px}
+.bm.preparando{background:#fef3c7;color:#92400e}
+.bm.transito{background:#d1fae5;color:#065f46}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-row">
+    <div>
+      <h1><span class="live-dot"></span>Dashboard Despachos</h1>
+      <p>Live · Conectado a Google Sheets · Filtro: Preparando · En Tránsito</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="updated" id="lastUpdated">Cargando…</span>
+      <button class="btn" id="refreshBtn">↻ Refrescar</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="banner loading" id="statusBanner">Conectando a Google Sheets…</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">Total filtrados</div><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-sub">despachos activos</div></div>
+    <div class="kpi transito"><div class="kpi-label">En Tránsito</div><div class="kpi-value" id="kpiTransito">0</div><div class="kpi-sub">en camino</div></div>
+    <div class="kpi preparando"><div class="kpi-label">Preparando</div><div class="kpi-value" id="kpiPreparando">0</div><div class="kpi-sub">en almacén</div></div>
+    <div class="kpi articulos"><div class="kpi-label">Total artículos</div><div class="kpi-value" id="kpiArticulos">0</div><div class="kpi-sub">unidades</div></div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card"><h3>Por Estatus</h3><div class="chart-wrap"><canvas id="chartEstatus"></canvas></div></div>
+    <div class="card"><h3>Por Ciudad / Destino</h3><div class="chart-wrap"><canvas id="chartCiudad"></canvas></div></div>
+    <div class="card"><h3>Por Vendedor</h3><div class="chart-wrap"><canvas id="chartVendedor"></canvas></div></div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card"><h3>Top Clientes</h3><ul class="bd-list" id="listClientes"></ul></div>
+    <div class="card"><h3>Por Lugar de Despacho</h3><ul class="bd-list" id="listLugar"></ul></div>
+    <div class="card"><h3>Por Fecha de Entrega</h3><ul class="bd-list" id="listFecha"></ul></div>
+  </div>
+
+  <div class="card">
+    <h3>Detalle de Despachos · Vista Agrupada (Mes → Estatus → Orden)</h3>
+    <div class="fbar">
+      <input type="text" id="searchInput" placeholder="Buscar por cliente, orden, vendedor, vehículo...">
+      <select id="estatusFilter">
+        <option value="">Todos los estatus</option>
+        <option value="Preparando">Solo Preparando</option>
+        <option value="En Transito">Solo En Tránsito</option>
+      </select>
+      <select id="ciudadFilter">
+        <option value="">Todas las ciudades</option>
+      </select>
+      <button class="btn-mini btn-blue" id="expAll">Expandir todo</button>
+      <button class="btn-mini btn-gray" id="colAll">Contraer todo</button>
+      <span class="small" id="rowCount"></span>
+    </div>
+    <div class="tw">
+      <table class="pivot">
+        <thead><tr>
+          <th style="width:18%">Mes / Estatus / No# Orden</th>
+          <th style="width:14%">Tipo de Movimiento</th>
+          <th style="width:9%">VENDEDOR</th>
+          <th style="width:14%">Nombre Cliente</th>
+          <th>Lugar de Entrega</th>
+          <th style="width:10%">Fecha Solicitada</th>
+          <th style="width:13%">Fecha de Entrega</th>
+          <th style="width:11%">Vehículo</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGtrgzYY0kHkDkM6tEwt69panoQsyLdWlL0ytJ5Y3WRTkOnBQBXnbEjR2WsnQ2hw/pub?gid=246525732&single=true&output=csv";
+const STATUS_FILTER = ["Preparando","En Transito"];
+const STATUS_ALL = ["Preparando","En Transito","Entregado","Entregado- No instalado","Recibida","Cancelado"];
+
+let currentData = [];
+const charts = {};
+const collapseState = {};
+const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const ML = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DL = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function esc(s){if(s===null||s===undefined)return '';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function setStatus(msg,cls){const el=document.getElementById('statusBanner');el.textContent=msg;el.className='banner '+(cls||'')}
+function setUpdated(t){document.getElementById('lastUpdated').textContent='Actualizado: '+t}
+
+function parseDate(s){
+  if(!s)return null;
+  s=String(s).trim();
+  if(!s)return null;
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m){const a=parseInt(m[1],10),b=parseInt(m[2],10);if(a>12)return m[3]+'-'+String(b).padStart(2,'0')+'-'+String(a).padStart(2,'0');return m[3]+'-'+String(a).padStart(2,'0')+'-'+String(b).padStart(2,'0')}
+  return s;
+}
+function getMonthKey(d){if(!d)return '(Sin Mes)';const p=String(d).split('-');if(p.length<2)return '(Sin Mes)';const i=parseInt(p[1],10)-1;return isNaN(i)?'(Sin Mes)':MS[i]+' '+p[0]}
+function getMonthSort(d){if(!d)return '0000-00';const p=String(d).split('-');return p[0]+'-'+(p[1]||'00')}
+function fmtShort(d){if(!d)return '<span class="empty-cell">(en blanco)</span>';const p=String(d).split('-');if(p.length<3)return esc(String(d));return parseInt(p[2],10)+'-'+MS[parseInt(p[1],10)-1]}
+function fmtLong(d){if(!d)return '<span class="empty-cell">(en blanco)</span>';const p=String(d).split('-');if(p.length<3)return esc(String(d));const dt=new Date(p[0],parseInt(p[1],10)-1,p[2]);if(isNaN(dt))return esc(String(d));return DL[dt.getDay()]+', '+parseInt(p[2],10)+' de '+ML[parseInt(p[1],10)-1]+' de '+p[0]}
+
+// Inline RFC-4180 CSV parser
+function parseCSV(text){
+  const rows=[];
+  let cur=[],field='',inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){if(i+1<text.length&&text[i+1]==='"'){field+='"';i++}else inQ=false}
+      else field+=c;
+    }else{
+      if(c==='"')inQ=true;
+      else if(c===','){cur.push(field);field=''}
+      else if(c==='\n'||c==='\r'){
+        if(c==='\r'&&i+1<text.length&&text[i+1]==='\n')i++;
+        cur.push(field);field='';
+        if(cur.some(f=>f.trim()))rows.push(cur);
+        cur=[];
+      }else field+=c;
+    }
+  }
+  cur.push(field);
+  if(cur.some(f=>f.trim()))rows.push(cur);
+  return rows;
+}
+
+async function loadFromSheet(){
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Cargando…';
+  setStatus('Conectando a Google Sheets…','loading');
+  try{
+    const url=SHEET_CSV_URL+'&_t='+Date.now();
+    const resp=await fetch(url,{cache:'no-cache',mode:'cors'});
+    if(!resp.ok)throw new Error('HTTP '+resp.status+' '+resp.statusText+'. Verifica que la hoja siga publicada como CSV.');
+    const text=await resp.text();
+    if(!text||text.length<10)throw new Error('La respuesta vino vacía. Verifica el enlace de publicación.');
+    if(text.trim().toLowerCase().startsWith('<!doctype')||text.trim().startsWith('<html'))throw new Error('Google devolvió HTML en vez de CSV. La hoja probablemente ya no está publicada o el enlace cambió.');
+    const rows=parseCSV(text);
+    if(rows.length<2)throw new Error('El CSV tiene menos de 2 filas — sin datos.');
+    const headers=rows[0].map(h=>h.trim());
+    const ci=name=>headers.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+    const iOrden=ci('No. Orden'), iTipo=ci('Tipo de Movimiento'), iCliente=ci('Nombre Cliente'),
+      iCiudad=ci('Ciudades'), iLugar=ci('Lugar de Entrega'), iFechaSol=ci('Fecha Solicitada'),
+      iFechaEnt=ci('Fecha de Entrega'), iVendedor=ci('VENDEDOR'), iDiasRest=ci('Dias Restantes'),
+      iLugarDes=ci('LUGAR DE DESPACHO'), iPrior=ci('Prioridad'), iCantArt=ci('Cantidad de Articulos'),
+      iVeh=ci('Vehículo'), iTrans=ci('Tipo de Transporte'), iEstatus=ci('Estatus'), iComent=ci('Comentario');
+    const g=(row,idx)=>idx>=0&&idx<row.length?(row[idx]||'').trim():'';
+    const findStatus=row=>{
+      if(iEstatus>=0){const v=g(row,iEstatus);if(STATUS_ALL.includes(v))return v}
+      for(const v of row){const t=(v||'').trim();if(STATUS_ALL.includes(t))return t}
+      return null;
+    };
+    const data=[];
+    for(let i=1;i<rows.length;i++){
+      const row=rows[i];
+      const orden=g(row,iOrden), cliente=g(row,iCliente);
+      if(!orden&&!cliente)continue;
+      const estatus=findStatus(row);
+      if(!STATUS_FILTER.includes(estatus))continue;
+      data.push({
+        orden:orden||'(sin orden)',
+        tipo:g(row,iTipo)||null,
+        cliente:cliente||null,
+        ciudad:g(row,iCiudad)||null,
+        lugar:g(row,iLugar)||null,
+        fechaSolicitada:parseDate(g(row,iFechaSol)),
+        fechaEntrega:parseDate(g(row,iFechaEnt)),
+        vendedor:g(row,iVendedor)||null,
+        diasRest:g(row,iDiasRest)?Number(g(row,iDiasRest).replace(/[^\-\d.]/g,''))||null:null,
+        lugarDespacho:g(row,iLugarDes)||null,
+        prioridad:g(row,iPrior)||null,
+        cantArticulos:g(row,iCantArt)?Number(g(row,iCantArt).replace(/[^\d.]/g,''))||null:null,
+        vehiculo:g(row,iVeh)||null,
+        transporte:g(row,iTrans)||null,
+        estatus:estatus,
+        comentario:g(row,iComent)||null
+      });
+    }
+    currentData=data;
+    Object.keys(collapseState).forEach(k=>delete collapseState[k]);
+    const ts=new Date().toLocaleString('es-DO');
+    setUpdated(ts);
+    setStatus('✓ '+data.length+' despachos en Preparando/En Tránsito (de '+(rows.length-1)+' filas totales) · Última lectura '+ts,'');
+    renderAll();
+  }catch(err){
+    console.error('Error en loadFromSheet:',err);
+    let msg=err.message||String(err);
+    if(msg==='Failed to fetch'||msg.toLowerCase().includes('network'))msg='Error de red. Posibles causas: (1) sin internet, (2) la hoja ya no está publicada como CSV.';
+    setStatus('No se pudo cargar: '+msg,'error');
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='↻ Refrescar';
+  }
+}
+
+function renderKPIs(){
+  document.getElementById('kpiTotal').textContent=currentData.length;
+  document.getElementById('kpiTransito').textContent=currentData.filter(d=>d.estatus==='En Transito').length;
+  document.getElementById('kpiPreparando').textContent=currentData.filter(d=>d.estatus==='Preparando').length;
+  document.getElementById('kpiArticulos').textContent=currentData.reduce((s,d)=>s+(Number(d.cantArticulos)||0),0);
+}
+function groupCount(arr,key){const m={};for(const r of arr){const k=(r[key]||'(sin dato)').toString().trim()||'(sin dato)';m[k]=(m[k]||0)+1}return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function makeChart(id,type,labels,data,colors){if(charts[id])charts[id].destroy();const ctx=document.getElementById(id).getContext('2d');charts[id]=new Chart(ctx,{type:type,data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderWidth:type==='doughnut'?2:0,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',display:type==='doughnut',labels:{font:{size:10}}}},scales:type==='bar'?{y:{beginAtZero:true,ticks:{stepSize:1,precision:0}},x:{ticks:{font:{size:9}}}}:{}}})}
+function renderCharts(){
+  const e=groupCount(currentData,'estatus');
+  makeChart('chartEstatus','doughnut',e.map(g=>g[0]),e.map(g=>g[1]),e.map(g=>g[0]==='En Transito'?'#10b981':'#f59e0b'));
+  const c=groupCount(currentData,'ciudad');
+  makeChart('chartCiudad','bar',c.map(g=>g[0]),c.map(g=>g[1]),'#3b82f6');
+  const v=groupCount(currentData,'vendedor');
+  makeChart('chartVendedor','bar',v.map(g=>g[0]),v.map(g=>g[1]),'#8b5cf6');
+}
+function renderBdList(elId,groups,max){max=max||10;const el=document.getElementById(elId);el.innerHTML='';if(!groups.length){el.innerHTML='<li class="small">Sin datos</li>';return}const top=Math.max.apply(null,groups.map(g=>g[1]));groups.slice(0,max).forEach(([n,c])=>{const li=document.createElement('li');const pct=(c/top)*100;li.innerHTML='<span class="bd-name">'+esc(n)+'</span><span class="bd-bar"><span style="width:'+pct+'%"></span></span><span class="bd-count">'+c+'</span>';el.appendChild(li)})}
+function renderBreakdowns(){renderBdList('listClientes',groupCount(currentData,'cliente'));renderBdList('listLugar',groupCount(currentData,'lugarDespacho'));renderBdList('listFecha',groupCount(currentData,'fechaEntrega'))}
+function populateCiudadFilter(){const sel=document.getElementById('ciudadFilter');const cur=sel.value;sel.innerHTML='<option value="">Todas las ciudades</option>';const cs=Array.from(new Set(currentData.map(d=>d.ciudad).filter(Boolean))).sort();cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});sel.value=cur}
+
+function toggleAll(expand){Object.keys(collapseState).forEach(k=>collapseState[k]=!expand);renderTable()}
+
+function renderTable(){
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  const fEst=document.getElementById('estatusFilter').value;
+  const fCity=document.getElementById('ciudadFilter').value;
+  const tb=document.getElementById('tableBody');
+  tb.innerHTML='';
+  const filtered=currentData.filter(d=>{
+    if(fEst&&d.estatus!==fEst)return false;
+    if(fCity&&d.ciudad!==fCity)return false;
+    if(search){const blob=[d.orden,d.cliente,d.ciudad,d.lugar,d.vendedor,d.vehiculo,d.comentario].join(' ').toLowerCase();if(!blob.includes(search))return false}
+    return true;
+  });
+  document.getElementById('rowCount').textContent=filtered.length+' de '+currentData.length+' despachos';
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#9ca3af">No hay despachos que coincidan con los filtros.</td></tr>';return}
+  const tree={};
+  filtered.forEach(d=>{
+    const mk=getMonthKey(d.fechaSolicitada);
+    const ms=getMonthSort(d.fechaSolicitada);
+    if(!tree[mk])tree[mk]={sort:ms,statuses:{}};
+    const est=d.estatus||'(sin estatus)';
+    if(!tree[mk].statuses[est])tree[mk].statuses[est]=[];
+    tree[mk].statuses[est].push(d);
+  });
+  const months=Object.entries(tree).sort((a,b)=>a[1].sort.localeCompare(b[1].sort));
+  months.forEach(([mes,mData])=>{
+    const mk='m:'+mes;
+    if(collapseState[mk]===undefined)collapseState[mk]=false;
+    const mc=collapseState[mk];
+    const sEnt=Object.entries(mData.statuses).sort((a,b)=>a[0].localeCompare(b[0]));
+    const total=sEnt.reduce((s,a)=>s+a[1].length,0);
+    const tr=document.createElement('tr');
+    tr.className='r-mes';
+    tr.onclick=()=>{collapseState[mk]=!collapseState[mk];renderTable()};
+    tr.innerHTML='<td colspan="8"><span class="tg">'+(mc?'+':'–')+'</span>'+esc(mes)+' <span style="opacity:.85;font-weight:500">· '+total+' despacho'+(total===1?'':'s')+'</span></td>';
+    tb.appendChild(tr);
+    if(mc)return;
+    sEnt.forEach(([est,recs])=>{
+      const ek='e:'+mes+'|'+est;
+      if(collapseState[ek]===undefined)collapseState[ek]=false;
+      const ec=collapseState[ek];
+      const bc=est==='En Transito'?'transito':'preparando';
+      const etr=document.createElement('tr');
+      etr.className='r-est';
+      etr.onclick=()=>{collapseState[ek]=!collapseState[ek];renderTable()};
+      etr.innerHTML='<td colspan="8" class="in-1"><span class="tg">'+(ec?'+':'–')+'</span>'+esc(est)+' <span class="bm '+bc+'">'+recs.length+'</span></td>';
+      tb.appendChild(etr);
+      if(ec)return;
+      recs.forEach(d=>{
+        const r=document.createElement('tr');
+        r.className='r-data';
+        const dr=Number(d.diasRest);
+        if(!isNaN(dr)&&dr<=0&&dr>-1000)r.classList.add('urgent');
+        const orden=(d.orden&&d.orden!=='(sin orden)')?esc(d.orden):'<span class="empty-cell">(en blanco)</span>';
+        r.innerHTML='<td class="in-2"><b>'+orden+'</b></td>'+
+          '<td>'+(esc(d.tipo)||'—')+'</td>'+
+          '<td>'+(esc(d.vendedor)||'—')+'</td>'+
+          '<td><b>'+(esc(d.cliente)||'—')+'</b></td>'+
+          '<td>'+(d.lugar?esc(d.lugar):'<span class="empty-cell">(en blanco)</span>')+'</td>'+
+          '<td>'+fmtShort(d.fechaSolicitada)+'</td>'+
+          '<td>'+fmtLong(d.fechaEntrega)+'</td>'+
+          '<td>'+(esc(d.vehiculo)||'—')+'</td>';
+        tb.appendChild(r);
+      });
+    });
+  });
+}
+
+function renderAll(){renderKPIs();renderCharts();renderBreakdowns();populateCiudadFilter();renderTable()}
+
+document.getElementById('refreshBtn').addEventListener('click', loadFromSheet);
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('estatusFilter').addEventListener('change', renderTable);
+document.getElementById('ciudadFilter').addEventListener('change', renderTable);
+document.getElementById('expAll').addEventListener('click', ()=>toggleAll(true));
+document.getElementById('colAll').addEventListener('click', ()=>toggleAll(false));
+
+// Auto-load on open + refresh every 5 minutes
+loadFromSheet();
+setInterval(loadFromSheet, 5 * 60 * 1000);
+</script>
+</body>
+</html>
