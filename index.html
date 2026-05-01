@@ -152,6 +152,11 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
   }
   window.pinKey=pinKey; window.pinClear=pinClear;
   if(sessionStorage.getItem('pin_ok')==='1') document.getElementById('pin-overlay').style.display='none';
+  document.addEventListener('keydown', function(e){
+    if(document.getElementById('pin-overlay').style.display==='none') return;
+    if(e.key>='0'&&e.key<='9') pinKey(e.key);
+    else if(e.key==='Backspace'||e.key==='Delete') pinClear();
+  });
 })();
 </script>
 
