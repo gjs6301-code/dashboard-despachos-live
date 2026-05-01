@@ -21,7 +21,7 @@
 :root{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fb;color:#1f2937}
-.hdr{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#fff;padding:20px 24px}
+.hdr{background:#3d3d3d;color:#fff;padding:16px 24px}
 .hdr h1{margin:0 0 4px;font-size:22px;font-weight:700}
 .hdr p{margin:0;opacity:.9;font-size:13px}
 .hdr-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
@@ -162,9 +162,12 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
 
 <div class="hdr">
   <div class="hdr-row">
-    <div>
-      <h1><span class="live-dot"></span>Dashboard Despachos</h1>
-      <p>Live · Conectado a Google Drive · Filtro: Preparando · En Tránsito</p>
+    <div style="display:flex;align-items:center;gap:16px">
+      <img src="logo.svg" alt="Altri Tempi" style="height:56px;width:56px;border-radius:6px;flex-shrink:0">
+      <div>
+        <h1><span class="live-dot"></span>Dashboard Despachos</h1>
+        <p id="hdrSub">Live</p>
+      </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span class="updated" id="lastUpdated">Cargando…</span>
