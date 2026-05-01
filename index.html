@@ -431,7 +431,7 @@ async function loadFromDrive() {
   btn.innerHTML = '<span class="spinner"></span>Cargando…';
   const usingCowork = !!(window.cowork && window.cowork.callMcpTool);
   document.querySelector('.hdr p').textContent =
-    'Live · ' + (usingCowork ? 'Google Drive (Cowork)' : 'Google Sheets CSV') + ' · Filtro: Preparando · En Tránsito';
+    'Live';
   try {
     const data = usingCowork ? await loadViaCowork() : await loadViaCSV();
     currentData = data;
