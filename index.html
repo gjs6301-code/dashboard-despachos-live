@@ -81,24 +81,24 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
       <img src="./logo.svg" alt="Altri Tempi" style="height:54px;width:54px;border-radius:6px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.4)">
       <div>
         <h1><span class="live-dot"></span>Dashboard Despachos</h1>
-        <p>Live Â· Conectado a Google Drive Â· Preparando Â· En TrÃ¡nsito</p>
+        <p>Live · Conectado a Google Drive · Preparando · En Tránsito</p>
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span class="updated" id="lastUpdated">Cargandoâ¦</span>
-      <button class="btn" id="refreshBtn">â» Refrescar</button>
+      <span class="updated" id="lastUpdated">Cargando…</span>
+      <button class="btn" id="refreshBtn">↻ Refrescar</button>
     </div>
   </div>
 </div>
 
 <main>
-  <div class="banner loading" id="statusBanner">Conectando a Google Driveâ¦</div>
+  <div class="banner loading" id="statusBanner">Conectando a Google Drive…</div>
 
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">Total filtrados</div><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-sub">despachos activos</div></div>
-    <div class="kpi transito"><div class="kpi-label">En TrÃ¡nsito</div><div class="kpi-value" id="kpiTransito">0</div><div class="kpi-sub">en camino</div></div>
-    <div class="kpi preparando"><div class="kpi-label">Preparando</div><div class="kpi-value" id="kpiPreparando">0</div><div class="kpi-sub">en almacÃ©n</div></div>
-    <div class="kpi articulos"><div class="kpi-label">Total artÃ­culos</div><div class="kpi-value" id="kpiArticulos">0</div><div class="kpi-sub">unidades</div></div>
+    <div class="kpi transito"><div class="kpi-label">En Tránsito</div><div class="kpi-value" id="kpiTransito">0</div><div class="kpi-sub">en camino</div></div>
+    <div class="kpi preparando"><div class="kpi-label">Preparando</div><div class="kpi-value" id="kpiPreparando">0</div><div class="kpi-sub">en almacén</div></div>
+    <div class="kpi articulos"><div class="kpi-label">Total artículos</div><div class="kpi-value" id="kpiArticulos">0</div><div class="kpi-sub">unidades</div></div>
   </div>
 
   <div class="grid grid-2" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -107,13 +107,13 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
   </div>
 
   <div class="card">
-    <h3>Detalle de Despachos Â· Vista Agrupada (Mes â Estatus â Orden)</h3>
+    <h3>Detalle de Despachos · Vista Agrupada (Mes → Estatus → Orden)</h3>
     <div class="fbar">
-      <input type="text" id="searchInput" placeholder="Buscar por cliente, orden, vendedor, vehÃ­culo...">
+      <input type="text" id="searchInput" placeholder="Buscar por cliente, orden, vendedor, vehículo...">
       <select id="estatusFilter">
         <option value="">Todos los estatus</option>
         <option value="Preparando">Solo Preparando</option>
-        <option value="En Transito">Solo En TrÃ¡nsito</option>
+        <option value="En Transito">Solo En Tránsito</option>
       </select>
       <select id="ciudadFilter">
         <option value="">Todas las ciudades</option>
@@ -132,7 +132,7 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
           <th>Lugar de Entrega</th>
           <th style="width:10%">Fecha Solicitada</th>
           <th style="width:13%">Fecha de Entrega</th>
-          <th style="width:11%">VehÃ­culo</th>
+          <th style="width:11%">Vehículo</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
@@ -154,14 +154,14 @@ const charts = {};
 const collapseState = {};
 const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const ML = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const DL = ['domingo','lunes','martes','miÃ©rcoles','jueves','viernes','sÃ¡bado'];
+const DL = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const MONTH_EN = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
 
 function esc(s){if(s===null||s===undefined)return '';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function setStatus(msg,cls){const el=document.getElementById('statusBanner');el.textContent=msg;el.className='banner '+(cls||'')}
 function setUpdated(t){document.getElementById('lastUpdated').textContent='Actualizado: '+t}
 
-// Parse dates â handles all formats from Google Sheets CSV and read_file_content
+// Parse dates — handles all formats from Google Sheets CSV and read_file_content
 function parseDate(s){
   if(!s)return null;
   s=String(s).trim();
@@ -195,7 +195,7 @@ function parseReadFileContent(rawContent) {
   if (text.startsWith('Despachos ')) text = text.substring('Despachos '.length);
   const LAST_HEADER_SEQ = ',Articulos total ';
   const hEnd = text.indexOf(LAST_HEADER_SEQ);
-  if (hEnd < 0) throw new Error('No se encontrÃ³ el encabezado esperado en el archivo.');
+  if (hEnd < 0) throw new Error('No se encontró el encabezado esperado en el archivo.');
   const headerText = text.substring(0, hEnd + LAST_HEADER_SEQ.length - 1);
   const dataText   = text.substring(hEnd + LAST_HEADER_SEQ.length);
   const headers = headerText.split(',').map(h => h.trim());
@@ -231,7 +231,7 @@ function parseReadFileContent(rawContent) {
   return { headers, rows };
 }
 
-// ââ Inline RFC-4180 CSV parser (used in browser-direct mode) ââââââââââââââââââ
+// ── Inline RFC-4180 CSV parser (used in browser-direct mode) ──────────────────
 function parseCSV(text){
   const rows=[];let cur=[],field='',inQ=false;
   for(let i=0;i<text.length;i++){
@@ -242,14 +242,14 @@ function parseCSV(text){
   cur.push(field);if(cur.some(f=>f.trim()))rows.push(cur);return rows;
 }
 
-// ââ Shared: build data array from parsed rows + headers âââââââââââââââââââââââ
+// ── Shared: build data array from parsed rows + headers ───────────────────────
 function buildData(headers, rows) {
   const ci = name => headers.findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
   const iOrden=ci('No. Orden'), iTipo=ci('Tipo de Movimiento'), iCliente=ci('Nombre Cliente'),
         iCiudad=ci('Ciudades'), iLugar=ci('Lugar de Entrega'), iFechaSol=ci('Fecha Solicitada'),
         iFechaEnt=ci('Fecha de Entrega'), iVendedor=ci('VENDEDOR'), iDiasRest=ci('Dias Restantes'),
         iLugarDes=ci('LUGAR DE DESPACHO'), iPrior=ci('Prioridad'), iCantArt=ci('Cantidad de Articulos'),
-        iVeh=ci('VehÃ­culo'), iTrans=ci('Tipo de Transporte'), iEstatus=ci('Estatus'), iComent=ci('Comentario');
+        iVeh=ci('Vehículo'), iTrans=ci('Tipo de Transporte'), iEstatus=ci('Estatus'), iComent=ci('Comentario');
   const g = (row, idx) => (idx >= 0 && idx < row.length) ? (row[idx] || '').trim() : '';
   const data = [];
   for (const row of rows) {
@@ -273,9 +273,9 @@ function buildData(headers, rows) {
   return data;
 }
 
-// ââ Mode A: Cowork app â callMcpTool â read_file_content (XLSX) âââââââââââââââ
+// ── Mode A: Cowork app — callMcpTool → read_file_content (XLSX) ───────────────
 async function loadViaCowork() {
-  setStatus('Leyendo archivo desde Google Driveâ¦', 'loading');
+  setStatus('Leyendo archivo desde Google Drive…', 'loading');
   const result = await window.cowork.callMcpTool(
     'mcp__dbc0f1fc-0770-41e8-a55e-7fb8a5270ee0__read_file_content',
     { fileId: DRIVE_FILE_ID }
@@ -299,47 +299,47 @@ async function loadViaCowork() {
     }
   }
   if (!rawContent || rawContent.length < 100)
-    throw new Error('Contenido vacÃ­o desde Drive (longitud: ' + (rawContent ? rawContent.length : 0) + ')');
+    throw new Error('Contenido vacío desde Drive (longitud: ' + (rawContent ? rawContent.length : 0) + ')');
   const { headers, rows } = parseReadFileContent(rawContent);
   return buildData(headers, rows);
 }
 
-// ââ Mode B: Browser direct â fetch() â Google Sheets published CSV ââââââââââââ
+// ── Mode B: Browser direct — fetch() → Google Sheets published CSV ────────────
 async function loadViaCSV() {
-  setStatus('Conectando a Google Sheetsâ¦', 'loading');
+  setStatus('Conectando a Google Sheets…', 'loading');
   const resp = await fetch(SHEET_CSV_URL + '&_t=' + Date.now(), {cache:'no-cache', mode:'cors'});
   if (!resp.ok) throw new Error('HTTP ' + resp.status + ' al descargar el CSV.');
   const text = await resp.text();
-  if (!text || text.length < 10) throw new Error('CSV vacÃ­o.');
+  if (!text || text.length < 10) throw new Error('CSV vacío.');
   if (text.trim().toLowerCase().startsWith('<!doctype') || text.trim().startsWith('<html'))
-    throw new Error('Google devolviÃ³ HTML. Verifica que la hoja siga publicada como CSV.');
+    throw new Error('Google devolvió HTML. Verifica que la hoja siga publicada como CSV.');
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('CSV con menos de 2 filas.');
   return buildData(rows[0].map(h => h.trim()), rows.slice(1));
 }
 
-// ââ Entry point âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Entry point ───────────────────────────────────────────────────────────────
 async function loadFromDrive() {
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Cargandoâ¦';
+  btn.innerHTML = '<span class="spinner"></span>Cargando…';
   const usingCowork = !!(window.cowork && window.cowork.callMcpTool);
   document.querySelector('.hdr p').textContent =
-    'Live Â· ' + (usingCowork ? 'Google Drive (Cowork)' : 'Google Sheets CSV') + ' Â· Filtro: Preparando Â· En TrÃ¡nsito';
+    'Live · ' + (usingCowork ? 'Google Drive (Cowork)' : 'Google Sheets CSV') + ' · Filtro: Preparando · En Tránsito';
   try {
     const data = usingCowork ? await loadViaCowork() : await loadViaCSV();
     currentData = data;
     Object.keys(collapseState).forEach(k => delete collapseState[k]);
     const ts = new Date().toLocaleString('es-DO');
     setUpdated(ts);
-    setStatus('â ' + data.length + ' despachos en Preparando/En TrÃ¡nsito Â· ' + ts, '');
+    setStatus('✓ ' + data.length + ' despachos en Preparando/En Tránsito · ' + ts, '');
     renderAll();
   } catch(err) {
     console.error('Error en loadFromDrive:', err);
     setStatus('No se pudo cargar: ' + (err.message || String(err)), 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = 'â» Refrescar';
+    btn.innerHTML = '↻ Refrescar';
   }
 }
 
@@ -387,7 +387,7 @@ function renderTable(){
     const tr=document.createElement('tr');
     tr.className='r-mes';
     tr.onclick=()=>{collapseState[mk]=!collapseState[mk];renderTable()};
-    tr.innerHTML='<td colspan="8"><span class="tg">'+(mc?'+':'â')+'</span>'+esc(mes)+' <span style="opacity:.85;font-weight:500">Â· '+total+' despacho'+(total===1?'':'s')+'</span></td>';
+    tr.innerHTML='<td colspan="8"><span class="tg">'+(mc?'+':'–')+'</span>'+esc(mes)+' <span style="opacity:.85;font-weight:500">· '+total+' despacho'+(total===1?'':'s')+'</span></td>';
     tb.appendChild(tr);
     if(mc)return;
     sEnt.forEach(([est,recs])=>{
@@ -398,7 +398,7 @@ function renderTable(){
       const etr=document.createElement('tr');
       etr.className='r-est';
       etr.onclick=()=>{collapseState[ek]=!collapseState[ek];renderTable()};
-      etr.innerHTML='<td colspan="8" class="in-1"><span class="tg">'+(ec?'+':'â')+'</span>'+esc(est)+' <span class="bm '+bc+'">'+recs.length+'</span></td>';
+      etr.innerHTML='<td colspan="8" class="in-1"><span class="tg">'+(ec?'+':'–')+'</span>'+esc(est)+' <span class="bm '+bc+'">'+recs.length+'</span></td>';
       tb.appendChild(etr);
       if(ec)return;
       recs.forEach(d=>{
@@ -408,13 +408,13 @@ function renderTable(){
         if(!isNaN(dr)&&dr<=0&&dr>-1000)r.classList.add('urgent');
         const orden=(d.orden&&d.orden!=='(sin orden)')?esc(d.orden):'<span class="empty-cell">(en blanco)</span>';
         r.innerHTML='<td class="in-2"><b>'+orden+'</b></td>'+
-          '<td>'+(esc(d.tipo)||'â')+'</td>'+
-          '<td>'+(esc(d.vendedor)||'â')+'</td>'+
-          '<td><b>'+(esc(d.cliente)||'â')+'</b></td>'+
+          '<td>'+(esc(d.tipo)||'—')+'</td>'+
+          '<td>'+(esc(d.vendedor)||'—')+'</td>'+
+          '<td><b>'+(esc(d.cliente)||'—')+'</b></td>'+
           '<td>'+(d.lugar?esc(d.lugar):'<span class="empty-cell">(en blanco)</span>')+'</td>'+
           '<td>'+fmtShort(d.fechaSolicitada)+'</td>'+
           '<td>'+fmtLong(d.fechaEntrega)+'</td>'+
-          '<td>'+(esc(d.vehiculo)||'â')+'</td>';
+          '<td>'+(esc(d.vehiculo)||'—')+'</td>';
         tb.appendChild(r);
       });
     });
@@ -432,13 +432,13 @@ function makeChart(id,type,labels,datasets,opts){
 }
 
 function renderCharts(){
-  // Chart 1: Despachos por Vendedor (stacked: Preparando vs En TrÃ¡nsito)
+  // Chart 1: Despachos por Vendedor (stacked: Preparando vs En Tránsito)
   const vendedores = [...new Set(currentData.map(d=>d.vendedor||'(sin asignar)'))].sort();
   const prepPorVend = vendedores.map(v=>currentData.filter(d=>(d.vendedor||'(sin asignar)')===v&&d.estatus==='Preparando').length);
   const transPorVend = vendedores.map(v=>currentData.filter(d=>(d.vendedor||'(sin asignar)')===v&&d.estatus==='En Transito').length);
   makeChart('chartVendedor','bar', vendedores, [
     {label:'Preparando', data:prepPorVend, backgroundColor:'#f59e0b', borderRadius:4},
-    {label:'En TrÃ¡nsito', data:transPorVend, backgroundColor:'#10b981', borderRadius:4}
+    {label:'En Tránsito', data:transPorVend, backgroundColor:'#10b981', borderRadius:4}
   ], {scales:{x:{stacked:true,ticks:{font:{size:10}},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1,precision:0,font:{size:10}}}}});
 
   // Chart 2: Despachos por Fecha de Entrega
@@ -459,7 +459,7 @@ function renderCharts(){
   const tranPorDia=dias.map(d=>currentData.filter(r=>r.fechaEntrega===d&&r.estatus==='En Transito').length);
   makeChart('chartDia','bar', labelsDia, [
     {label:'Preparando', data:prepPorDia, backgroundColor:'#f59e0b', borderRadius:4},
-    {label:'En TrÃ¡nsito', data:tranPorDia, backgroundColor:'#10b981', borderRadius:4}
+    {label:'En Tránsito', data:tranPorDia, backgroundColor:'#10b981', borderRadius:4}
   ], {scales:{x:{stacked:true,ticks:{font:{size:11}},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1,precision:0,font:{size:11}}}}});
 }
 
