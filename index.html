@@ -174,12 +174,7 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
     <div class="kpi articulos"><div class="kpi-label">Total artículos</div><div class="kpi-value" id="kpiArticulos">0</div><div class="kpi-sub">unidades</div></div>
   </div>
 
-  <div class="grid grid-2" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-    <div class="card"><h3>Despachos por Vendedor</h3><div class="chart-wrap" style="height:240px"><canvas id="chartVendedor"></canvas></div></div>
-    <div class="card"><h3>Despachos por Fecha de Entrega</h3><div style="font-size:11px;color:#6b7280;margin:-8px 0 8px" id="chartDiaSub"></div><div class="chart-wrap" style="height:220px"><canvas id="chartDia"></canvas></div></div>
-  </div>
-
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <h3>Detalle de Despachos · Vista Agrupada (Mes → Estatus → Orden)</h3>
     <div class="fbar">
       <input type="text" id="searchInput" placeholder="Buscar por cliente, orden, vendedor, vehículo...">
@@ -210,6 +205,11 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
         <tbody id="tableBody"></tbody>
       </table>
     </div>
+  </div>
+
+  <div class="grid grid-2" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div class="card"><h3>Despachos por Vendedor</h3><div class="chart-wrap" style="height:240px"><canvas id="chartVendedor"></canvas></div></div>
+    <div class="card"><h3>Despachos por Fecha de Entrega</h3><div style="font-size:11px;color:#6b7280;margin:-8px 0 8px" id="chartDiaSub"></div><div class="chart-wrap" style="height:220px"><canvas id="chartDia"></canvas></div></div>
   </div>
 </main>
 
