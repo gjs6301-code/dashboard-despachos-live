@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📖 Guía de Usuario — Workforce Platform</title>
+<style>
+/* ── VERSIÓN DE LA GUÍA ─────────────────────────────────────────────────── */
+/* WWP-GUIDE-VERSION: 2.0 — actualizado 2026-05-13 */
+
+:root{
+  --brand:#1e3a5f;--brand-light:#2563eb;--brand-dark:#0f2340;
+  --green:#059669;--amber:#d97706;--red:#dc2626;--purple:#7c3aed;
+  --surface:#ffffff;--surface-2:#f8fafc;--surface-3:#f1f5f9;
+  --border:#e2e8f0;--text:#0f172a;--text-2:#475569;--text-3:#94a3b8;
+  --radius:10px;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--surface-2);color:var(--text);line-height:1.6}
+
+/* ── HEADER ── */
+.guide-header{
+  background:linear-gradient(135deg,#0f2340 0%,#1e3a5f 60%,#1e4080 100%);
+  color:white;padding:40px 32px 32px;text-align:center;
+  position:relative;
+}
+.guide-header h1{font-size:28px;font-weight:800;margin-bottom:6px}
+.guide-header p{font-size:14px;opacity:.75;max-width:520px;margin:0 auto}
+.guide-version{
+  display:inline-block;margin-top:14px;font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;letter-spacing:.4px;
+}
+.btn-back{
+  position:absolute;top:20px;left:20px;
+  background:rgba(255,255,255,.15);color:white;border:none;
+  border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+}
+.btn-back:hover{background:rgba(255,255,255,.25)}
+
+/* ── NAV LATERAL ── */
+.guide-layout{display:flex;min-height:calc(100vh - 180px)}
+.guide-sidebar{
+  width:240px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);padding:20px 0;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-section{font-size:10px;font-weight:700;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.6px;padding:12px 20px 4px}
+.sidebar-link{
+  display:block;padding:8px 20px;font-size:13px;color:var(--text-2);
+  text-decoration:none;border-left:3px solid transparent;
+  transition:all .15s;font-weight:500;
+}
+.sidebar-link:hover{background:var(--surface-2);color:var(--brand-light)}
+.sidebar-link.active{background:#eff6ff;color:var(--brand-light);
+  border-left-color:var(--brand-light);font-weight:700}
+
+/* ── CONTENIDO ── */
+.guide-content{flex:1;padding:32px 40px;max-width:860px}
+section{margin-bottom:48px}
+section:target .sec-title{color:var(--brand-light)}
+
+.sec-title{
+  font-size:22px;font-weight:800;color:var(--brand);margin-bottom:8px;
+  padding-bottom:10px;border-bottom:2px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sec-subtitle{font-size:15px;font-weight:700;color:var(--text);margin:20px 0 8px}
+p{font-size:14px;color:var(--text-2);margin-bottom:12px}
+
+/* ── STEPS ── */
+.steps{list-style:none;margin:16px 0 20px}
+.steps li{
+  display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;
+}
+.step-num{
+  width:28px;height:28px;border-radius:50%;background:var(--brand-light);
+  color:white;font-size:13px;font-weight:800;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.step-body{flex:1}
+.step-body strong{display:block;font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.step-body span{font-size:13px;color:var(--text-2)}
+
+/* ── ROLE TABLE ── */
+.role-table{width:100%;border-collapse:collapse;margin:12px 0 20px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.role-table th{background:var(--brand);color:white;padding:10px 14px;font-size:12px;font-weight:700;text-align:left}
+.role-table td{padding:10px 14px;border-top:1px solid var(--border);font-size:13px}
+.role-table tr:hover td{background:var(--surface-2)}
+.check-yes{color:#059669;font-size:16px;font-weight:800}
+.check-no{color:#dc2626;font-size:16px}
+.role-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.role-admin{background:#7c3aed;color:white}
+.role-manager{background:#0284c7;color:white}
+.role-assistant{background:#059669;color:white}
+
+/* ── MOCKUP UI ── */
+.mockup{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin:16px 0 20px;box-shadow:0 4px 20px rgba(0,0,0,.07);
+}
+.mockup-bar{
+  background:var(--brand);color:white;padding:10px 16px;
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+}
+.mockup-bar-dot{width:8px;height:8px;border-radius:50%;opacity:.6}
+.mockup-body{padding:16px}
+.mock-input{
+  border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;
+  font-size:13px;color:var(--text-3);background:var(--surface-2);
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+}
+.mock-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+  background:var(--brand-light);color:white;border-radius:8px;font-size:13px;font-weight:700;
+}
+.mock-card{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:14px;margin-bottom:8px;border-left:4px solid #94a3b8;
+}
+.mock-card.in-progress{border-left-color:#f59e0b}
+.mock-card.completed{border-left-color:#10b981}
+.mock-card-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.mock-badges{display:flex;gap:6px;flex-wrap:wrap}
+.mock-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px}
+.b-pending{background:#f1f5f9;color:#475569}
+.b-inprogress{background:#fef3c7;color:#92400e}
+.b-completed{background:#d1fae5;color:#065f46}
+.b-high{background:#fee2e2;color:#991b1b}
+.b-medium{background:#fef9c3;color:#713f12}
+.mock-nav{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 16px}
+.mock-tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-3);border-bottom:2px solid transparent}
+.mock-tab.active{color:var(--brand-light);border-bottom-color:var(--brand-light)}
+.mock-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.mock-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.mock-kpi-val{font-size:26px;font-weight:800;color:var(--brand)}
+.mock-kpi-label{font-size:10px;color:var(--text-3);margin-top:2px}
+.mock-status-flow{display:flex;align-items:center;gap:0;overflow-x:auto;margin:10px 0}
+.mock-status-step{display:flex;align-items:center;gap:0;flex-shrink:0}
+.mock-status-label{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;
+  border:1.5px solid var(--border);color:var(--text-3);background:var(--surface-2);white-space:nowrap}
+.mock-status-label.active{background:var(--brand-light);color:white;border-color:var(--brand-light)}
+.mock-status-label.done{background:#f0fdf4;color:#059669;border-color:#059669}
+.mock-status-arrow{font-size:10px;color:var(--text-3);margin:0 4px}
+.mock-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.mock-form-group{margin-bottom:12px}
+.mock-form-label{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.mock-field{border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text-2);background:var(--surface-2)}
+.mock-odoo-row{display:flex;gap:8px;margin-top:6px}
+.mock-odoo-field{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text-2);background:var(--surface-2)}
+.mock-search-btn{padding:9px 14px;background:var(--brand);color:white;border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap}
+.mock-odoo-result{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;font-size:12px;color:#166534;margin-top:8px}
+.presence-pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600}
+.presence-pill.active{background:rgba(5,150,105,.18);color:#065f46}
+.presence-pill.lunch{background:rgba(217,119,6,.18);color:#92400e}
+.presence-dot{width:8px;height:8px;border-radius:50%}
+.presence-dot.green{background:#059669}
+.presence-dot.amber{background:#d97706}
+.presence-dot.blue{background:#2563eb}
+.presence-dot.gray{background:#9ca3af}
+
+/* ── CALLOUT ── */
+.callout{
+  border-radius:10px;padding:14px 16px;margin:12px 0 16px;
+  font-size:13px;display:flex;gap:10px;align-items:flex-start;
+}
+.callout.tip{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.callout.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.callout.success{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+.callout.danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.callout-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── CODE / REFERENCE ── */
+.ref-tag{
+  display:inline-block;background:var(--surface-3);border:1px solid var(--border);
+  border-radius:5px;padding:1px 7px;font-family:monospace;font-size:12px;color:var(--text);
+}
+.highlight{background:#fef9c3;padding:1px 4px;border-radius:4px;font-weight:600}
+
+/* ── TYPE TAG ── */
+.type-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;
+  font-size:11px;font-weight:700;background:var(--surface-3);color:var(--text-2);margin:2px}
+
+/* ── TOC INDEX ── */
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:32px}
+.toc-title{font-size:13px;font-weight:800;color:var(--brand);margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px}
+.toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+.toc-item{font-size:13px}
+.toc-item a{color:var(--brand-light);text-decoration:none;font-weight:500}
+.toc-item a:hover{text-decoration:underline}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .guide-sidebar{display:none}
+  .guide-content{padding:20px 16px}
+  .mock-form-row,.mock-kpi-grid{grid-template-columns:1fr}
+  .toc-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="guide-header">
+  <a class="btn-back" href="javascript:history.back()">← Volver a WWP</a>
+  <h1>📖 Guía de Usuario</h1>
+  <p>Workforce Platform — Altritempi Operaciones<br>Todo lo que necesitas saber para trabajar con WWP</p>
+  <span class="guide-version">Versión 2.0 · 13 mayo 2026</span>
+</header>
+
+<div class="guide-layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="guide-sidebar">
+    <div class="sidebar-section">Primeros pasos</div>
+    <a class="sidebar-link" href="#acceso">🔐 Acceso y Login</a>
+    <a class="sidebar-link" href="#roles">👤 Roles y Permisos</a>
+    <a class="sidebar-link" href="#interfaz">🖥️ Interfaz General</a>
+
+    <div class="sidebar-section">Funciones</div>
+    <a class="sidebar-link" href="#tareas">📋 Gestión de Tareas</a>
+    <a class="sidebar-link" href="#nueva-tarea">➕ Crear Nueva Tarea</a>
+    <a class="sidebar-link" href="#drawer">📂 Detalle de Tarea</a>
+    <a class="sidebar-link" href="#estados">🔄 Flujo de Estados</a>
+    <a class="sidebar-link" href="#odoo">🔗 Búsqueda Odoo</a>
+    <a class="sidebar-link" href="#evidencia">📸 Evidencia Fotográfica</a>
+    <a class="sidebar-link" href="#subtareas">✅ Subtareas</a>
+    <a class="sidebar-link" href="#chat">💬 Chat de Tarea</a>
+
+    <div class="sidebar-section">Herramientas</div>
+    <a class="sidebar-link" href="#presencia">🟢 Estado de Presencia</a>
+    <a class="sidebar-link" href="#almuerzo">🍴 Control de Almuerzo</a>
+    <a class="sidebar-link" href="#notificaciones">🔔 Notificaciones</a>
+    <a class="sidebar-link" href="#dashboard">📊 Dashboard</a>
+    <a class="sidebar-link" href="#usuarios">👥 Usuarios (Admin)</a>
+    <a class="sidebar-link" href="#historial">🔗 Integración Historial</a>
+
+    <div class="sidebar-section">Administración</div>
+    <a class="sidebar-link" href="#control-acceso" style="color:#7c3aed;font-weight:700">⚙️ Control de Guía Staff</a>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="guide-content">
+
+    <!-- ÍNDICE -->
+    <div class="toc">
+      <div class="toc-title">📑 Índice de contenidos</div>
+      <div class="toc-grid">
+        <div class="toc-item"><a href="#acceso">1. Acceso y Login</a></div>
+        <div class="toc-item"><a href="#roles">2. Roles y Permisos</a></div>
+        <div class="toc-item"><a href="#interfaz">3. Interfaz General</a></div>
+        <div class="toc-item"><a href="#tareas">4. Gestión de Tareas</a></div>
+        <div class="toc-item"><a href="#nueva-tarea">5. Crear Nueva Tarea</a></div>
+        <div class="toc-item"><a href="#drawer">6. Detalle de Tarea</a></div>
+        <div class="toc-item"><a href="#estados">7. Flujo de Estados</a></div>
+        <div class="toc-item"><a href="#odoo">8. Búsqueda Odoo</a></div>
+        <div class="toc-item"><a href="#evidencia">9. Evidencia Fotográfica</a></div>
+        <div class="toc-item"><a href="#subtareas">10. Subtareas</a></div>
+        <div class="toc-item"><a href="#chat">11. Chat de Tarea</a></div>
+        <div class="toc-item"><a href="#presencia">12. Estado de Presencia</a></div>
+        <div class="toc-item"><a href="#almuerzo">13. Control de Almuerzo</a></div>
+        <div class="toc-item"><a href="#notificaciones">14. Notificaciones</a></div>
+        <div class="toc-item"><a href="#dashboard">15. Dashboard</a></div>
+        <div class="toc-item"><a href="#usuarios">16. Usuarios (Admin)</a></div>
+        <div class="toc-item"><a href="#historial">17. Integración Historial</a></div>
+        <div class="toc-item"><a href="#control-acceso" style="color:#7c3aed;font-weight:700">⚙️ Control de Guía Staff</a></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="acceso">
+      <h2 class="sec-title">🔐 Acceso y Login</h2>
+      <p>La Workforce Platform (WWP) es una aplicación web accesible desde cualquier navegador moderno. Para ingresar necesitas tu correo corporativo y contraseña asignados por el administrador del sistema.</p>
+
+      <h3 class="sec-subtitle">Cómo iniciar sesión</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Abre el navegador</strong>
+            <span>Navega a <span class="ref-tag">http://localhost:3000/wwp.html</span> — o accede desde el Dashboard principal en la sección <em>Workforce Platform</em>.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Ingresa tu correo corporativo</strong>
+            <span>Usa tu dirección <span class="ref-tag">@altritempi.com.do</span>. Ej: <span class="ref-tag">juan@altritempi.com.do</span></span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Ingresa tu contraseña</strong>
+            <span>Usa el ícono 👁️ para mostrar u ocultar la contraseña. Marca <em>"Mantener sesión"</em> para no tener que ingresar de nuevo en el mismo dispositivo.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Presiona "Entrar"</strong>
+            <span>Si los datos son correctos, accederás directamente al panel de tareas. Si hay un error, aparecerá un mensaje en rojo.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="mockup">
+        <div class="mockup-bar">
+          <span class="mockup-bar-dot" style="background:#ef4444"></span>
+          <span class="mockup-bar-dot" style="background:#f59e0b"></span>
+          <span class="mockup-bar-dot" style="background:#10b981"></span>
+          <span style="margin-left:8px">🏭 Workforce Platform — Login</span>
+        </div>
+        <div class="mockup-body" style="max-width:380px;margin:0 auto;padding:24px">
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:32px;margin-bottom:8px">🏭</div>
+            <div style="font-size:18px;font-weight:800;color:#1e3a5f">Workforce Platform</div>
+            <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Altritempi · Operaciones</div>
+          </div>
+          <div class="mock-form-group">
+            <div class="mock-form-label">Correo electrónico</div>
+            <div class="mock-field">juan@altritempi.com.do</div>
+          </div>
+          <div class="mock-form-group">
+            <div class="mock-form-label">Contraseña</div>
+            <div class="mock-field">••••••••  <span style="float:right">👁️</span></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;font-size:13px">
+            <span style="color:#475569">☑ Mantener sesión</span>
+            <span style="color:#2563eb">¿Olvidaste tu contraseña?</span>
+          </div>
+          <div class="mock-btn" style="width:100%;justify-content:center">Entrar</div>
+        </div>
+      </div>
+
+      <h3 class="sec-subtitle">Recuperar contraseña</h3>
+      <p>Si olvidaste tu contraseña, haz clic en <em>"¿Olvidaste tu contraseña?"</em>. Ingresa tu correo y el sistema te enviará un enlace de recuperación. Al hacer clic en el enlace podrás establecer una nueva contraseña.</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div>La sesión se guarda automáticamente en el dispositivo si marcas <strong>"Mantener sesión"</strong>. No necesitas ingresar de nuevo cada vez que abras la app, siempre que el token no haya expirado (7 días).</div>
+      </div>
+
+      <h3 class="sec-subtitle">Cerrar sesión</h3>
+      <p>Haz clic en tu nombre/avatar en la esquina superior derecha → <strong>🚪 Cerrar sesión</strong>. Esto elimina el token del dispositivo y regresa a la pantalla de login.</p>
+
+      <h3 class="sec-subtitle">Cambiar contraseña</h3>
+      <p>Menú de usuario (avatar superior derecho) → <strong>🔑 Cambiar contraseña</strong>. Debes ingresar tu contraseña actual y la nueva dos veces.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="roles">
+      <h2 class="sec-title">👤 Roles y Permisos</h2>
+      <p>WWP tiene tres roles con distintos niveles de acceso. El administrador asigna el rol al crear o editar un usuario.</p>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <span class="role-badge role-admin">Admin</span>
+        <span style="font-size:13px;color:var(--text-2);align-self:center">Acceso total — administra usuarios, valida tareas, ve el dashboard</span>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <span class="role-badge role-manager">Encargado</span>
+        <span style="font-size:13px;color:var(--text-2);align-self:center">Crea, asigna y valida tareas. Ve usuarios en el dropdown de asignación</span>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <span class="role-badge role-assistant">Auxiliar</span>
+        <span style="font-size:13px;color:var(--text-2);align-self:center">Ejecuta tareas asignadas. Actualiza estado, sube evidencia y chatea</span>
+      </div>
+
+      <table class="role-table">
+        <thead>
+          <tr>
+            <th>Función</th>
+            <th><span class="role-badge role-admin">Admin</span></th>
+            <th><span class="role-badge role-manager">Encargado</span></th>
+            <th><span class="role-badge role-assistant">Auxiliar</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Ver todas las tareas</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-yes">✔</td></tr>
+          <tr><td>Crear nueva tarea</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+          <tr><td>Editar tarea</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+          <tr><td>Eliminar tarea</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+          <tr><td>Asignar encargado</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+          <tr><td>Actualizar estado</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-yes">✔</td></tr>
+          <tr><td>Validar tarea (completada → validada)</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+          <tr><td>Subir evidencia fotográfica</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-yes">✔</td></tr>
+          <tr><td>Chat en tarea</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-yes">✔</td></tr>
+          <tr><td>Ver Dashboard KPIs</td><td class="check-yes">✔</td><td class="check-no">✗</td><td class="check-no">✗</td></tr>
+          <tr><td>Ver reporte de almuerzos</td><td class="check-yes">✔</td><td class="check-no">✗</td><td class="check-no">✗</td></tr>
+          <tr><td>Gestionar usuarios</td><td class="check-yes">✔</td><td class="check-no">✗</td><td class="check-no">✗</td></tr>
+          <tr><td>Ver lista de usuarios (asignación)</td><td class="check-yes">✔</td><td class="check-yes">✔</td><td class="check-no">✗</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div>Un <strong>Auxiliar</strong> que intente acceder al Dashboard o al módulo de Usuarios será redirigido automáticamente a la pestaña de Tareas.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="interfaz">
+      <h2 class="sec-title">🖥️ Interfaz General</h2>
+
+      <div class="mockup">
+        <div class="mockup-bar">
+          <span style="font-size:16px">🏭</span>
+          <span>Workforce Platform</span>
+          <span style="opacity:.6;font-size:11px;margin-left:4px">Altritempi · Operaciones</span>
+          <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+            <span class="presence-pill active"><span class="presence-dot green"></span>Activo</span>
+            <span>🔔</span>
+            <span style="background:rgba(255,255,255,.2);border-radius:20px;padding:4px 10px;font-size:12px">JR ▼</span>
+          </div>
+        </div>
+        <div class="mock-nav">
+          <div class="mock-tab active">📋 Tareas</div>
+          <div class="mock-tab">📊 Dashboard</div>
+          <div class="mock-tab">👥 Usuarios</div>
+        </div>
+        <div class="mockup-body">
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:8px">↑ Barra de navegación superior ↑</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <div class="mock-input" style="flex:1;min-width:200px"><span>🔍</span> Buscar tarea, orden…</div>
+            <div style="display:flex;gap:8px">
+              <div class="mock-input" style="min-width:130px">Todos los estados ▾</div>
+              <div class="mock-input" style="min-width:130px">Todos los tipos ▾</div>
+              <div class="mock-btn">+ Nueva Tarea</div>
+            </div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-title">📦 Despacho Orden S09115</div>
+            <div class="mock-badges">
+              <span class="mock-badge b-pending">Pendiente</span>
+              <span class="mock-badge b-high">Alta prioridad</span>
+              <span style="font-size:11px;color:var(--text-3)">📍 CDP · 👤 Sin asignar · 📅 Hoy</span>
+            </div>
+          </div>
+          <div class="mock-card in-progress">
+            <div class="mock-card-title">🚚 Transferencia ALVEN/OUT/00201</div>
+            <div class="mock-badges">
+              <span class="mock-badge b-inprogress">En Progreso</span>
+              <span class="mock-badge b-medium">Media</span>
+              <span style="font-size:11px;color:var(--text-3)">📍 Almacén · 👤 Pedro R. · 📅 mañana</span>
+            </div>
+          </div>
+          <div class="mock-card completed" style="border-left-color:#10b981">
+            <div class="mock-card-title">✅ Embalaje Orden S09100</div>
+            <div class="mock-badges">
+              <span class="mock-badge b-completed">Completado</span>
+              <span style="font-size:11px;color:var(--text-3)">📍 PTN · 👤 Ana G.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sec-subtitle">Elementos de la interfaz</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num" style="background:#1e3a5f">🏭</div>
+          <div class="step-body">
+            <strong>Header / Encabezado</strong>
+            <span>Barra azul superior con el nombre de la plataforma. Contiene el botón de presencia, notificaciones (🔔) y el menú de usuario (avatar con iniciales).</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">📋</div>
+          <div class="step-body">
+            <strong>Barra de navegación (tabs)</strong>
+            <span>En escritorio aparece horizontal bajo el header. En móvil se convierte en barra inferior fija. Las pestañas disponibles dependen del rol del usuario.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">🔍</div>
+          <div class="step-body">
+            <strong>Buscador y filtros</strong>
+            <span>Filtra tareas por texto libre, por estado (pendiente, en progreso, etc.) o por tipo de tarea. Los filtros son instantáneos.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">📄</div>
+          <div class="step-body">
+            <strong>Tarjetas de tarea</strong>
+            <span>Cada tarea aparece como una tarjeta. La franja de color izquierda indica el estado. Haz clic en cualquier tarjeta para abrir el detalle completo.</span>
+          </div>
+        </li>
+      </ul>
+
+      <h3 class="sec-subtitle">Colores de estado en tarjetas</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px">
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><span style="width:12px;height:12px;border-radius:2px;background:#94a3b8;display:inline-block"></span> Pendiente</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><span style="width:12px;height:12px;border-radius:2px;background:#2563eb;display:inline-block"></span> Asignado</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><span style="width:12px;height:12px;border-radius:2px;background:#f59e0b;display:inline-block"></span> En Progreso</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><span style="width:12px;height:12px;border-radius:2px;background:#10b981;display:inline-block"></span> Completado</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><span style="width:12px;height:12px;border-radius:2px;background:#8b5cf6;display:inline-block"></span> Validado</span>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="tareas">
+      <h2 class="sec-title">📋 Gestión de Tareas</h2>
+      <p>La pestaña <strong>Tareas</strong> es el centro de operaciones de WWP. Aquí puedes ver todas las tareas del equipo, filtrarlas y acceder a los detalles.</p>
+
+      <h3 class="sec-subtitle">Tipos de tarea disponibles</h3>
+      <div style="margin:10px 0 16px">
+        <span class="type-tag">🚚 Orden de Despacho</span>
+        <span class="type-tag">📦 Embalaje</span>
+        <span class="type-tag">🔍 Recogida de Artículos</span>
+        <span class="type-tag">🚛 Carga en Camión</span>
+        <span class="type-tag">📦 Movimiento de Almacén</span>
+        <span class="type-tag">📌 General</span>
+      </div>
+
+      <h3 class="sec-subtitle">Buscar y filtrar tareas</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Búsqueda por texto</strong>
+            <span>Escribe en el campo de búsqueda para filtrar tareas por título, número de orden u otros datos. El filtrado es instantáneo mientras escribes.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Filtro por estado</strong>
+            <span>Usa el selector "Todos los estados" para mostrar solo tareas Pendientes, Asignadas, En Progreso, Completadas o Validadas.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Filtro por tipo</strong>
+            <span>Usa el selector "Todos los tipos" para ver solo un tipo específico de tarea (ej: solo Órdenes de Despacho).</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div>Las tareas con fecha límite <strong>vencida</strong> muestran un chip rojo <span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">⏰ Vencida</span> en la esquina superior de la tarjeta.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="nueva-tarea">
+      <h2 class="sec-title">➕ Crear Nueva Tarea</h2>
+      <p>Solo los usuarios con rol <span class="role-badge role-admin">Admin</span> o <span class="role-badge role-manager">Encargado</span> pueden crear tareas.</p>
+
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Haz clic en "+ Nueva Tarea"</strong>
+            <span>En escritorio, el botón azul está en la barra de herramientas. En móvil, es el botón flotante "+" en la esquina inferior derecha.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Completa el título *</strong>
+            <span>Escribe una descripción breve y clara de la tarea. Ej: "Despacho Orden S09115 — CDP".</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Selecciona el tipo y la prioridad</strong>
+            <span>Tipo: Orden de Despacho, Embalaje, Recogida, Carga en Camión, Movimiento de Almacén o General. Prioridad: Baja 🟢, Media 🟡, Alta 🔴.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Busca la referencia Odoo (opcional)</strong>
+            <span>Ingresa un número de orden (S09115), transferencia (ALVEN/OUT/00146) o artículo (YH.PALERMO…) y presiona 🔍 Buscar. Los artículos se cargarán automáticamente.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Asigna encargado y fecha límite</strong>
+            <span>Selecciona al responsable de la tarea del dropdown y establece una fecha límite opcional.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <strong>Agrega localidad y descripción</strong>
+            <span>Indica el área donde se realizará la tarea (CDP, PTN, Showroom…) y cualquier detalle adicional en el campo de descripción.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <strong>Presiona "Guardar"</strong>
+            <span>La tarea se crea y aparece inmediatamente en la lista. Si asignaste un encargado, recibirá una notificación.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="mockup">
+        <div class="mockup-bar">➕ Nueva Tarea</div>
+        <div class="mockup-body">
+          <div class="mock-form-group">
+            <div class="mock-form-label">Título *</div>
+            <div class="mock-field">Despacho Orden S09115 — CDP</div>
+          </div>
+          <div class="mock-form-row">
+            <div>
+              <div class="mock-form-label">Tipo *</div>
+              <div class="mock-field">🚚 Orden de Despacho ▾</div>
+            </div>
+            <div>
+              <div class="mock-form-label">Prioridad</div>
+              <div class="mock-field">🔴 Alta ▾</div>
+            </div>
+          </div>
+          <div class="mock-form-group">
+            <div class="mock-form-label">Referencia Odoo <span style="font-size:10px;font-weight:400;color:var(--text-3)">orden · transferencia · artículo</span></div>
+            <div class="mock-odoo-row">
+              <div class="mock-odoo-field">S09115</div>
+              <div class="mock-search-btn">🔍 Buscar</div>
+            </div>
+            <div class="mock-odoo-result">📋 Orden de Venta · 👤 Juan Pérez — 3 artículos encontrados</div>
+          </div>
+          <div class="mock-form-row">
+            <div>
+              <div class="mock-form-label">Encargado</div>
+              <div class="mock-field">Pedro Ramírez ▾</div>
+            </div>
+            <div>
+              <div class="mock-form-label">Fecha límite</div>
+              <div class="mock-field">2026-05-14</div>
+            </div>
+          </div>
+          <div class="mock-form-group">
+            <div class="mock-form-label">Localidad / Área</div>
+            <div class="mock-field">CDP</div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+            <div class="mock-btn" style="background:#6b7280">Cancelar</div>
+            <div class="mock-btn">Guardar</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="drawer">
+      <h2 class="sec-title">📂 Detalle de Tarea (Drawer)</h2>
+      <p>Al hacer clic en cualquier tarjeta de tarea, se abre un panel lateral (drawer) con todos los detalles. En móvil, este panel se desliza desde la parte inferior de la pantalla.</p>
+
+      <h3 class="sec-subtitle">Contenido del drawer</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num" style="background:#475569">①</div>
+          <div class="step-body">
+            <strong>Flujo de estados</strong>
+            <span>Barra visual que muestra el progreso: Pendiente → Asignado → En Progreso → Completado → Validado. El estado actual aparece destacado en azul.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">②</div>
+          <div class="step-body">
+            <strong>Información general</strong>
+            <span>Grid con: tipo, prioridad, encargado asignado, fecha límite, localidad y descripción de la tarea.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">③</div>
+          <div class="step-body">
+            <strong>Botones de acción</strong>
+            <span>Según el estado actual y tu rol, aparecen botones para avanzar el estado, validar, asignar o eliminar la tarea.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">④</div>
+          <div class="step-body">
+            <strong>Artículos de la orden</strong>
+            <span>Lista de artículos vinculados desde Odoo, con imagen miniatura, nombre, SKU, cantidad y ubicación en almacén.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">⑤</div>
+          <div class="step-body">
+            <strong>Evidencia fotográfica</strong>
+            <span>Galería de fotos subidas como evidencia de la tarea completada. Puedes agregar fotos desde aquí.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">⑥</div>
+          <div class="step-body">
+            <strong>Historial de cambios</strong>
+            <span>Línea de tiempo con todos los cambios de estado, quién los realizó y cuándo.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num" style="background:#475569">⑦</div>
+          <div class="step-body">
+            <strong>Chat de la tarea</strong>
+            <span>Sección de mensajes directamente en el contexto de la tarea. Todos los asignados pueden participar.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="mockup">
+        <div class="mockup-bar">📂 Despacho Orden S09115</div>
+        <div class="mockup-body">
+          <div class="mock-status-flow">
+            <div class="mock-status-step">
+              <span class="mock-status-label done">Pendiente</span>
+              <span class="mock-status-arrow">→</span>
+            </div>
+            <div class="mock-status-step">
+              <span class="mock-status-label done">Asignado</span>
+              <span class="mock-status-arrow">→</span>
+            </div>
+            <div class="mock-status-step">
+              <span class="mock-status-label active">En Progreso</span>
+              <span class="mock-status-arrow">→</span>
+            </div>
+            <div class="mock-status-step">
+              <span class="mock-status-label">Completado</span>
+              <span class="mock-status-arrow">→</span>
+            </div>
+            <div class="mock-status-step">
+              <span class="mock-status-label">Validado</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px">
+              <div style="font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">TIPO</div>
+              <div style="font-size:12px;font-weight:600">🚚 Orden de Despacho</div>
+            </div>
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px">
+              <div style="font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">ENCARGADO</div>
+              <div style="font-size:12px;font-weight:600">Pedro R.</div>
+            </div>
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px">
+              <div style="font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:3px">PRIORIDAD</div>
+              <div style="font-size:12px;font-weight:600;color:#dc2626">🔴 Alta</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div class="mock-btn" style="background:#059669">✔ Marcar Completado</div>
+            <div class="mock-btn" style="background:#6b7280">✏️ Editar</div>
+          </div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text-2)">
+            📦 <strong>3 artículos</strong> · <span style="color:#059669">✔ 2 verificados</span> · ⏳ 1 pendiente
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="estados">
+      <h2 class="sec-title">🔄 Flujo de Estados</h2>
+      <p>Las tareas siguen un flujo secuencial de estados. Solo los roles autorizados pueden avanzar o retroceder estados.</p>
+
+      <table class="role-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Significado</th>
+            <th>¿Quién puede avanzar?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="mock-badge b-pending">Pendiente</span></td>
+            <td>Tarea recién creada, sin asignar</td>
+            <td><span class="role-badge role-admin">Admin</span> <span class="role-badge role-manager">Encargado</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-badge" style="background:#dbeafe;color:#1e40af">Asignado</span></td>
+            <td>Tiene encargado designado, listo para iniciar</td>
+            <td><span class="role-badge role-admin">Admin</span> <span class="role-badge role-manager">Encargado</span> <span class="role-badge role-assistant">Auxiliar</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-badge b-inprogress">En Progreso</span></td>
+            <td>Está siendo ejecutado activamente</td>
+            <td><span class="role-badge role-admin">Admin</span> <span class="role-badge role-manager">Encargado</span> <span class="role-badge role-assistant">Auxiliar</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-badge b-completed">Completado</span></td>
+            <td>El equipo terminó la ejecución</td>
+            <td><span class="role-badge role-admin">Admin</span> <span class="role-badge role-manager">Encargado</span></td>
+          </tr>
+          <tr>
+            <td><span class="mock-badge" style="background:#ede9fe;color:#5b21b6">Validado</span></td>
+            <td>Revisado y aprobado por encargado/admin</td>
+            <td>Estado final — no se puede avanzar más</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div>Cuando una tarea llega a <strong>Completado</strong>, el Admin y el Encargado reciben una notificación para poder revisarla y <strong>Validarla</strong>. La validación es el cierre formal de la tarea.</div>
+      </div>
+
+      <h3 class="sec-subtitle">Cómo cambiar el estado</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Abre el detalle de la tarea</strong>
+            <span>Haz clic en la tarjeta de la tarea para abrir el drawer lateral.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Usa el botón de acción correspondiente</strong>
+            <span>El botón cambia según el estado actual: "Iniciar", "Marcar Completado", "Validar", etc.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>El historial se actualiza automáticamente</strong>
+            <span>Cada cambio de estado queda registrado con tu nombre y la hora exacta.</span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="odoo">
+      <h2 class="sec-title">🔗 Búsqueda en Odoo</h2>
+      <p>El campo <strong>Referencia Odoo</strong> en el formulario de nueva tarea te permite vincular la tarea con datos reales del sistema Odoo. Soporta tres tipos de búsqueda:</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+        <div style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:32px;margin-bottom:8px">📋</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Órdenes de Venta</div>
+          <div style="font-size:12px;color:var(--text-3)">Ingresa: <span class="ref-tag">S09115</span></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Carga cliente + líneas de productos</div>
+        </div>
+        <div style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:32px;margin-bottom:8px">🔄</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Transferencias</div>
+          <div style="font-size:12px;color:var(--text-3)">Ingresa: <span class="ref-tag">ALVEN/OUT/00146</span></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Tipo, origen y artículos del movimiento</div>
+        </div>
+        <div style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:32px;margin-bottom:8px">🪑</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Artículos</div>
+          <div style="font-size:12px;color:var(--text-3)">Ingresa: <span class="ref-tag">YH.PALERMO</span></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Nombre, SKU y stock por ubicación</div>
+        </div>
+      </div>
+
+      <h3 class="sec-subtitle">Paso a paso</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Escribe la referencia en el campo</strong>
+            <span>Puedes ingresar el número de orden, el nombre de la transferencia o el código/nombre del artículo.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Presiona "🔍 Buscar"</strong>
+            <span>El sistema busca primero en órdenes, luego en transferencias, luego en artículos (búsqueda en cascada).</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Revisa el resultado</strong>
+            <span>Aparece el tipo (Orden de Venta, Transferencia o Artículo), el cliente/nombre y el origen si aplica.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Selecciona los artículos</strong>
+            <span>Si la referencia tiene artículos asociados, aparece un panel con la lista. Puedes seleccionar todos o solo algunos que apliquen a la tarea.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div>Desde el <strong>Dashboard de Historial de Órdenes</strong>, puedes hacer clic en <strong>➕ Nueva Tarea WWP</strong> al buscar una orden, transferencia o artículo — la referencia se llenará automáticamente en el formulario de nueva tarea.</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div>Si la búsqueda devuelve <em>"No encontrado en Odoo"</em>, verifica que el número o código sea exacto. Las transferencias usan prefijo <span class="ref-tag">ALVEN/OUT/</span>, <span class="ref-tag">ALVEN/IN/</span>, etc.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="evidencia">
+      <h2 class="sec-title">📸 Evidencia Fotográfica</h2>
+      <p>Cualquier usuario puede subir fotos como evidencia de que una tarea fue realizada. Las fotos se guardan en el servidor y quedan visibles en el detalle de la tarea.</p>
+
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Abre el detalle de la tarea</strong>
+            <span>Haz clic en la tarjeta de la tarea para abrir el drawer.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Busca la sección de Evidencia</strong>
+            <span>Desplázate hacia abajo en el drawer hasta encontrar la sección "📸 Evidencia".</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Haz clic en "📷 Agregar foto"</strong>
+            <span>Se abrirá el selector de archivo o la cámara del dispositivo (en móvil).</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Selecciona o toma la foto</strong>
+            <span>Puedes subir múltiples fotos. Cada foto aparece en la galería de evidencia inmediatamente.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Para eliminar: clic en el botón ✕</strong>
+            <span>Aparece en la esquina de cada miniatura. Solo Admin y Encargados pueden eliminar fotos.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="callout-icon">📱</span>
+        <div>En dispositivos móviles, al agregar evidencia puedes <strong>tomar una foto directamente con la cámara</strong> sin necesidad de guardarla en la galería primero.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="subtareas">
+      <h2 class="sec-title">✅ Subtareas</h2>
+      <p>Las subtareas permiten dividir una tarea grande en pasos más pequeños y rastrear el progreso de cada uno por separado.</p>
+
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Abre el detalle de la tarea</strong>
+            <span>Desde el drawer, busca la sección "✅ Subtareas".</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Haz clic en una subtarea</strong>
+            <span>Puedes marcarla como completada o ver su estado. La barra de progreso en la tarjeta principal refleja el % de subtareas completadas.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div>La barra de progreso delgada que aparece debajo del título en la tarjeta principal indica el porcentaje de subtareas completadas.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="chat">
+      <h2 class="sec-title">💬 Chat de Tarea</h2>
+      <p>Cada tarea tiene su propio chat integrado, visible al final del drawer. Todos los usuarios asignados a la tarea pueden comunicarse directamente en el contexto de la tarea.</p>
+
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Abre el detalle de la tarea</strong>
+            <span>Desplázate hasta el final del drawer para ver la sección "💬 Mensajes".</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Escribe tu mensaje</strong>
+            <span>Usa el campo de texto en la parte inferior. Presiona Enter o el botón "Enviar".</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Los mensajes aparecen en tiempo real</strong>
+            <span>Tus mensajes aparecen a la derecha (azul). Los mensajes de otros aparecen a la izquierda (gris).</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="mockup">
+        <div class="mockup-bar">💬 Chat — Despacho S09115</div>
+        <div class="mockup-body" style="padding:12px 16px">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <div style="width:24px;height:24px;border-radius:50%;background:#2563eb;color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">PR</div>
+              <div>
+                <div style="font-size:9px;color:var(--text-3);margin-bottom:2px">Pedro R. · 10:32</div>
+                <div style="background:var(--surface-3);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:13px;color:var(--text)">Ya iniciamos con los artículos del CDP</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse">
+              <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">JR</div>
+              <div>
+                <div style="font-size:9px;color:var(--text-3);text-align:right;margin-bottom:2px">Tú · 10:35</div>
+                <div style="background:#2563eb;border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;color:white">Ok, recuerda tomar foto del embalaje</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="mock-input" style="flex:1">Escribe un mensaje…</div>
+            <div class="mock-btn" style="padding:9px 12px">Enviar</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="presencia">
+      <h2 class="sec-title">🟢 Estado de Presencia</h2>
+      <p>El botón de presencia en el header te permite indicar tu estado actual. Esto es visible para todos los usuarios del equipo.</p>
+
+      <table class="role-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Ícono</th>
+            <th>Significado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="presence-pill active"><span class="presence-dot green"></span>Disponible</span></td>
+            <td>🟢</td>
+            <td>En el trabajo, disponible para tareas</td>
+          </tr>
+          <tr>
+            <td><span class="presence-pill" style="background:rgba(37,99,235,.15);color:#1d4ed8"><span class="presence-dot blue"></span>Trabajando</span></td>
+            <td>💼</td>
+            <td>Activamente ejecutando una tarea</td>
+          </tr>
+          <tr>
+            <td><span class="presence-pill lunch"><span class="presence-dot amber"></span>En Almuerzo</span></td>
+            <td>🍴</td>
+            <td>En pausa de almuerzo — inicia el contador</td>
+          </tr>
+          <tr>
+            <td><span class="presence-pill" style="background:rgba(107,114,128,.15);color:#374151"><span class="presence-dot gray"></span>Fuera de Línea</span></td>
+            <td>⚫</td>
+            <td>No disponible / fuera del turno</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="sec-subtitle">Cómo cambiar el estado</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Haz clic en el botón de presencia</strong>
+            <span>Es el botón con el punto de color en el header, al lado de las notificaciones.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Selecciona tu estado del menú desplegable</strong>
+            <span>Aparecerán las 4 opciones. Al seleccionar "En Almuerzo", inicia automáticamente el contador de tiempo.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="callout-icon">⏱️</span>
+        <div>Al activar <strong>En Almuerzo</strong>, el sistema registra la hora de inicio. Al cambiar de vuelta a otro estado, registra la hora de fin. Este registro es visible para los administradores en el Dashboard.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="almuerzo">
+      <h2 class="sec-title">🍴 Control de Almuerzo</h2>
+      <p>Cuando un usuario activa el estado <strong>"En Almuerzo"</strong>, el sistema inicia un contador visible en el header. Este contador registra el tiempo exacto de la pausa.</p>
+
+      <h3 class="sec-subtitle">Para el usuario</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Activa "🍴 En Almuerzo" desde el botón de presencia</strong>
+            <span>El counter "🍴 00:00" aparecerá en el header y comenzará a contar.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>El contador se vuelve rojo al exceder el tiempo permitido</strong>
+            <span>El límite es configurado por el administrador por usuario (30 min a 2 hrs). Al excederlo, el contador parpadea en rojo.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Al regresar, cambia tu estado</strong>
+            <span>Selecciona "Disponible" o "Trabajando" para detener el contador y registrar el fin del almuerzo.</span>
+          </div>
+        </li>
+      </ul>
+
+      <h3 class="sec-subtitle">Para el administrador (Dashboard)</h3>
+      <p>La pestaña <strong>Dashboard</strong> incluye la sección <em>"🍴 Control de Almuerzos"</em> con:</p>
+      <ul style="list-style:disc;padding-left:20px;font-size:14px;color:var(--text-2);margin-bottom:16px">
+        <li>KPIs: total de registros, cuántos cumplieron, cuántos excedieron, promedio de duración</li>
+        <li>Filtro por fecha y por usuario</li>
+        <li>Tabla detallada con hora inicio, hora fin, duración, tiempo permitido y diferencia</li>
+        <li>Indicadores de color: verde (dentro del límite), rojo (excedió el tiempo)</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="notificaciones">
+      <h2 class="sec-title">🔔 Notificaciones</h2>
+      <p>El sistema envía notificaciones automáticas en tiempo real cuando ocurren eventos relevantes para ti.</p>
+
+      <h3 class="sec-subtitle">Cuándo recibes notificaciones</h3>
+      <ul style="list-style:disc;padding-left:20px;font-size:14px;color:var(--text-2);margin-bottom:16px">
+        <li>Una tarea te fue asignada como encargado</li>
+        <li>El estado de una tarea que supervisas cambió</li>
+        <li>Una tarea que gestionas fue marcada como completada (para validarla)</li>
+        <li>Se subió nueva evidencia fotográfica a una tarea tuya</li>
+        <li>Alguien te envió un mensaje en el chat de una tarea</li>
+      </ul>
+
+      <h3 class="sec-subtitle">Cómo usar las notificaciones</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Mira el ícono 🔔 en el header</strong>
+            <span>Si hay notificaciones no leídas, aparece un círculo rojo con el número.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Haz clic en 🔔 para abrir el panel</strong>
+            <span>Se despliega un panel con todas las notificaciones. Las no leídas aparecen en azul claro.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Haz clic en una notificación</strong>
+            <span>Te lleva directamente a la tarea relacionada. La notificación se marca como leída.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Usa "Marcar leídas" o "Limpiar"</strong>
+            <span>"Marcar leídas" marca todas sin leídas. "Limpiar" elimina las que ya están leídas del panel.</span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="dashboard">
+      <h2 class="sec-title">📊 Dashboard</h2>
+      <p>Disponible solo para <span class="role-badge role-admin">Admin</span>. Muestra métricas clave del equipo en tiempo real.</p>
+
+      <h3 class="sec-subtitle">KPIs de tareas</h3>
+      <div class="mockup">
+        <div class="mockup-bar">📊 Dashboard — Resumen de Tareas</div>
+        <div class="mockup-body">
+          <div class="mock-kpi-grid">
+            <div class="mock-kpi">
+              <div class="mock-kpi-val">12</div>
+              <div class="mock-kpi-label">Total Tareas</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#f59e0b">4</div>
+              <div class="mock-kpi-label">En Progreso</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#10b981">6</div>
+              <div class="mock-kpi-label">Completadas</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#dc2626">2</div>
+              <div class="mock-kpi-label">Vencidas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sec-subtitle">Control de almuerzos</h3>
+      <p>Filtra por fecha y usuario para ver el historial detallado de almuerzos del equipo. Ver sección <a href="#almuerzo" style="color:var(--brand-light)">🍴 Control de Almuerzo</a> para detalles.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="usuarios">
+      <h2 class="sec-title">👥 Gestión de Usuarios</h2>
+      <p>Disponible solo para <span class="role-badge role-admin">Admin</span>. Permite crear, editar y desactivar cuentas de usuario.</p>
+
+      <h3 class="sec-subtitle">Crear nuevo usuario</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Ir a la pestaña "👥 Usuarios"</strong>
+            <span>Solo visible para administradores.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Haz clic en "+ Nuevo Usuario"</strong>
+            <span>Se abre el formulario de creación.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Completa los campos</strong>
+            <span>Nombre completo, correo corporativo, rol (Auxiliar / Encargado / Admin), estado (Activo/Inactivo), contraseña inicial y tiempo de almuerzo permitido.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>El avatar se genera automáticamente</strong>
+            <span>El sistema crea un avatar con las iniciales del nombre y un color único basado en el nombre. No se necesita foto.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Presiona "Guardar"</strong>
+            <span>El usuario puede iniciar sesión inmediatamente con su correo y contraseña.</span>
+          </div>
+        </li>
+      </ul>
+
+      <h3 class="sec-subtitle">Tiempo de almuerzo permitido</h3>
+      <p>Al crear o editar un usuario, puedes configurar su límite de almuerzo individual. Opciones disponibles: 30, 45, 60, 75, 90, 105 o 120 minutos. El valor predeterminado es 60 minutos (1 hora).</p>
+
+      <h3 class="sec-subtitle">Desactivar un usuario</h3>
+      <p>Edita el usuario y cambia el campo "Estado" a <em>Inactivo</em>. El usuario no podrá iniciar sesión, pero sus datos e historial de tareas se conservan.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <section id="historial">
+      <h2 class="sec-title">🔗 Integración con Historial de Órdenes</h2>
+      <p>La Workforce Platform está integrada directamente con el <strong>Dashboard de Historial de Órdenes</strong>. Desde el historial puedes crear tareas WWP sin necesidad de cambiar de pantalla.</p>
+
+      <h3 class="sec-subtitle">Botón "➕ Nueva Tarea WWP"</h3>
+      <p>Aparece automáticamente en los resultados de búsqueda del historial cuando buscas:</p>
+      <ul style="list-style:disc;padding-left:20px;font-size:14px;color:var(--text-2);margin-bottom:16px">
+        <li><strong>Órdenes de venta</strong> — El botón está en el panel de resultado de la orden</li>
+        <li><strong>Transferencias</strong> — El botón está en el resultado de la transferencia encontrada</li>
+        <li><strong>Artículos</strong> — El botón está junto a la información del artículo encontrado</li>
+      </ul>
+
+      <h3 class="sec-subtitle">Cómo usarlo</h3>
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Busca una orden, transferencia o artículo en el Historial</strong>
+            <span>Ve a la sección correspondiente (Órdenes, Transferencias o Artículos) y realiza tu búsqueda normalmente.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Haz clic en "➕ Nueva Tarea WWP"</strong>
+            <span>El botón azul aparece en el resultado de la búsqueda.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>El sistema navega a WWP con el campo pre-llenado</strong>
+            <span>La sección Workforce Platform se activa automáticamente y abre el formulario de nueva tarea con la referencia Odoo ya ingresada.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Completa los demás campos y guarda</strong>
+            <span>El tipo de tarea se selecciona automáticamente según lo que buscaste (orden → Despacho, transferencia → Movimiento de Almacén, artículo → Recogida).</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout success">
+        <span class="callout-icon">🚀</span>
+        <div>Esta integración elimina el trabajo duplicado: ya no necesitas abrir WWP por separado, buscar la orden manualmente y copiar el número. <strong>Todo se hace con un clic.</strong></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════ CONTROL DE GUÍA STAFF ═══════════════════════ -->
+    <section id="control-acceso">
+      <h2 class="sec-title" style="color:#7c3aed;border-bottom-color:#ede9fe">⚙️ Control de Guía Staff</h2>
+      <p>Define qué secciones de la guía son visibles para <span class="role-badge role-manager">Encargado</span> y <span class="role-badge role-assistant">Auxiliar</span>. Los cambios se aplican inmediatamente — la próxima vez que un Encargado o Auxiliar abra su guía, solo verá las secciones habilitadas.</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div>La configuración se guarda en este navegador. Si el servidor se reinicia o el usuario abre la guía desde otro navegador, se usarán los valores predeterminados. Para restablecer, usa el botón <strong>"Restaurar predeterminados"</strong>.</div>
+      </div>
+
+      <!-- Tabla de control -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0 20px;box-shadow:0 4px 20px rgba(0,0,0,.06)">
+        <!-- Header de tabla -->
+        <div style="display:grid;grid-template-columns:1fr 130px 130px;background:var(--brand);color:white;padding:12px 20px;font-size:12px;font-weight:700;gap:0;align-items:center">
+          <div>Sección de la Guía</div>
+          <div style="text-align:center"><span style="background:#0284c7;padding:3px 10px;border-radius:12px;font-size:11px">Encargado</span></div>
+          <div style="text-align:center"><span style="background:#059669;padding:3px 10px;border-radius:12px;font-size:11px">Auxiliar</span></div>
+        </div>
+
+        <!-- Filas generadas por JS -->
+        <div id="access-table-body"></div>
+
+        <!-- Footer con botones -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:2px solid var(--border);background:var(--surface-2);flex-wrap:wrap;gap:10px">
+          <span id="access-save-status" style="font-size:12px;color:var(--text-3)">Sin cambios pendientes</span>
+          <div style="display:flex;gap:10px">
+            <button onclick="resetAccessDefaults()" style="padding:9px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-2)">↩ Restaurar predeterminados</button>
+            <button onclick="saveAccessConfig()" id="btn-save-access" style="padding:9px 18px;background:#7c3aed;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💾 Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista previa rápida -->
+      <h3 class="sec-subtitle">Vista previa — secciones actualmente activas</h3>
+      <div id="access-preview" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"></div>
+    </section>
+
+    <section style="background:var(--brand);color:white;border-radius:12px;padding:28px;text-align:center;margin-bottom:40px">
+      <div style="font-size:32px;margin-bottom:10px">🏭</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:6px">Workforce Platform</div>
+      <div style="font-size:13px;opacity:.8;margin-bottom:20px">Altritempi · Operaciones — Guía de Usuario v2.0</div>
+      <a href="javascript:history.back()" style="display:inline-block;background:rgba(255,255,255,.2);color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">← Volver a Workforce Platform</a>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// SCROLL SPY
+// ══════════════════════════════════════════════════════════════════
+const links = document.querySelectorAll('.sidebar-link');
+const sections = document.querySelectorAll('section[id]');
+function onScroll() {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 80) current = s.id;
+  });
+  links.forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', onScroll, {passive: true});
+onScroll();
+
+// ══════════════════════════════════════════════════════════════════
+// CONTROL DE ACCESO A GUÍA STAFF
+// ══════════════════════════════════════════════════════════════════
+const ACCESS_KEY = 'wwp_guide_access';
+
+// Definición de secciones: id, label, emoji, defaults por rol
+const GUIDE_SECTIONS = [
+  { id:'acceso',         label:'Acceso y Sesión',           emoji:'🔐', mgr:true,  ast:true  },
+  { id:'tu-rol',         label:'Tu Rol y Permisos',         emoji:'👤', mgr:true,  ast:true  },
+  { id:'interfaz',       label:'Pantalla Principal',        emoji:'🖥️', mgr:true,  ast:true  },
+  { id:'ver-tareas',     label:'Ver y Buscar Tareas',       emoji:'📋', mgr:true,  ast:true  },
+  { id:'nueva-tarea',    label:'Crear Nueva Tarea',         emoji:'➕', mgr:true,  ast:false },
+  { id:'detalle',        label:'Detalle de Tarea',          emoji:'📂', mgr:true,  ast:true  },
+  { id:'estados',        label:'Cambiar Estado',            emoji:'🔄', mgr:true,  ast:true  },
+  { id:'odoo',           label:'Búsqueda en Odoo',          emoji:'🔗', mgr:true,  ast:false },
+  { id:'evidencia',      label:'Evidencia Fotográfica',     emoji:'📸', mgr:true,  ast:true  },
+  { id:'chat',           label:'Chat de Tarea',             emoji:'💬', mgr:true,  ast:true  },
+  { id:'presencia',      label:'Estado de Presencia',       emoji:'🟢', mgr:true,  ast:true  },
+  { id:'almuerzo',       label:'Control de Almuerzo',       emoji:'🍴', mgr:true,  ast:true  },
+  { id:'notificaciones', label:'Notificaciones',            emoji:'🔔', mgr:true,  ast:true  },
+  { id:'historial-int',  label:'Integración con Historial', emoji:'🔗', mgr:true,  ast:false },
+];
+
+// Carga la config guardada (o devuelve defaults)
+function loadAccessConfig() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(ACCESS_KEY) || 'null');
+    if (saved && typeof saved === 'object') {
+      // Fusionar con defaults por si hay nuevas secciones
+      var out = {};
+      GUIDE_SECTIONS.forEach(function(s) {
+        out[s.id] = {
+          manager:   saved[s.id] ? !!saved[s.id].manager   : s.mgr,
+          assistant: saved[s.id] ? !!saved[s.id].assistant : s.ast,
+        };
+      });
+      return out;
+    }
+  } catch(e) {}
+  return getDefaultConfig();
+}
+
+function getDefaultConfig() {
+  var cfg = {};
+  GUIDE_SECTIONS.forEach(function(s) { cfg[s.id] = { manager: s.mgr, assistant: s.ast }; });
+  return cfg;
+}
+
+// Estado en memoria
+var _accessConfig = loadAccessConfig();
+var _dirty = false;
+
+// Renderiza la tabla
+function renderAccessTable() {
+  var body = document.getElementById('access-table-body');
+  if (!body) return;
+
+  body.innerHTML = GUIDE_SECTIONS.map(function(s, i) {
+    var cfg = _accessConfig[s.id] || { manager: s.mgr, assistant: s.ast };
+    var bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+    return [
+      '<div style="display:grid;grid-template-columns:1fr 130px 130px;',
+      'background:'+bg+';padding:13px 20px;align-items:center;',
+      'border-bottom:1px solid var(--border);gap:0;transition:background .12s" ',
+      'onmouseover="this.style.background=\'#f0f7ff\'" onmouseout="this.style.background=\''+bg+'\'">',
+
+      // Nombre de sección
+      '<div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text)">',
+      '<span>'+s.emoji+'</span>',
+      '<span>'+s.label+'</span>',
+      '</div>',
+
+      // Checkbox Encargado
+      '<div style="display:flex;justify-content:center;align-items:center">',
+      '<label class="access-toggle" style="position:relative;display:inline-flex;align-items:center;cursor:pointer">',
+      '<input type="checkbox" data-section="'+s.id+'" data-role="manager" ',
+      (cfg.manager ? 'checked' : '') + ' ',
+      'onchange="onAccessChange(this)" ',
+      'style="opacity:0;width:0;height:0;position:absolute">',
+      '<span class="toggle-track" data-checked="'+(cfg.manager?'1':'0')+'" style="',
+      'width:44px;height:24px;border-radius:12px;display:block;transition:background .2s;',
+      'background:'+(cfg.manager?'#059669':'#cbd5e1')+';position:relative">',
+      '<span style="position:absolute;top:3px;left:'+(cfg.manager?'23px':'3px')+';',
+      'width:18px;height:18px;border-radius:50%;background:white;transition:left .2s;',
+      'box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>',
+      '</span>',
+      '</label>',
+      '</div>',
+
+      // Checkbox Auxiliar
+      '<div style="display:flex;justify-content:center;align-items:center">',
+      '<label class="access-toggle" style="position:relative;display:inline-flex;align-items:center;cursor:pointer">',
+      '<input type="checkbox" data-section="'+s.id+'" data-role="assistant" ',
+      (cfg.assistant ? 'checked' : '') + ' ',
+      'onchange="onAccessChange(this)" ',
+      'style="opacity:0;width:0;height:0;position:absolute">',
+      '<span class="toggle-track" data-checked="'+(cfg.assistant?'1':'0')+'" style="',
+      'width:44px;height:24px;border-radius:12px;display:block;transition:background .2s;',
+      'background:'+(cfg.assistant?'#059669':'#cbd5e1')+';position:relative">',
+      '<span style="position:absolute;top:3px;left:'+(cfg.assistant?'23px':'3px')+';',
+      'width:18px;height:18px;border-radius:50%;background:white;transition:left .2s;',
+      'box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>',
+      '</span>',
+      '</label>',
+      '</div>',
+
+      '</div>',
+    ].join('');
+  }).join('');
+
+  renderAccessPreview();
+}
+
+// Toggle visual sin rerender completo
+function onAccessChange(input) {
+  var section = input.dataset.section;
+  var role    = input.dataset.role;
+  var checked = input.checked;
+
+  // Actualizar config en memoria
+  if (!_accessConfig[section]) _accessConfig[section] = {};
+  _accessConfig[section][role] = checked;
+
+  // Animar el toggle track
+  var track = input.nextElementSibling;
+  var thumb = track ? track.querySelector('span') : null;
+  if (track) track.style.background = checked ? '#059669' : '#cbd5e1';
+  if (thumb) thumb.style.left = checked ? '23px' : '3px';
+
+  // Marcar como dirty
+  _dirty = true;
+  var status = document.getElementById('access-save-status');
+  if (status) {
+    status.textContent = '⚠️ Hay cambios sin guardar';
+    status.style.color = '#d97706';
+    status.style.fontWeight = '600';
+  }
+
+  renderAccessPreview();
+}
+
+// Renderiza la vista previa de secciones activas
+function renderAccessPreview() {
+  var preview = document.getElementById('access-preview');
+  if (!preview) return;
+
+  var html = '';
+
+  // Encargado
+  html += '<div style="flex:1;min-width:260px">';
+  html += '<div style="font-size:11px;font-weight:700;color:#0284c7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#0284c7;display:inline-block"></span>Encargado</div>';
+  GUIDE_SECTIONS.forEach(function(s) {
+    var on = _accessConfig[s.id] && _accessConfig[s.id].manager;
+    html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:13px;color:'+(on?'var(--text)':'var(--text-3)')+'">';
+    html += '<span style="font-size:14px;font-weight:800;color:'+(on?'#059669':'#dc2626')+'">'+(on?'✔':'✗')+'</span>';
+    html += s.emoji+' '+s.label;
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Auxiliar
+  html += '<div style="flex:1;min-width:260px">';
+  html += '<div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#059669;display:inline-block"></span>Auxiliar</div>';
+  GUIDE_SECTIONS.forEach(function(s) {
+    var on = _accessConfig[s.id] && _accessConfig[s.id].assistant;
+    html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:13px;color:'+(on?'var(--text)':'var(--text-3)')+'">';
+    html += '<span style="font-size:14px;font-weight:800;color:'+(on?'#059669':'#dc2626')+'">'+(on?'✔':'✗')+'</span>';
+    html += s.emoji+' '+s.label;
+    html += '</div>';
+  });
+  html += '</div>';
+
+  preview.innerHTML = html;
+}
+
+// Guardar en localStorage
+function saveAccessConfig() {
+  try {
+    localStorage.setItem(ACCESS_KEY, JSON.stringify(_accessConfig));
+    _dirty = false;
+    var status = document.getElementById('access-save-status');
+    if (status) {
+      status.textContent = '✔ Guardado correctamente — ' + new Date().toLocaleTimeString('es-DO');
+      status.style.color = '#059669';
+      status.style.fontWeight = '700';
+    }
+    // Flash del botón
+    var btn = document.getElementById('btn-save-access');
+    if (btn) {
+      var orig = btn.textContent;
+      btn.textContent = '✔ ¡Guardado!';
+      btn.style.background = '#059669';
+      setTimeout(function() {
+        btn.textContent = orig;
+        btn.style.background = '#7c3aed';
+      }, 2000);
+    }
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+// Restaurar defaults
+function resetAccessDefaults() {
+  if (!confirm('¿Restaurar la configuración predeterminada de visibilidad?\nEsto no se puede deshacer.')) return;
+  _accessConfig = getDefaultConfig();
+  _dirty = false;
+  try { localStorage.removeItem(ACCESS_KEY); } catch(e) {}
+  renderAccessTable();
+  var status = document.getElementById('access-save-status');
+  if (status) {
+    status.textContent = '✔ Predeterminados restaurados';
+    status.style.color = '#059669';
+    status.style.fontWeight = '700';
+  }
+}
+
+// Avisar si hay cambios sin guardar al salir
+window.addEventListener('beforeunload', function(e) {
+  if (_dirty) {
+    e.preventDefault();
+    e.returnValue = 'Tienes cambios sin guardar en la configuración de la guía.';
+  }
+});
+
+// Inicializar tabla al cargar
+renderAccessTable();
+</script>
+</body>
+</html>

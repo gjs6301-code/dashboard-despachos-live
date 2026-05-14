@@ -1,0 +1,455 @@
+[
+  {
+    "id": "wt_mp2w3g4gnszc",
+    "parentId": null,
+    "title": "Enviar mercancia a PTN",
+    "type": "dispatch_order",
+    "description": "enviar en horas de la mananan",
+    "priority": "high",
+    "status": "pending",
+    "assignedTo": null,
+    "managerId": "au_gsanchez",
+    "managerName": "Gabriel Joaquín Sánchez Ramírez",
+    "executors": [],
+    "odooRef": "S09115",
+    "location": "CDP",
+    "dueDate": "2026-05-13",
+    "evidence": [],
+    "statusHistory": [
+      {
+        "status": "pending",
+        "date": "2026-05-12T17:13:29.440Z",
+        "by": "au_gsanchez",
+        "note": ""
+      }
+    ],
+    "createdBy": "au_gsanchez",
+    "createdAt": "2026-05-12T17:13:29.440Z",
+    "updatedAt": "2026-05-12T22:02:27.186Z",
+    "messages": [],
+    "items": [
+      {
+        "item_id": "oi_37296",
+        "odoo_line_id": 37296,
+        "odoo_product_id": 49313,
+        "sku": "111.0032.JH",
+        "product_name": "[JH.AVIRON.RUG.300X400.HUMUS.P] Aviron Rug 300 X 400 Color Humus",
+        "quantity": 1,
+        "selected": true,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37297",
+        "odoo_line_id": 37297,
+        "odoo_product_id": 49291,
+        "sku": "111.0021.JH",
+        "product_name": "[JH.VERTIGO.RUG.300X400.MNROCK.P] Vertigo Rug 300 X 400 Color Moon Rock",
+        "quantity": 0,
+        "selected": true,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      }
+    ]
+  },
+  {
+    "id": "wt_mp37451vn8yk",
+    "parentId": null,
+    "title": "PRIEBA 123 PREPARAR ORDEN PARA ENVIO",
+    "type": "dispatch_order",
+    "description": "",
+    "priority": "medium",
+    "status": "pending",
+    "assignedTo": null,
+    "managerId": "au_juena",
+    "managerName": "Jose Ismael Ureña Montas",
+    "executors": [],
+    "odooRef": "S09115",
+    "location": "",
+    "dueDate": "2026-05-13",
+    "evidence": [],
+    "statusHistory": [
+      {
+        "status": "pending",
+        "date": "2026-05-12T22:21:57.523Z",
+        "by": "au_gsanchez",
+        "note": ""
+      }
+    ],
+    "createdBy": "au_gsanchez",
+    "createdAt": "2026-05-12T22:21:57.523Z",
+    "updatedAt": "2026-05-14T13:47:01.438Z",
+    "messages": [
+      {
+        "id": "msg_mp5jlmtammb6",
+        "fromId": "au_gsanchez",
+        "fromName": "Gabriel Joaquín Sánchez Ramírez",
+        "text": "como van",
+        "createdAt": "2026-05-14T13:47:01.438Z"
+      }
+    ],
+    "items": [
+      {
+        "item_id": "oi_37296",
+        "odoo_line_id": 37296,
+        "odoo_product_id": 49313,
+        "sku": "111.0032.JH",
+        "product_name": "[JH.AVIRON.RUG.300X400.HUMUS.P] Aviron Rug 300 X 400 Color Humus",
+        "quantity": 1,
+        "selected": true,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37297",
+        "odoo_line_id": 37297,
+        "odoo_product_id": 49291,
+        "sku": "111.0021.JH",
+        "product_name": "[JH.VERTIGO.RUG.300X400.MNROCK.P] Vertigo Rug 300 X 400 Color Moon Rock",
+        "quantity": 0,
+        "selected": true,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      }
+    ]
+  },
+  {
+    "id": "wt_mp4f88ma3xw0",
+    "parentId": null,
+    "title": "preparar orden S09115",
+    "type": "dispatch_order",
+    "description": "Esto debe ser enviado manana en la manana a tienda",
+    "priority": "medium",
+    "status": "in_progress",
+    "assignedTo": "oe_8",
+    "managerId": "au_hcheco",
+    "managerName": "Harold Eduardo Checo Guzman",
+    "executors": [],
+    "odooRef": "S09115",
+    "location": "",
+    "dueDate": "2026-05-14",
+    "evidence": [],
+    "statusHistory": [
+      {
+        "status": "pending",
+        "date": "2026-05-13T18:56:51.874Z",
+        "by": "au_gsanchez",
+        "note": ""
+      },
+      {
+        "status": "assigned",
+        "date": "2026-05-13T19:20:45.790Z",
+        "by": "Franklin Antonio De Jesus Candelario",
+        "note": ""
+      },
+      {
+        "status": "in_progress",
+        "date": "2026-05-13T19:21:09.199Z",
+        "by": "Franklin Antonio De Jesus Candelario",
+        "note": ""
+      }
+    ],
+    "createdBy": "au_gsanchez",
+    "createdAt": "2026-05-13T18:56:51.874Z",
+    "updatedAt": "2026-05-13T19:21:09.199Z",
+    "items": [
+      {
+        "item_id": "oi_37296",
+        "odoo_line_id": 37296,
+        "odoo_product_id": 49313,
+        "sku": "111.0032.JH",
+        "product_name": "[JH.AVIRON.RUG.300X400.HUMUS.P] Aviron Rug 300 X 400 Color Humus",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 18,
+            "location_name": "ALVEN/Stock/D-PTN/SHOWROOM",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 30,
+            "location_name": "ALVEN/Stock/B-STI",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 95,
+            "location_name": "ALVEN/Stock/A-CDP/BB1",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 2,
+        "selected_location_name": "ALVEN/Stock/A-CDP/BB1",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37297",
+        "odoo_line_id": 37297,
+        "odoo_product_id": 49291,
+        "sku": "111.0021.JH",
+        "product_name": "[JH.VERTIGO.RUG.300X400.MNROCK.P] Vertigo Rug 300 X 400 Color Moon Rock",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 624,
+            "location_name": "ALVEN/Stock/A-CDP/PFRONTAL",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 0,
+        "selected_location_name": "ALVEN/Stock/A-CDP/PFRONTAL",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      }
+    ],
+    "assignees": [
+      "au_hcheco"
+    ]
+  },
+  {
+    "id": "wt_mp4gksm3qxdr",
+    "parentId": null,
+    "title": "empacar para envio de santiago",
+    "type": "dispatch_order",
+    "description": "",
+    "priority": "medium",
+    "status": "assigned",
+    "assignedTo": "oe_8",
+    "managerId": "au_hcheco",
+    "managerName": "Harold Eduardo Checo Guzman",
+    "executors": [],
+    "assignees": [
+      "au_hcheco"
+    ],
+    "odooRef": "S09114",
+    "location": "",
+    "dueDate": "2026-05-14",
+    "evidence": [],
+    "statusHistory": [
+      {
+        "status": "pending",
+        "date": "2026-05-13T19:34:37.275Z",
+        "by": "au_gsanchez",
+        "note": ""
+      },
+      {
+        "status": "assigned",
+        "date": "2026-05-13T19:35:00.702Z",
+        "by": "Franklin Antonio De Jesus Candelario",
+        "note": ""
+      }
+    ],
+    "createdBy": "au_gsanchez",
+    "createdAt": "2026-05-13T19:34:37.275Z",
+    "updatedAt": "2026-05-13T19:35:00.702Z",
+    "items": [
+      {
+        "item_id": "oi_37255",
+        "odoo_line_id": 37255,
+        "odoo_product_id": 50490,
+        "sku": "211.0021.HBF",
+        "product_name": "[HBF.TIEN.SDTBL.BC67.P] Tien End Table Color Red Wine",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 30,
+            "location_name": "ALVEN/Stock/B-STI",
+            "available": 1,
+            "total": 2
+          },
+          {
+            "location_id": 822,
+            "location_name": "ALVEN/Stock/C-Outlet 27 FEB",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 18,
+            "location_name": "ALVEN/Stock/D-PTN/SHOWROOM",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 1,
+        "selected_location_name": "ALVEN/Stock/C-Outlet 27 FEB",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37257",
+        "odoo_line_id": 37257,
+        "odoo_product_id": 50487,
+        "sku": "111.0019.HBF",
+        "product_name": "[HBF.SWEEN.COFFTBL.BC89.P] Sween Coffee Table Color Brown",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 175,
+            "location_name": "ALVEN/Stock/A-CDP/DB3",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 18,
+            "location_name": "ALVEN/Stock/D-PTN/SHOWROOM",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 0,
+        "selected_location_name": "ALVEN/Stock/A-CDP/DB3",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37259",
+        "odoo_line_id": 37259,
+        "odoo_product_id": 49329,
+        "sku": "102.0001.GE",
+        "product_name": "[GE.CEN.COFFTBL.NAT.MARB.TOP.K2] Cenn Coffee Table W/Natural Marble Top *K*",
+        "quantity": 1,
+        "selected": true,
+        "locations": [],
+        "selected_location": null,
+        "selected_location_name": null,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37261",
+        "odoo_line_id": 37261,
+        "odoo_product_id": 49383,
+        "sku": "111.0022.GE",
+        "product_name": "[GE.AUSTIN.COFFTBL.NAT.MARB.P] Austin Coffee Table In Natural Marble",
+        "quantity": 1,
+        "selected": true,
+        "locations": [],
+        "selected_location": null,
+        "selected_location_name": null,
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      }
+    ]
+  },
+  {
+    "id": "wt_mp4nm2l2p143",
+    "parentId": null,
+    "title": "S09115",
+    "type": "packaging",
+    "description": "Empacar estos articulos para que la furgoneta los busque para una entrega",
+    "priority": "medium",
+    "status": "pending",
+    "assignedTo": null,
+    "managerId": "au_fcandelario",
+    "managerName": "Franklin Antonio De Jesus Candelario",
+    "executors": [],
+    "assignees": [],
+    "odooRef": "S09115",
+    "location": "CDP",
+    "dueDate": "2026-05-14",
+    "evidence": [],
+    "statusHistory": [
+      {
+        "status": "pending",
+        "date": "2026-05-13T22:51:34.166Z",
+        "by": "au_gsanchez",
+        "note": ""
+      }
+    ],
+    "createdBy": "au_gsanchez",
+    "createdAt": "2026-05-13T22:51:34.166Z",
+    "updatedAt": "2026-05-14T13:47:30.550Z",
+    "items": [
+      {
+        "item_id": "oi_37296",
+        "odoo_line_id": 37296,
+        "odoo_product_id": 49313,
+        "sku": "111.0032.JH",
+        "product_name": "[JH.AVIRON.RUG.300X400.HUMUS.P] Aviron Rug 300 X 400 Color Humus",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 18,
+            "location_name": "ALVEN/Stock/D-PTN/SHOWROOM",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 30,
+            "location_name": "ALVEN/Stock/B-STI",
+            "available": 1,
+            "total": 1
+          },
+          {
+            "location_id": 95,
+            "location_name": "ALVEN/Stock/A-CDP/BB1",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 2,
+        "selected_location_name": "ALVEN/Stock/A-CDP/BB1",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      },
+      {
+        "item_id": "oi_37297",
+        "odoo_line_id": 37297,
+        "odoo_product_id": 49291,
+        "sku": "111.0021.JH",
+        "product_name": "[JH.VERTIGO.RUG.300X400.MNROCK.P] Vertigo Rug 300 X 400 Color Moon Rock",
+        "quantity": 1,
+        "selected": true,
+        "locations": [
+          {
+            "location_id": 624,
+            "location_name": "ALVEN/Stock/A-CDP/PFRONTAL",
+            "available": 1,
+            "total": 1
+          }
+        ],
+        "selected_location": 0,
+        "selected_location_name": "ALVEN/Stock/A-CDP/PFRONTAL",
+        "evidence_images": [],
+        "comments": "",
+        "status": "pending"
+      }
+    ],
+    "messages": [
+      {
+        "id": "msg_mp4nnuovesbz",
+        "fromId": "au_fcandelario",
+        "fromName": "Franklin Antonio De Jesus Candelario",
+        "text": "ya esta listo",
+        "createdAt": "2026-05-13T22:52:57.247Z"
+      },
+      {
+        "id": "msg_mp5jm99yc95z",
+        "fromId": "au_gsanchez",
+        "fromName": "Gabriel Joaquín Sánchez Ramírez",
+        "text": "hola",
+        "createdAt": "2026-05-14T13:47:30.550Z"
+      }
+    ]
+  }
+]

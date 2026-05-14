@@ -69,6 +69,21 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
 .bm{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:600;margin-left:6px}
 .bm.preparando{background:#fef3c7;color:#92400e}
 .bm.transito{background:#d1fae5;color:#065f46}
+.bm.pendiente{background:#fce7f3;color:#9d174d}
+/* ── Pendiente Confirmación table — green theme ── */
+.pend-card{border-top:3px solid #10b981}
+.pend-card h3{color:#065f46}
+.pend-card .pivot thead th{background:#065f46;border-right-color:#047857}
+.pend-card .r-mes{background:#065f46}
+.pend-card .r-mes td{border-right-color:#047857}
+.pend-card .r-est{background:#d1fae5;color:#065f46}
+.pend-card .r-data:hover td{background:#ecfdf5}
+.pend-card .tg{color:#065f46;background:#fff}
+.pend-card .r-est .tg{background:#065f46;color:#fff}
+.pend-card .btn-blue{background:#065f46}
+/* ── Main Detalle table — blue top accent ── */
+.main-card{border-top:3px solid #1e3a8a}
+.main-card h3{color:#1e3a8a}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -173,7 +188,7 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
     <div class="kpi articulos"><div class="kpi-label">Total artículos</div><div class="kpi-value" id="kpiArticulos">0</div><div class="kpi-sub">unidades</div></div>
   </div>
 
-  <div class="card" style="margin-bottom:16px">
+  <div class="card main-card" style="margin-bottom:16px">
     <h3>Detalle de Despachos · Vista Agrupada (Mes → Estatus → Orden)</h3>
     <div class="fbar">
       <input type="text" id="searchInput" placeholder="Buscar por cliente, orden, vendedor, vehículo...">
@@ -210,6 +225,32 @@ main{padding:16px 20px;max-width:1400px;margin:0 auto}
     <div class="card"><h3>Despachos por Vendedor</h3><div class="chart-wrap" style="height:240px"><canvas id="chartVendedor"></canvas></div></div>
     <div class="card"><h3>Despachos por Fecha de Entrega</h3><div style="font-size:11px;color:#6b7280;margin:-8px 0 8px" id="chartDiaSub"></div><div class="chart-wrap" style="height:220px"><canvas id="chartDia"></canvas></div></div>
   </div>
+
+  <div class="card pend-card" style="margin-bottom:16px">
+    <h3>Pendiente Confirmación · Vista Agrupada (Mes → Estatus → Orden)</h3>
+    <div class="fbar">
+      <input type="text" id="searchPendInput" placeholder="Buscar por cliente, orden, vendedor, vehículo...">
+      <button class="btn-mini btn-blue" id="expAllPend">Expandir todo</button>
+      <button class="btn-mini btn-gray" id="colAllPend">Contraer todo</button>
+      <span class="small" id="rowCountPend"></span>
+    </div>
+    <div class="tw">
+      <table class="pivot">
+        <thead><tr>
+          <th style="width:16%">Mes / Estatus / No# Orden</th>
+          <th style="width:13%">Tipo de Movimiento</th>
+          <th style="width:8%">VENDEDOR</th>
+          <th style="width:13%">Nombre Cliente</th>
+          <th>Lugar de Entrega</th>
+          <th style="width:9%">Fecha Solicitada</th>
+          <th style="width:12%">Fecha de Entrega</th>
+          <th style="width:9%">Vehículo</th>
+          <th style="width:13%">Comentario</th>
+        </tr></thead>
+        <tbody id="tableBodyPend"></tbody>
+      </table>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -222,8 +263,10 @@ const STATUS_ALL = ['Preparando','En Transito','Entregado','Entregado- No instal
 const NUM_COLS = 22;
 
 let currentData = [];
+let currentPendienteData = [];
 const charts = {};
 const collapseState = {};
+const collapseStatePend = {};
 const MS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const ML = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DL = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -315,7 +358,8 @@ function parseCSV(text){
 }
 
 // ── Shared: build data array from parsed rows + headers ───────────────────────
-function buildData(headers, rows) {
+function buildData(headers, rows, statusFilter) {
+  if (!statusFilter) statusFilter = STATUS_FILTER;
   const ci = name => headers.findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
   const iOrden=ci('No. Orden'), iTipo=ci('Tipo de Movimiento'), iCliente=ci('Nombre Cliente'),
         iCiudad=ci('Ciudades'), iLugar=ci('Lugar de Entrega'), iFechaSol=ci('Fecha Solicitada'),
@@ -327,7 +371,7 @@ function buildData(headers, rows) {
   for (const row of rows) {
     if (row.length < 3) continue;
     const estatus = g(row, iEstatus);
-    if (!STATUS_FILTER.includes(estatus)) continue;
+    if (!statusFilter.includes(estatus)) continue;
     const orden = g(row, iOrden), cliente = g(row, iCliente);
     if (!orden && !cliente) continue;
     data.push({
@@ -373,7 +417,7 @@ async function loadViaCowork() {
   if (!rawContent || rawContent.length < 100)
     throw new Error('Contenido vacío desde Drive (longitud: ' + (rawContent ? rawContent.length : 0) + ')');
   const { headers, rows } = parseReadFileContent(rawContent);
-  return buildData(headers, rows);
+  return { main: buildData(headers, rows), pend: buildData(headers, rows, ['Pendiente Confirmacion']) };
 }
 
 // ── Mode B: Browser direct — fetch() → Google Sheets published CSV ────────────
@@ -387,7 +431,8 @@ async function loadViaCSV() {
     throw new Error('Google devolvió HTML. Verifica que la hoja siga publicada como CSV.');
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('CSV con menos de 2 filas.');
-  return buildData(rows[0].map(h => h.trim()), rows.slice(1));
+  const hdrs = rows[0].map(h => h.trim()), dataRows = rows.slice(1);
+  return { main: buildData(hdrs, dataRows), pend: buildData(hdrs, dataRows, ['Pendiente Confirmacion']) };
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -399,12 +444,14 @@ async function loadFromDrive() {
   document.querySelector('.hdr p').textContent =
     'Live · ' + (usingCowork ? 'Google Drive (Cowork)' : 'Google Sheets CSV') + ' · Filtro: Preparando · En Tránsito';
   try {
-    const data = usingCowork ? await loadViaCowork() : await loadViaCSV();
-    currentData = data;
+    const result = usingCowork ? await loadViaCowork() : await loadViaCSV();
+    currentData = result.main;
+    currentPendienteData = result.pend;
     Object.keys(collapseState).forEach(k => delete collapseState[k]);
+    Object.keys(collapseStatePend).forEach(k => delete collapseStatePend[k]);
     const ts = new Date().toLocaleString('es-DO');
     setUpdated(ts);
-    setStatus('✓ ' + data.length + ' despachos en Preparando/En Tránsito · ' + ts, '');
+    setStatus('✓ ' + currentData.length + ' despachos en Preparando/En Tránsito · ' + currentPendienteData.length + ' Pendiente Confirmación · ' + ts, '');
     renderAll();
   } catch(err) {
     console.error('Error en loadFromDrive:', err);
@@ -535,7 +582,68 @@ function renderCharts(){
   ], {scales:{x:{stacked:true,ticks:{font:{size:11}},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1,precision:0,font:{size:11}}}}});
 }
 
-function renderAll(){renderKPIs();renderCharts();populateCiudadFilter();renderTable()}
+function renderPendienteTable(){
+  const search=document.getElementById('searchPendInput').value.toLowerCase();
+  const tb=document.getElementById('tableBodyPend');
+  tb.innerHTML='';
+  const filtered=currentPendienteData.filter(d=>{
+    if(search){const blob=[d.orden,d.cliente,d.ciudad,d.lugar,d.vendedor,d.vehiculo,d.comentario].join(' ').toLowerCase();if(!blob.includes(search))return false;}
+    return true;
+  });
+  document.getElementById('rowCountPend').textContent=filtered.length+' de '+currentPendienteData.length+' despachos';
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af">No hay despachos con estatus "Pendiente Confirmación".</td></tr>';return;}
+  const tree={};
+  filtered.forEach(d=>{
+    const mk=getMonthKey(d.fechaSolicitada);
+    const ms=getMonthSort(d.fechaSolicitada);
+    if(!tree[mk])tree[mk]={sort:ms,statuses:{}};
+    const est=d.estatus||'(sin estatus)';
+    if(!tree[mk].statuses[est])tree[mk].statuses[est]=[];
+    tree[mk].statuses[est].push(d);
+  });
+  const months=Object.entries(tree).sort((a,b)=>a[1].sort.localeCompare(b[1].sort));
+  months.forEach(([mes,mData])=>{
+    const mk='pm:'+mes;
+    if(collapseStatePend[mk]===undefined)collapseStatePend[mk]=false;
+    const mc=collapseStatePend[mk];
+    const sEnt=Object.entries(mData.statuses).sort((a,b)=>a[0].localeCompare(b[0]));
+    const total=sEnt.reduce((s,a)=>s+a[1].length,0);
+    const tr=document.createElement('tr');
+    tr.className='r-mes';
+    tr.onclick=()=>{collapseStatePend[mk]=!collapseStatePend[mk];renderPendienteTable();};
+    tr.innerHTML='<td colspan="9"><span class="tg">'+(mc?'+':'–')+'</span>'+esc(mes)+' <span style="opacity:.85;font-weight:500">· '+total+' despacho'+(total===1?'':'s')+'</span></td>';
+    tb.appendChild(tr);
+    if(mc)return;
+    sEnt.forEach(([est,recs])=>{
+      const ek='pe:'+mes+'|'+est;
+      if(collapseStatePend[ek]===undefined)collapseStatePend[ek]=false;
+      const ec=collapseStatePend[ek];
+      const etr=document.createElement('tr');
+      etr.className='r-est';
+      etr.onclick=()=>{collapseStatePend[ek]=!collapseStatePend[ek];renderPendienteTable();};
+      etr.innerHTML='<td colspan="9" class="in-1"><span class="tg">'+(ec?'+':'–')+'</span>'+esc(est)+' <span class="bm pendiente">'+recs.length+'</span></td>';
+      tb.appendChild(etr);
+      if(ec)return;
+      recs.forEach(d=>{
+        const r=document.createElement('tr');
+        r.className='r-data';
+        const orden=(d.orden&&d.orden!=='(sin orden)')?esc(d.orden):'<span class="empty-cell">(en blanco)</span>';
+        r.innerHTML='<td class="in-2"><b>'+orden+'</b></td>'+
+          '<td>'+(esc(d.tipo)||'—')+'</td>'+
+          '<td>'+(esc(d.vendedor)||'—')+'</td>'+
+          '<td><b>'+(esc(d.cliente)||'—')+'</b></td>'+
+          '<td>'+(d.lugar?esc(d.lugar):'<span class="empty-cell">(en blanco)</span>')+'</td>'+
+          '<td>'+fmtShort(d.fechaSolicitada)+'</td>'+
+          '<td>'+fmtLong(d.fechaEntrega)+'</td>'+
+          '<td>'+(esc(d.vehiculo)||'—')+'</td>'+
+          '<td>'+(d.comentario?'<span style="color:#6b7280;font-style:italic">'+esc(d.comentario)+'</span>':'<span class="empty-cell">—</span>')+'</td>';
+        tb.appendChild(r);
+      });
+    });
+  });
+}
+
+function renderAll(){renderKPIs();renderCharts();populateCiudadFilter();renderTable();renderPendienteTable();}
 
 document.getElementById('refreshBtn').addEventListener('click', loadFromDrive);
 document.getElementById('searchInput').addEventListener('input', renderTable);
@@ -543,6 +651,9 @@ document.getElementById('estatusFilter').addEventListener('change', renderTable)
 document.getElementById('ciudadFilter').addEventListener('change', renderTable);
 document.getElementById('expAll').addEventListener('click', ()=>toggleAll(true));
 document.getElementById('colAll').addEventListener('click', ()=>toggleAll(false));
+document.getElementById('searchPendInput').addEventListener('input', renderPendienteTable);
+document.getElementById('expAllPend').addEventListener('click', ()=>{Object.keys(collapseStatePend).forEach(k=>collapseStatePend[k]=false);renderPendienteTable();});
+document.getElementById('colAllPend').addEventListener('click', ()=>{Object.keys(collapseStatePend).forEach(k=>collapseStatePend[k]=true);renderPendienteTable();});
 
 // Auto-load on open + refresh every 5 minutes
 loadFromDrive();

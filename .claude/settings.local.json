@@ -4,7 +4,10 @@
       "mcp__Claude_in_Chrome__tabs_context_mcp",
       "Bash(gh --version)",
       "PowerShell(winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements)",
-      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\gh-cli\" -Recurse | Where-Object { $_.Name -eq \"gh.exe\" })"
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\gh-cli\" -Recurse | Where-Object { $_.Name -eq \"gh.exe\" })",
+      "Bash(node proxy.js)",
+      "Bash(curl -s http://localhost:3000/api/odoo/auth)",
+      "Bash(curl -s http://localhost:3000/api/sheets)"
     ]
   }
 }
