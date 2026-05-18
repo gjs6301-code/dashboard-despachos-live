@@ -508,6 +508,88 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .imp-riesgo-ok{background:#dcfce7;color:#15803d}
 .imp-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px}
 @media(max-width:700px){.imp-kpi-row{grid-template-columns:1fr 1fr}.imp-emp-grid{grid-template-columns:1fr}}
+/* ── Empaque tab ──────────────────────────────────────────────────────────── */
+.emp-page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.emp-section-title{font-size:14px;font-weight:700;color:var(--text-primary);margin:20px 0 12px;display:flex;align-items:center;gap:7px}
+.emp-mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.emp-mat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.emp-mat-foto{width:100%;height:130px;object-fit:cover;background:#f1f5f9;display:block}
+.emp-mat-foto-empty{width:100%;height:130px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:32px;color:#cbd5e1}
+.emp-mat-body{padding:12px;flex:1;display:flex;flex-direction:column;gap:4px}
+.emp-mat-name{font-size:13px;font-weight:700;color:var(--text-primary)}
+.emp-mat-desc{font-size:11px;color:var(--text-muted);line-height:1.4;flex:1}
+.emp-mat-actions{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border-light)}
+.emp-mat-btn{flex:1;padding:5px 8px;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.emp-mat-btn.edit{background:#eff6ff;color:#1d4ed8}
+.emp-mat-btn.del{background:#fff1f2;color:#be123c}
+.emp-mat-btn:hover{opacity:.8}
+/* Reglas */
+.emp-regla-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.emp-regla-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.emp-regla-categ{flex:1}
+.emp-regla-categ-name{font-size:12px;font-weight:700;color:var(--text-primary)}
+.emp-regla-categ-path{font-size:10px;color:var(--text-muted);margin-top:2px}
+.emp-regla-mats{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.emp-regla-mat-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:5px;font-size:10px;font-weight:600;color:#0369a1}
+.emp-regla-mat-chip .ord{background:#0369a1;color:#fff;border-radius:3px;padding:0 4px;font-size:9px}
+.emp-regla-actions{display:flex;gap:6px;flex-shrink:0}
+.emp-regla-btn{padding:4px 10px;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.emp-regla-btn.edit{background:#eff6ff;color:#1d4ed8}
+.emp-regla-btn.del{background:#fff1f2;color:#be123c}
+.emp-regla-btn:hover{opacity:.8}
+/* Modal editor material */
+.emp-mat-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2100;display:none;align-items:center;justify-content:center}
+.emp-mat-editor-overlay.open{display:flex}
+.emp-mat-editor-box{background:var(--surface);border-radius:14px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;margin:16px}
+.emp-mat-editor-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.emp-mat-editor-hdr h3{font-size:15px;font-weight:700;color:var(--text-primary)}
+.emp-mat-editor-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.emp-mat-editor-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+/* Modal editor regla */
+.emp-reg-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2100;display:none;align-items:center;justify-content:center}
+.emp-reg-editor-overlay.open{display:flex}
+.emp-reg-editor-box{background:var(--surface);border-radius:14px;width:100%;max-width:580px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;margin:16px}
+.emp-reg-editor-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.emp-reg-editor-hdr h3{font-size:15px;font-weight:700;color:var(--text-primary)}
+.emp-reg-editor-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.emp-reg-editor-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.emp-mat-sortable{display:flex;flex-direction:column;gap:6px}
+.emp-mat-sortable-row{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+.emp-mat-sortable-ord{width:22px;text-align:center;font-size:11px;font-weight:700;color:#64748b;background:#e2e8f0;border-radius:4px;padding:1px 4px;flex-shrink:0}
+.emp-mat-sortable-name{flex:1;font-size:12px;font-weight:600;color:var(--text-primary)}
+.emp-mat-sortable-thumb{width:30px;height:30px;border-radius:5px;object-fit:cover;background:#e2e8f0;flex-shrink:0}
+.emp-mat-sortable-up,.emp-mat-sortable-dn{padding:3px 6px;border:none;background:#e2e8f0;border-radius:4px;cursor:pointer;font-size:11px;line-height:1;transition:background .15s}
+.emp-mat-sortable-up:hover,.emp-mat-sortable-dn:hover{background:#cbd5e1}
+.emp-mat-sortable-rm{padding:3px 7px;border:none;background:#fee2e2;border-radius:4px;cursor:pointer;font-size:11px;color:#b91c1c;font-weight:700;transition:background .15s}
+.emp-mat-sortable-rm:hover{background:#fecaca}
+/* Empaque en vista de tarea (por artículo) */
+.task-emp-section{border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;padding:12px 14px;margin-top:10px}
+.task-emp-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#0369a1;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.task-emp-mat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.task-emp-mat-row{display:flex;align-items:center;gap:10px}
+.task-emp-mat-num{width:20px;height:20px;border-radius:50%;background:#0369a1;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.task-emp-mat-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;background:#e0f2fe;flex-shrink:0;cursor:pointer}
+.task-emp-mat-thumb-empty{width:36px;height:36px;border-radius:6px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.task-emp-mat-info{flex:1}
+.task-emp-mat-name{font-size:12px;font-weight:700;color:#0c4a6e}
+.task-emp-mat-desc{font-size:10px;color:#0369a1;line-height:1.3}
+.task-emp-confirm-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.task-emp-btn-ok{padding:6px 14px;border:none;border-radius:8px;background:#0369a1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s}
+.task-emp-btn-ok:hover{background:#0284c7}
+.task-emp-btn-ok.done{background:#15803d}
+.task-emp-btn-partial{padding:6px 14px;border:none;border-radius:8px;background:#f59e0b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s}
+.task-emp-btn-partial:hover{background:#d97706}
+.task-emp-confirmed{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#15803d;background:#dcfce7;padding:5px 10px;border-radius:7px}
+.task-emp-partial{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:5px 10px;border-radius:7px}
+.task-emp-just-wrap{margin-top:8px;display:none}
+.task-emp-just-wrap.open{display:block}
+.task-emp-just-area{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;resize:vertical;min-height:60px;font-family:inherit}
+/* Foto ampliada */
+.emp-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:3000;display:none;align-items:center;justify-content:center}
+.emp-lightbox.open{display:flex}
+.emp-lightbox img{max-width:90vw;max-height:85vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.emp-lightbox-close{position:absolute;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;font-weight:700;line-height:1}
+@media(max-width:700px){.emp-mat-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.pol-kpi-row{grid-template-columns:1fr 1fr}.pol-page-hdr{margin-bottom:14px}}
 @media(max-width:700px){
   .veh-check-hdr,.veh-check-row{grid-template-columns:1fr 44px 44px}
@@ -2851,7 +2933,115 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
     </div>
     <!-- /tab-impacto -->
 
+    <!-- ═══════════════ TAB EMPAQUE ═══════════════ -->
+    <div id="tab-empaque" style="display:none">
+      <div class="emp-page-hdr">
+        <div>
+          <h2 style="font-size:18px;font-weight:800;color:var(--text-primary);margin:0">📦 Materiales de Empaque</h2>
+          <p style="font-size:12px;color:var(--text-muted);margin:3px 0 0">Configura el catálogo de materiales y asígnalos por familia de artículos</p>
+        </div>
+      </div>
+
+      <!-- Sub-sección 1: Catálogo de materiales -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="emp-section-title" style="margin:0">🗂 Catálogo de Materiales</div>
+        <button class="btn-primary" onclick="empOpenMatEditor(null)" style="font-size:12px;padding:7px 14px">+ Nuevo Material</button>
+      </div>
+      <div class="emp-mat-grid" id="emp-mat-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted);font-size:13px">Cargando materiales…</div>
+      </div>
+
+      <!-- Sub-sección 2: Reglas por familia -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-top:1px solid var(--border);padding-top:20px">
+        <div class="emp-section-title" style="margin:0">🔗 Reglas por Familia de Artículos</div>
+        <button class="btn-primary" onclick="empOpenReglaEditor(null)" style="font-size:12px;padding:7px 14px">+ Nueva Regla</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin:-8px 0 12px">El sistema aplica la regla más específica disponible en la jerarquía de categorías Odoo.</p>
+      <div class="emp-regla-list" id="emp-regla-list">
+        <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">Cargando reglas…</div>
+      </div>
+    </div>
+    <!-- /tab-empaque -->
+
   </div>
+</div>
+
+<!-- ── Modales de Empaque ─────────────────────────────────────────────────── -->
+
+<!-- Modal: editor de material -->
+<div class="emp-mat-editor-overlay" id="modal-emp-mat">
+  <div class="emp-mat-editor-box">
+    <div class="emp-mat-editor-hdr">
+      <h3 id="emp-mat-editor-title">Nuevo Material</h3>
+      <button onclick="empCloseMatEditor()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">×</button>
+    </div>
+    <div class="emp-mat-editor-body">
+      <input type="hidden" id="emp-mat-id">
+      <div class="form-group">
+        <label class="form-label">Nombre del material *</label>
+        <input type="text" id="emp-mat-nombre" class="form-input" placeholder="Ej: Cinta de embalaje">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción / Para qué sirve *</label>
+        <textarea id="emp-mat-desc" class="form-input" rows="3" placeholder="Ej: Se usa para sellar las cajas y asegurar el contenido durante el transporte" style="resize:vertical"></textarea>
+      </div>
+      <!-- Preview de foto actual -->
+      <div id="emp-mat-foto-preview-wrap" style="display:none;margin-bottom:4px">
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 5px">Foto actual:</p>
+        <img id="emp-mat-foto-preview" src="" alt="preview" style="height:90px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📷 Foto del material</label>
+        <input type="file" id="emp-mat-foto-file" accept="image/*" onchange="empPreviewFoto(this)" style="font-size:12px">
+        <p style="font-size:10px;color:var(--text-muted);margin:4px 0 0">Desde PC o cámara del teléfono. JPG/PNG/WebP recomendado.</p>
+      </div>
+    </div>
+    <div class="emp-mat-editor-footer">
+      <button onclick="empCloseMatEditor()" style="padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer">Cancelar</button>
+      <button onclick="empSaveMat()" class="btn-primary" style="font-size:12px;padding:7px 18px">Guardar Material</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: editor de regla (categoría → materiales) -->
+<div class="emp-reg-editor-overlay" id="modal-emp-reg">
+  <div class="emp-reg-editor-box">
+    <div class="emp-reg-editor-hdr">
+      <h3 id="emp-reg-editor-title">Nueva Regla de Empaque</h3>
+      <button onclick="empCloseReglaEditor()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">×</button>
+    </div>
+    <div class="emp-reg-editor-body">
+      <input type="hidden" id="emp-reg-id">
+      <div class="form-group">
+        <label class="form-label">Categoría Odoo *</label>
+        <input type="text" id="emp-reg-categ-search" class="form-input" placeholder="Escribe para buscar: Sala, Alfombra, Dormitorio…" oninput="empFilterCateg(this.value)" autocomplete="off">
+        <div id="emp-reg-categ-dropdown" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;width:calc(100% - 40px);box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
+        <input type="hidden" id="emp-reg-categ-id">
+        <div id="emp-reg-categ-selected" style="display:none;margin-top:6px;padding:6px 10px;background:#f0f9ff;border-radius:6px;font-size:11px;color:#0369a1;font-weight:600"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Materiales asignados (en orden de aplicación) *</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="emp-reg-mat-picker" class="form-select" style="flex:1;font-size:12px">
+            <option value="">— Selecciona un material —</option>
+          </select>
+          <button onclick="empRegAddMat()" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#f1f5f9;font-size:12px;cursor:pointer;font-weight:700">+ Agregar</button>
+        </div>
+        <div class="emp-mat-sortable" id="emp-reg-sortable"></div>
+        <p style="font-size:10px;color:var(--text-muted);margin:5px 0 0">Usa ↑ ↓ para ordenar. El orden indica la secuencia de aplicación.</p>
+      </div>
+    </div>
+    <div class="emp-reg-editor-footer">
+      <button onclick="empCloseReglaEditor()" style="padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer">Cancelar</button>
+      <button onclick="empSaveRegla()" class="btn-primary" style="font-size:12px;padding:7px 18px">Guardar Regla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox de foto ampliada -->
+<div class="emp-lightbox" id="emp-lightbox" onclick="empCloseLightbox()">
+  <span class="emp-lightbox-close">×</span>
+  <img id="emp-lightbox-img" src="" alt="Foto material">
 </div>
 
 
@@ -3154,6 +3344,7 @@ function guardTab(tab) {
   if (tab === 'users'      && !can('users_tab')) { switchTab('tasks'); return false; }
   if (tab === 'politicas'  && !can('dashboard')) { switchTab('tasks'); return false; }
   if (tab === 'impacto'    && !can('dashboard')) { switchTab('tasks'); return false; }
+  if (tab === 'empaque'    && !can('dashboard')) { switchTab('tasks'); return false; }
   return true;
 }
 
@@ -3845,16 +4036,14 @@ function enterApp() {
     vehTab.onclick = () => switchTab('vehiculos');
     nav.appendChild(vehTab);
   }
-  // Políticas + Impacto tabs — solo admin
+  // Políticas + Impacto + Empaque tabs — solo admin
   if (_user.role === 'admin') {
-    ['politicas','impacto'].forEach(function(tabKey) {
-      if (!nav.querySelector('[data-tab="'+tabKey+'"]')) {
+    [{key:'politicas',icon:'📋',label:'Políticas'},{key:'impacto',icon:'⚡',label:'Impacto'},{key:'empaque',icon:'📦',label:'Empaque'}].forEach(function(t) {
+      if (!nav.querySelector('[data-tab="'+t.key+'"]')) {
         const btn = document.createElement('button');
-        btn.className = 'nav-tab'; btn.dataset.tab = tabKey;
-        btn.innerHTML = tabKey === 'politicas'
-          ? '<span class="nav-tab-icon">📋</span> Políticas'
-          : '<span class="nav-tab-icon">⚡</span> Impacto';
-        btn.onclick = () => switchTab(tabKey);
+        btn.className = 'nav-tab'; btn.dataset.tab = t.key;
+        btn.innerHTML = '<span class="nav-tab-icon">'+t.icon+'</span> '+t.label;
+        btn.onclick = () => switchTab(t.key);
         nav.appendChild(btn);
       }
     });
@@ -3944,11 +4133,14 @@ function switchTab(tab) {
   document.getElementById('tab-vehiculos').style.display  = tab==='vehiculos'?'':'none';
   document.getElementById('tab-politicas').style.display  = tab==='politicas'?'':'none';
   document.getElementById('tab-impacto').style.display    = tab==='impacto'?'':'none';
+  var empTab = document.getElementById('tab-empaque');
+  if (empTab) empTab.style.display = tab==='empaque' ? '' : 'none';
   if (tab==='dashboard')  loadDashboard();
   if (tab==='users')      loadUsers();
   if (tab==='politicas')  { polLoadAll(); }
   else                    { polStopRefresh(); }
   if (tab==='impacto')    { impInit(); }
+  if (tab==='empaque')    { empInit(); }
   closeProfileMenu();
 }
 
@@ -4269,6 +4461,7 @@ function renderDrawer(t) {
         </div>
         ${evs.length?`<div class="ev-grid">${evs.map(e=>`<div class="ev-wrap"><img class="ev-img" src="${mediaUrl(e.url)}" onerror="this.src='data:image/svg+xml,<svg/>'"><button class="ev-del" onclick="deleteItemEvidence('${t.id}','${it.item_id}','${e.id}')">✕</button></div>`).join('')}</div>`:''}
         ${canUpload?`<button class="btn-add-photo" onclick="uploadItemEvidence('${t.id}','${it.item_id}')">📷 Agregar foto</button>`:''}
+        ${it.odoo_categ_id?`<div class="task-emp-section" id="emp-item-${it.item_id}"><div style="color:var(--text-muted);font-size:11px;padding:4px">Cargando materiales de empaque…</div></div>`:''}
       </div>`;
     }).join('')}`;
   }
@@ -4331,6 +4524,10 @@ function renderDrawer(t) {
   `;
   // Cargar mensajes de forma asíncrona para no bloquear render
   loadChatMessages(t.id);
+  // Enriquecer artículos con materiales de empaque
+  window._currentTaskDetail = t;
+  window._refreshCurrentTask = function() { openDrawer(t.id); };
+  empEnrichTaskItems(t, '#drawer-body');
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -10248,6 +10445,445 @@ function impRenderGrid(results) {
 
   var grid = document.getElementById('imp-emp-grid');
   if (grid) grid.innerHTML = cards || '<div class="imp-empty">Sin empleados activos</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ── MÓDULO EMPAQUE ───────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+
+var _empMateriales = [];      // catálogo completo
+var _empReglas = [];          // reglas por categoría
+var _empCategorias = [];      // árbol Odoo (cacheado)
+var _empMatEditorId = null;   // null = nuevo
+var _empRegEditorId = null;   // null = nuevo
+var _empRegSortList = [];     // [{materialId, orden}] en el editor de regla
+
+// ── Carga inicial ─────────────────────────────────────────────────────────
+function empInit() {
+  Promise.all([empLoadMateriales(), empLoadReglas(), empLoadCategorias()]);
+}
+
+function empLoadMateriales() {
+  return apiFetch('/api/empaque/materiales').then(function(r) {
+    if (r.ok) { _empMateriales = r.materiales || []; empRenderMatGrid(); }
+  });
+}
+function empLoadReglas() {
+  return apiFetch('/api/empaque/reglas').then(function(r) {
+    if (r.ok) { _empReglas = r.reglas || []; empRenderReglaList(); }
+  });
+}
+function empLoadCategorias() {
+  if (_empCategorias.length) return Promise.resolve();
+  return apiFetch('/api/empaque/categorias').then(function(r) {
+    if (r.ok) _empCategorias = r.categorias || [];
+  });
+}
+
+// ── Render: catálogo de materiales ───────────────────────────────────────
+function empRenderMatGrid() {
+  var grid = document.getElementById('emp-mat-grid');
+  if (!grid) return;
+  if (!_empMateriales.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);font-size:13px">No hay materiales. Agrega el primero con <strong>+ Nuevo Material</strong>.</div>';
+    return;
+  }
+  grid.innerHTML = _empMateriales.map(function(m) {
+    var fotoHtml = m.foto_url
+      ? '<img class="emp-mat-foto" src="' + m.foto_url + '" alt="' + esc(m.nombre) + '" onclick="empOpenLightbox(\'' + esc(m.foto_url) + '\')">'
+      : '<div class="emp-mat-foto-empty">📦</div>';
+    return '<div class="emp-mat-card">' +
+      fotoHtml +
+      '<div class="emp-mat-body">' +
+        '<div class="emp-mat-name">' + esc(m.nombre) + '</div>' +
+        '<div class="emp-mat-desc">' + esc(m.descripcion || '—') + '</div>' +
+      '</div>' +
+      '<div class="emp-mat-actions">' +
+        '<button class="emp-mat-btn edit" onclick="empOpenMatEditor(\'' + m.id + '\')">✏️ Editar</button>' +
+        '<button class="emp-mat-btn del" onclick="empDeleteMat(\'' + m.id + '\', this)">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Render: lista de reglas ───────────────────────────────────────────────
+function empRenderReglaList() {
+  var list = document.getElementById('emp-regla-list');
+  if (!list) return;
+  if (!_empReglas.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">No hay reglas. Agrega la primera con <strong>+ Nueva Regla</strong>.</div>';
+    return;
+  }
+  var matMap = {}; _empMateriales.forEach(function(m) { matMap[m.id] = m; });
+  list.innerHTML = _empReglas.map(function(r) {
+    var chips = (r.materiales || [])
+      .sort(function(a,b) { return (a.orden||0)-(b.orden||0); })
+      .map(function(m, i) {
+        var mat = matMap[m.materialId];
+        if (!mat) return '';
+        return '<span class="emp-regla-mat-chip"><span class="ord">' + (i+1) + '</span>' + esc(mat.nombre) + '</span>';
+      }).join('');
+    var pathParts = (r.categ_nombre || '').split(' / ');
+    var shortName = pathParts[pathParts.length - 1];
+    var pathStr = pathParts.length > 1 ? pathParts.slice(0,-1).join(' / ') : '';
+    return '<div class="emp-regla-card">' +
+      '<div class="emp-regla-categ">' +
+        '<div class="emp-regla-categ-name">📂 ' + esc(shortName) + '</div>' +
+        (pathStr ? '<div class="emp-regla-categ-path">' + esc(pathStr) + '</div>' : '') +
+        '<div class="emp-regla-mats">' + (chips || '<span style="font-size:10px;color:var(--text-muted)">Sin materiales asignados</span>') + '</div>' +
+      '</div>' +
+      '<div class="emp-regla-actions">' +
+        '<button class="emp-regla-btn edit" onclick="empOpenReglaEditor(\'' + r.id + '\')">✏️</button>' +
+        '<button class="emp-regla-btn del" onclick="empDeleteRegla(\'' + r.id + '\', this)">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Editor de material ────────────────────────────────────────────────────
+function empOpenMatEditor(matId) {
+  _empMatEditorId = matId;
+  var overlay = document.getElementById('modal-emp-mat');
+  document.getElementById('emp-mat-editor-title').textContent = matId ? 'Editar Material' : 'Nuevo Material';
+  document.getElementById('emp-mat-id').value = matId || '';
+  document.getElementById('emp-mat-nombre').value = '';
+  document.getElementById('emp-mat-desc').value = '';
+  document.getElementById('emp-mat-foto-file').value = '';
+  var prevWrap = document.getElementById('emp-mat-foto-preview-wrap');
+  var prevImg  = document.getElementById('emp-mat-foto-preview');
+  prevWrap.style.display = 'none';
+  prevImg.src = '';
+  if (matId) {
+    var m = _empMateriales.find(function(x) { return x.id === matId; });
+    if (m) {
+      document.getElementById('emp-mat-nombre').value = m.nombre || '';
+      document.getElementById('emp-mat-desc').value   = m.descripcion || '';
+      if (m.foto_url) {
+        prevImg.src = m.foto_url;
+        prevWrap.style.display = 'block';
+      }
+    }
+  }
+  overlay.classList.add('open');
+}
+function empCloseMatEditor() {
+  document.getElementById('modal-emp-mat').classList.remove('open');
+  _empMatEditorId = null;
+}
+
+function empPreviewFoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var prevImg  = document.getElementById('emp-mat-foto-preview');
+    var prevWrap = document.getElementById('emp-mat-foto-preview-wrap');
+    prevImg.src = e.target.result;
+    prevWrap.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function empSaveMat() {
+  var nombre = (document.getElementById('emp-mat-nombre').value || '').trim();
+  var desc   = (document.getElementById('emp-mat-desc').value   || '').trim();
+  if (!nombre) { alert('El nombre es requerido'); return; }
+
+  var matId  = document.getElementById('emp-mat-id').value;
+  var fileInput = document.getElementById('emp-mat-foto-file');
+  var file = fileInput.files[0];
+
+  function doSave(foto_url) {
+    var url    = '/api/empaque/materiales' + (matId ? '/' + matId : '');
+    var method = matId ? 'PATCH' : 'POST';
+    var body   = {nombre: nombre, descripcion: desc};
+    if (foto_url !== undefined) body.foto_url = foto_url;
+    apiFetch(url, {method: method, body: JSON.stringify(body)}).then(function(r) {
+      if (!r.ok) { showToast('Error: ' + (r.error||'desconocido'), 'error'); return; }
+      empCloseMatEditor();
+      empLoadMateriales();
+      showToast(matId ? 'Material actualizado' : 'Material creado', 'success');
+    });
+  }
+
+  if (file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      var base64  = dataUrl.split(',')[1];
+      var ext     = file.name.split('.').pop() || 'jpg';
+      var targetId = matId || ('mat_tmp_' + Date.now());
+      // Si es nuevo, primero creamos el material y luego subimos la foto
+      if (!matId) {
+        apiFetch('/api/empaque/materiales', {method:'POST', body:JSON.stringify({nombre:nombre, descripcion:desc})}).then(function(r) {
+          if (!r.ok) { showToast('Error: ' + (r.error||''), 'error'); return; }
+          var newId = r.material.id;
+          apiFetch('/api/empaque/materiales/' + newId + '/foto', {method:'POST', body:JSON.stringify({data:base64, ext:ext})}).then(function(r2) {
+            empCloseMatEditor();
+            empLoadMateriales();
+            showToast('Material creado', 'success');
+          });
+        });
+      } else {
+        apiFetch('/api/empaque/materiales/' + matId + '/foto', {method:'POST', body:JSON.stringify({data:base64, ext:ext})}).then(function(r2) {
+          doSave(r2.url);
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  } else {
+    doSave(undefined);
+  }
+}
+
+function empDeleteMat(matId, btn) {
+  if (!confirm('¿Eliminar este material? Se quitará de todas las reglas.')) return;
+  var orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+  apiFetch('/api/empaque/materiales/' + matId, {method:'DELETE'}).then(function(r) {
+    if (!r.ok) { btn.textContent = orig; btn.disabled = false; showToast('Error al eliminar', 'error'); return; }
+    empLoadMateriales();
+    empLoadReglas();
+    showToast('Material eliminado', 'success');
+  });
+}
+
+// ── Editor de regla ───────────────────────────────────────────────────────
+function empOpenReglaEditor(regId) {
+  _empRegEditorId = regId;
+  _empRegSortList = [];
+  document.getElementById('emp-reg-editor-title').textContent = regId ? 'Editar Regla' : 'Nueva Regla de Empaque';
+  document.getElementById('emp-reg-id').value = regId || '';
+  document.getElementById('emp-reg-categ-search').value = '';
+  document.getElementById('emp-reg-categ-id').value = '';
+  document.getElementById('emp-reg-categ-selected').style.display = 'none';
+  document.getElementById('emp-reg-categ-selected').textContent = '';
+  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
+  // Poblar picker de materiales
+  var picker = document.getElementById('emp-reg-mat-picker');
+  picker.innerHTML = '<option value="">— Selecciona un material —</option>' +
+    _empMateriales.map(function(m) { return '<option value="' + m.id + '">' + esc(m.nombre) + '</option>'; }).join('');
+
+  if (regId) {
+    var reg = _empReglas.find(function(r) { return r.id === regId; });
+    if (reg) {
+      document.getElementById('emp-reg-categ-search').value = reg.categ_nombre;
+      document.getElementById('emp-reg-categ-id').value = reg.categ_id;
+      var sel = document.getElementById('emp-reg-categ-selected');
+      sel.textContent = '✓ ' + reg.categ_nombre;
+      sel.style.display = 'block';
+      _empRegSortList = (reg.materiales || []).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);});
+    }
+  }
+  empRenderRegSortable();
+  document.getElementById('modal-emp-reg').classList.add('open');
+  // Ensure categories are loaded
+  empLoadCategorias();
+}
+function empCloseReglaEditor() {
+  document.getElementById('modal-emp-reg').classList.remove('open');
+  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
+  _empRegEditorId = null;
+}
+
+function empFilterCateg(q) {
+  var dd = document.getElementById('emp-reg-categ-dropdown');
+  if (!q || q.length < 2) { dd.style.display = 'none'; return; }
+  var lower = q.toLowerCase();
+  var matches = _empCategorias.filter(function(c) {
+    return c.complete_name && c.complete_name.toLowerCase().includes(lower);
+  }).slice(0, 15);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.style.display = 'block';
+  dd.innerHTML = matches.map(function(c) {
+    var parts = (c.complete_name||'').split(' / ');
+    var leaf  = parts[parts.length-1];
+    var path  = parts.slice(0,-1).join(' / ');
+    return '<div onclick="empSelectCateg(' + c.id + ',\'' + esc(c.complete_name) + '\')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);hover:background:#f1f5f9">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--text-primary)">' + esc(leaf) + '</div>' +
+      (path ? '<div style="font-size:10px;color:var(--text-muted)">' + esc(path) + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+function empSelectCateg(id, nombre) {
+  document.getElementById('emp-reg-categ-id').value = id;
+  document.getElementById('emp-reg-categ-search').value = nombre;
+  var sel = document.getElementById('emp-reg-categ-selected');
+  sel.textContent = '✓ ' + nombre;
+  sel.style.display = 'block';
+  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
+}
+
+function empRegAddMat() {
+  var picker = document.getElementById('emp-reg-mat-picker');
+  var matId = picker.value;
+  if (!matId) return;
+  if (_empRegSortList.some(function(m) { return m.materialId === matId; })) {
+    showToast('Ese material ya está en la lista', 'warning'); return;
+  }
+  _empRegSortList.push({materialId: matId, orden: _empRegSortList.length + 1});
+  picker.value = '';
+  empRenderRegSortable();
+}
+
+function empRenderRegSortable() {
+  var container = document.getElementById('emp-reg-sortable');
+  if (!container) return;
+  var matMap = {}; _empMateriales.forEach(function(m) { matMap[m.id] = m; });
+  if (!_empRegSortList.length) {
+    container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;border:1px dashed var(--border);border-radius:8px">Agrega materiales usando el selector de arriba</div>';
+    return;
+  }
+  container.innerHTML = _empRegSortList.map(function(item, i) {
+    var mat = matMap[item.materialId] || {};
+    var thumbHtml = mat.foto_url
+      ? '<img class="emp-mat-sortable-thumb" src="' + mat.foto_url + '" alt="">'
+      : '<div class="emp-mat-sortable-thumb" style="background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:14px">📦</div>';
+    return '<div class="emp-mat-sortable-row" data-idx="' + i + '">' +
+      '<span class="emp-mat-sortable-ord">' + (i+1) + '</span>' +
+      thumbHtml +
+      '<span class="emp-mat-sortable-name">' + esc(mat.nombre || item.materialId) + '</span>' +
+      '<button class="emp-mat-sortable-up" onclick="empRegMoveUp(' + i + ')" ' + (i===0?'disabled':'' ) + '>↑</button>' +
+      '<button class="emp-mat-sortable-dn" onclick="empRegMoveDn(' + i + ')" ' + (i===_empRegSortList.length-1?'disabled':'') + '>↓</button>' +
+      '<button class="emp-mat-sortable-rm" onclick="empRegRemove(' + i + ')">×</button>' +
+    '</div>';
+  }).join('');
+}
+function empRegMoveUp(i) {
+  if (i <= 0) return;
+  var tmp = _empRegSortList[i-1]; _empRegSortList[i-1] = _empRegSortList[i]; _empRegSortList[i] = tmp;
+  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
+  empRenderRegSortable();
+}
+function empRegMoveDn(i) {
+  if (i >= _empRegSortList.length-1) return;
+  var tmp = _empRegSortList[i+1]; _empRegSortList[i+1] = _empRegSortList[i]; _empRegSortList[i] = tmp;
+  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
+  empRenderRegSortable();
+}
+function empRegRemove(i) {
+  _empRegSortList.splice(i, 1);
+  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
+  empRenderRegSortable();
+}
+
+function empSaveRegla() {
+  var categId   = document.getElementById('emp-reg-categ-id').value;
+  var categNom  = document.getElementById('emp-reg-categ-search').value.trim();
+  if (!categId) { alert('Selecciona una categoría'); return; }
+  if (!_empRegSortList.length) { alert('Agrega al menos un material'); return; }
+  var body = {categ_id: Number(categId), categ_nombre: categNom, materiales: _empRegSortList};
+  apiFetch('/api/empaque/reglas', {method:'POST', body: JSON.stringify(body)}).then(function(r) {
+    if (!r.ok) { showToast('Error: ' + (r.error||''), 'error'); return; }
+    empCloseReglaEditor();
+    empLoadReglas();
+    showToast('Regla guardada', 'success');
+  });
+}
+
+function empDeleteRegla(regId, btn) {
+  if (!confirm('¿Eliminar esta regla de empaque?')) return;
+  var orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+  apiFetch('/api/empaque/reglas/' + regId, {method:'DELETE'}).then(function(r) {
+    if (!r.ok) { btn.textContent = orig; btn.disabled = false; showToast('Error al eliminar', 'error'); return; }
+    empLoadReglas();
+    showToast('Regla eliminada', 'success');
+  });
+}
+
+// ── Lightbox ─────────────────────────────────────────────────────────────
+function empOpenLightbox(url) {
+  document.getElementById('emp-lightbox-img').src = url;
+  document.getElementById('emp-lightbox').classList.add('open');
+}
+function empCloseLightbox() {
+  document.getElementById('emp-lightbox').classList.remove('open');
+}
+
+// ── EMPAQUE EN VISTA DE TAREA (por artículo) ─────────────────────────────
+
+// Enriquece los items de una tarea con datos de empaque y renderiza
+function empEnrichTaskItems(task, containerSelector) {
+  var items = (task.items || []).filter(function(it) { return it.selected && it.odoo_categ_id; });
+  if (!items.length) return;
+  var categIds = [...new Set(items.map(function(it) { return it.odoo_categ_id; }))].join(',');
+  apiFetch('/api/empaque/resolve?categ_ids=' + categIds).then(function(r) {
+    if (!r.ok) return;
+    var resolvedMap = r.result || {};
+    items.forEach(function(item) {
+      var empData = resolvedMap[item.odoo_categ_id] || null;
+      if (!empData || !empData.materiales.length) return;
+      var sectionId = 'emp-item-' + item.item_id;
+      var existing  = document.getElementById(sectionId);
+      if (!existing) return;
+      empRenderItemSection(existing, item, empData.materiales);
+    });
+  });
+}
+
+function empRenderItemSection(container, item, materiales) {
+  var conf = item.empaque_confirmacion || {};
+  var isConfirmed = conf.status === 'confirmed';
+  var isPartial   = conf.status === 'partial';
+  var matsHtml = materiales.map(function(mat, i) {
+    var thumbHtml = mat.foto_url
+      ? '<img class="task-emp-mat-thumb" src="' + mat.foto_url + '" alt="" onclick="empOpenLightbox(\'' + esc(mat.foto_url) + '\')" title="Ver foto">'
+      : '<div class="task-emp-mat-thumb-empty">📦</div>';
+    return '<div class="task-emp-mat-row">' +
+      '<div class="task-emp-mat-num">' + (i+1) + '</div>' +
+      thumbHtml +
+      '<div class="task-emp-mat-info">' +
+        '<div class="task-emp-mat-name">' + esc(mat.nombre) + '</div>' +
+        (mat.descripcion ? '<div class="task-emp-mat-desc">' + esc(mat.descripcion) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  var statusHtml = '';
+  if (isConfirmed) {
+    statusHtml = '<div class="task-emp-confirmed">✅ Empaque confirmado' + (conf.by ? ' por ' + esc(conf.by) : '') + '</div>';
+  } else if (isPartial) {
+    statusHtml = '<div class="task-emp-partial">⚠️ Parcial: ' + esc(conf.justificacion || '') + '</div>';
+  } else {
+    statusHtml = '<div class="task-emp-confirm-row">' +
+      '<button class="task-emp-btn-ok" onclick="empConfirmItem(\'' + item.item_id + '\',\'confirmed\',this)">✅ Usé todos los materiales</button>' +
+      '<button class="task-emp-btn-partial" onclick="empShowPartialForm(\'' + item.item_id + '\')">⚠️ Faltó material</button>' +
+    '</div>' +
+    '<div class="task-emp-just-wrap" id="just-wrap-' + item.item_id + '">' +
+      '<textarea class="task-emp-just-area" id="just-txt-' + item.item_id + '" placeholder="Explica cuál material faltó y el motivo…"></textarea>' +
+      '<button class="task-emp-btn-partial" style="margin-top:6px;font-size:11px" onclick="empConfirmItem(\'' + item.item_id + '\',\'partial\',this)">Enviar justificación</button>' +
+    '</div>';
+  }
+
+  container.innerHTML =
+    '<div class="task-emp-title">📦 Materiales de empaque requeridos</div>' +
+    '<div class="task-emp-mat-list">' + matsHtml + '</div>' +
+    statusHtml;
+}
+
+function empShowPartialForm(itemId) {
+  var wrap = document.getElementById('just-wrap-' + itemId);
+  if (wrap) { wrap.classList.toggle('open'); }
+}
+
+function empConfirmItem(itemId, status, btn) {
+  var taskId = (window._currentTaskDetail || {}).id;
+  if (!taskId) return;
+  var justificacion = '';
+  if (status === 'partial') {
+    var txt = document.getElementById('just-txt-' + itemId);
+    justificacion = txt ? txt.value.trim() : '';
+    if (!justificacion) { alert('Escribe la justificación antes de enviar'); return; }
+  }
+  var orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+  apiFetch('/api/wwp/tasks/' + taskId + '/items/' + itemId + '/empaque', {
+    method: 'PATCH',
+    body: JSON.stringify({status: status, justificacion: justificacion})
+  }).then(function(r) {
+    if (!r.ok) { btn.textContent = orig; btn.disabled = false; showToast(r.error || 'Error', 'error'); return; }
+    // Recargar la tarea para reflejar el cambio
+    if (window._refreshCurrentTask) window._refreshCurrentTask();
+    showToast(status === 'confirmed' ? 'Empaque confirmado ✅' : 'Justificación registrada', 'success');
+  });
 }
 
 // ── AUTOCOMPLETE DEL BUSCADOR ────────────────────────────────────────────────

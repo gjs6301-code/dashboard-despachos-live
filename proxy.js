@@ -45,7 +45,50 @@ const WWP_ROLES_FILE  = path.join(__dirname, 'wwp-roles.json'); // { "oe_95": "a
 const WWP_FOTOS_DIR   = path.join(__dirname, 'wwp-fotos');
 const WWP_LUNCH_FILE  = path.join(__dirname, 'wwp-lunch-breaks.json');
 const VEHICULOS_FILE  = path.join(__dirname, 'vehiculos-inspecciones.json');
-const POLITICAS_FILE  = path.join(__dirname, 'politicas.json');
+const POLITICAS_FILE      = path.join(__dirname, 'politicas.json');
+const EMP_MATERIALES_FILE = path.join(__dirname, 'empaque-materiales.json');
+const EMP_REGLAS_FILE     = path.join(__dirname, 'empaque-reglas.json');
+const EMP_FOTOS_DIR       = path.join(__dirname, 'empaque-fotos');
+
+function loadEmpaqueMateria() { try { return JSON.parse(fs.readFileSync(EMP_MATERIALES_FILE,'utf-8')); } catch { return []; } }
+function saveEmpaqueMateria(l) { fs.writeFileSync(EMP_MATERIALES_FILE, JSON.stringify(l,null,2),'utf-8'); }
+function loadEmpaqueReglas() { try { return JSON.parse(fs.readFileSync(EMP_REGLAS_FILE,'utf-8')); } catch { return []; } }
+function saveEmpaqueReglas(l) { fs.writeFileSync(EMP_REGLAS_FILE, JSON.stringify(l,null,2),'utf-8'); }
+
+// ── Caché de categorías Odoo (5 min TTL) ─────────────────────────────────────
+let _categCache = null;
+let _categCacheAt = 0;
+async function getCategCache() {
+  const now = Date.now();
+  if (_categCache && now - _categCacheAt < 5 * 60 * 1000) return _categCache;
+  const cats = await odooCall('product.category','search_read',[[]],
+    {fields:['id','name','complete_name','parent_id'],limit:500});
+  _categCache = cats;
+  _categCacheAt = now;
+  return cats;
+}
+// Dado un categ_id, devuelve la cadena de ids ancestros [categ_id, parent, grandparent, ...]
+function categAncestors(categId, cats) {
+  const map = {}; cats.forEach(c => { map[c.id] = c; });
+  const chain = [];
+  let cur = map[categId];
+  while (cur) {
+    chain.push(cur.id);
+    const pid = cur.parent_id ? cur.parent_id[0] : null;
+    cur = pid ? map[pid] : null;
+  }
+  return chain;
+}
+// Resuelve la regla de empaque más específica para un categ_id dado
+function resolveEmpaqueRegla(categId, cats, reglas) {
+  if (!categId) return null;
+  const ancestors = categAncestors(categId, cats);
+  for (const cid of ancestors) {
+    const regla = reglas.find(r => r.categ_id === cid);
+    if (regla) return regla;
+  }
+  return null;
+}
 
 function loadPoliticas() {
   try { return JSON.parse(fs.readFileSync(POLITICAS_FILE,'utf-8')); } catch {
@@ -59,7 +102,8 @@ function loadPoliticas() {
   }
 }
 function savePoliticas(list) { fs.writeFileSync(POLITICAS_FILE, JSON.stringify(list,null,2),'utf-8'); }
-if (!fs.existsSync(WWP_FOTOS_DIR)) fs.mkdirSync(WWP_FOTOS_DIR, { recursive: true });
+if (!fs.existsSync(WWP_FOTOS_DIR))  fs.mkdirSync(WWP_FOTOS_DIR,  { recursive: true });
+if (!fs.existsSync(EMP_FOTOS_DIR))  fs.mkdirSync(EMP_FOTOS_DIR,  { recursive: true });
 
 function loadLunchBreaks() { try { return JSON.parse(fs.readFileSync(WWP_LUNCH_FILE,'utf-8')); } catch { return []; } }
 function saveLunchBreaks(b) { fs.writeFileSync(WWP_LUNCH_FILE, JSON.stringify(b, null, 2), 'utf-8'); }
@@ -2226,6 +2270,21 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ok:false,error:'Debes subir al menos una foto de evidencia para completar la tarea'}));
             return;
           }
+          // Validar confirmación de empaque: artículos con regla deben tener confirmación
+          const reglas = loadEmpaqueReglas();
+          const itemsPendingEmpaque = selItems.filter(it => {
+            if (!it.odoo_categ_id) return false; // sin categoría registrada, no aplica
+            // buscar regla en la cadena de ancestros (resolución simple por categ_id directo, la resolución completa la hace /resolve)
+            const hasRegla = reglas.some(r => r.categ_id === it.odoo_categ_id);
+            if (!hasRegla) return false;
+            const conf = it.empaque_confirmacion;
+            return !conf || conf.status === 'pending' || !conf.status;
+          });
+          if (itemsPendingEmpaque.length > 0) {
+            res.writeHead(422,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({ok:false,error:'Falta confirmar empaque para: '+itemsPendingEmpaque.map(it=>it.product_name).join(', ')}));
+            return;
+          }
         }
         tasks[idx].status=d.status;
         tasks[idx].statusHistory.push({ status:d.status, date:now, by:d.by||'', note:d.note||'' });
@@ -2505,6 +2564,206 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── EMPAQUE ───────────────────────────────────────────────────────────────
+
+  // GET /api/empaque/categorias — árbol de categorías Odoo (con caché 5 min)
+  if (reqPath === '/api/empaque/categorias' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const cats = await getCategCache();
+      // Solo categorías útiles (bajo "Muebles" o cualquier categoría con productos activos)
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, categorias: cats}));
+    } catch(e) {
+      res.writeHead(502,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:false,error:e.message}));
+    }
+    return;
+  }
+
+  // GET /api/empaque/materiales
+  if (reqPath === '/api/empaque/materiales' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true, materiales: loadEmpaqueMateria()}));
+    return;
+  }
+
+  // POST /api/empaque/materiales — crear material [admin]
+  if (reqPath === '/api/empaque/materiales' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    try {
+      const d = await readBody(req);
+      if (!d.nombre) throw new Error('nombre es requerido');
+      const list = loadEmpaqueMateria();
+      const mat = {
+        id: 'mat_' + Date.now(),
+        nombre: String(d.nombre).trim(),
+        descripcion: String(d.descripcion||'').trim(),
+        foto_url: d.foto_url || null,
+        creadoEn: new Date().toISOString()
+      };
+      list.push(mat);
+      saveEmpaqueMateria(list);
+      res.writeHead(201,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, material: mat}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // PATCH /api/empaque/materiales/:id — actualizar material [admin]
+  if (reqPath.match(/^\/api\/empaque\/materiales\/mat_\d+$/) && req.method === 'PATCH') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    try {
+      const matId = reqPath.split('/').pop();
+      const d = await readBody(req);
+      const list = loadEmpaqueMateria();
+      const idx = list.findIndex(m => m.id === matId);
+      if (idx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'No encontrado'})); return; }
+      if (d.nombre !== undefined)      list[idx].nombre      = String(d.nombre).trim();
+      if (d.descripcion !== undefined) list[idx].descripcion = String(d.descripcion).trim();
+      if (d.foto_url !== undefined)    list[idx].foto_url    = d.foto_url;
+      saveEmpaqueMateria(list);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, material: list[idx]}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // DELETE /api/empaque/materiales/:id — eliminar material [admin]
+  if (reqPath.match(/^\/api\/empaque\/materiales\/mat_\d+$/) && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    const matId = reqPath.split('/').pop();
+    const list = loadEmpaqueMateria();
+    const mat = list.find(m => m.id === matId);
+    if (!mat) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'No encontrado'})); return; }
+    // Limpiar foto si existe
+    if (mat.foto_url) {
+      const fname = path.basename(mat.foto_url);
+      const fpath = path.join(EMP_FOTOS_DIR, fname);
+      try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath); } catch(e) {}
+    }
+    // Quitar de reglas también
+    const reglas = loadEmpaqueReglas();
+    reglas.forEach(r => { r.materiales = (r.materiales||[]).filter(m => m.materialId !== matId); });
+    saveEmpaqueReglas(reglas);
+    saveEmpaqueMateria(list.filter(m => m.id !== matId));
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
+    return;
+  }
+
+  // POST /api/empaque/materiales/:id/foto — subir foto de material (base64) [admin]
+  if (reqPath.match(/^\/api\/empaque\/materiales\/mat_\d+\/foto$/) && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    try {
+      const matId = reqPath.split('/')[4];
+      const d = await readBody(req);
+      if (!d.data) throw new Error('data (base64) requerido');
+      const ext = (d.ext||'jpg').replace(/[^a-zA-Z0-9]/g,'').toLowerCase() || 'jpg';
+      const fname = `${matId}_${Date.now()}.${ext}`;
+      const fpath = path.join(EMP_FOTOS_DIR, fname);
+      fs.writeFileSync(fpath, Buffer.from(d.data,'base64'));
+      const url = `/empaque-fotos/${fname}`;
+      // Actualizar el material
+      const list = loadEmpaqueMateria();
+      const idx = list.findIndex(m => m.id === matId);
+      if (idx >= 0) {
+        // Borrar foto anterior si existe
+        if (list[idx].foto_url) { try { fs.unlinkSync(path.join(EMP_FOTOS_DIR, path.basename(list[idx].foto_url))); } catch(e) {} }
+        list[idx].foto_url = url;
+        saveEmpaqueMateria(list);
+      }
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, url}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/empaque/reglas
+  if (reqPath === '/api/empaque/reglas' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true, reglas: loadEmpaqueReglas()}));
+    return;
+  }
+
+  // POST /api/empaque/reglas — crear o reemplazar regla para una categoría [admin]
+  if (reqPath === '/api/empaque/reglas' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    try {
+      const d = await readBody(req);
+      if (!d.categ_id) throw new Error('categ_id requerido');
+      const reglas = loadEmpaqueReglas();
+      const existing = reglas.findIndex(r => r.categ_id === Number(d.categ_id));
+      const regla = {
+        id: existing >= 0 ? reglas[existing].id : ('reg_' + Date.now()),
+        categ_id: Number(d.categ_id),
+        categ_nombre: String(d.categ_nombre||''),
+        materiales: (d.materiales||[]).map((m,i) => ({materialId: m.materialId, orden: m.orden ?? i+1})),
+        creadoEn: existing >= 0 ? reglas[existing].creadoEn : new Date().toISOString(),
+        actualizadoEn: new Date().toISOString()
+      };
+      if (existing >= 0) reglas[existing] = regla; else reglas.push(regla);
+      saveEmpaqueReglas(reglas);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, regla}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // DELETE /api/empaque/reglas/:id — eliminar regla [admin]
+  if (reqPath.match(/^\/api\/empaque\/reglas\/reg_\d+$/) && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'Solo admin'})); return; }
+    const regId = reqPath.split('/').pop();
+    const reglas = loadEmpaqueReglas();
+    const idx = reglas.findIndex(r => r.id === regId);
+    if (idx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'No encontrada'})); return; }
+    reglas.splice(idx,1);
+    saveEmpaqueReglas(reglas);
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
+    return;
+  }
+
+  // GET /api/empaque/resolve?categ_ids=64,175 — resuelve materiales para lista de categorías
+  if (reqPath === '/api/empaque/resolve' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const qs = new URL(req.url,'http://x').searchParams;
+      const ids = (qs.get('categ_ids')||'').split(',').map(Number).filter(Boolean);
+      if (!ids.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,result:{}})); return; }
+      const [cats, reglas, materiales] = await Promise.all([getCategCache(), Promise.resolve(loadEmpaqueReglas()), Promise.resolve(loadEmpaqueMateria())]);
+      const matMap = {}; materiales.forEach(m => { matMap[m.id] = m; });
+      const result = {};
+      for (const cid of ids) {
+        const regla = resolveEmpaqueRegla(cid, cats, reglas);
+        if (regla) {
+          result[cid] = {
+            regla_id: regla.id,
+            categ_id: regla.categ_id,
+            categ_nombre: regla.categ_nombre,
+            materiales: (regla.materiales||[])
+              .sort((a,b)=>(a.orden||0)-(b.orden||0))
+              .map(m => matMap[m.materialId])
+              .filter(Boolean)
+          };
+        } else {
+          result[cid] = null;
+        }
+      }
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, result}));
+    } catch(e) { res.writeHead(502,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // ── INSPECCIONES DE VEHÍCULOS ──────────────────────────────────────────────
 
   // GET /api/vehiculos/inspecciones — lista todas las inspecciones [JWT requerido]
@@ -2706,7 +2965,10 @@ const server = http.createServer(async (req, res) => {
       return lines.filter(l=>l.product_id).map(l=>{
         const prod=prodMap[l.product_id[0]]||{};
         const locations=stockMap[l.product_id[0]]||[];
+        const categ = prod.categ_id;
         return { item_id:'oi_'+l.id, odoo_line_id:l.id, odoo_product_id:l.product_id[0],
+          odoo_categ_id: categ ? categ[0] : null,
+          odoo_categ_nombre: categ ? categ[1] : null,
           sku:prod.barcode||prod.default_code||'', product_name:l.product_id[1]||l.name||'',
           quantity:l.product_uom_qty||l.qty_done||l.quantity||1,
           image:prod.image_128?'data:image/png;base64,'+prod.image_128:null,
@@ -2725,7 +2987,7 @@ const server = http.createServer(async (req, res) => {
         if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',items:[]})); return; }
         const lines = await odooCall('sale.order.line','read',[lineIds],{fields:['product_id','product_uom_qty','name']});
         const productIds=[...new Set(lines.filter(l=>l.product_id).map(l=>l.product_id[0]))];
-        const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
+        const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128','categ_id']}) : [];
         const prodMap={}; products.forEach(p=>{ prodMap[p.id]=p; });
         const stockMap = await fetchStockMap(productIds);
         const items = buildItems(lines, prodMap, stockMap);
@@ -2743,7 +3005,7 @@ const server = http.createServer(async (req, res) => {
           [[['picking_id','=',pick.id],['state','!=','cancel']]],
           {fields:['product_id','product_uom_qty','quantity_done','name'],limit:100});
         const productIds=[...new Set(moves.filter(m=>m.product_id).map(m=>m.product_id[0]))];
-        const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
+        const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128','categ_id']}) : [];
         const prodMap={}; products.forEach(p=>{ prodMap[p.id]=p; });
         const stockMap = await fetchStockMap(productIds);
         const items = buildItems(moves, prodMap, stockMap);
@@ -2798,18 +3060,51 @@ const server = http.createServer(async (req, res) => {
         const selLocIdx = typeof item.selected_location==='number' ? item.selected_location : null;
         const selLocObj = (selLocIdx!==null && Array.isArray(item.locations)) ? (item.locations[selLocIdx]||null) : null;
         return { item_id:item.item_id, odoo_line_id:item.odoo_line_id||null, odoo_product_id:item.odoo_product_id||null,
+          odoo_categ_id: item.odoo_categ_id||prev.odoo_categ_id||null,
+          odoo_categ_nombre: item.odoo_categ_nombre||prev.odoo_categ_nombre||null,
           sku:item.sku||'', product_name:item.product_name||'', quantity:item.quantity||0,
           selected:!!item.selected,
           locations:item.locations||[],
           selected_location:selLocIdx,
           selected_location_name:selLocObj?.location_name||null,
-          evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'', status:prev.status||'pending' };
+          evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'', status:prev.status||'pending',
+          empaque_confirmacion:prev.empaque_confirmacion||null };
       });
       tasks[idx].updatedAt=new Date().toISOString();
       saveWwpTasks(tasks);
       broadcastWwpTasks('items_updated', tasks[idx], { taskId:id, items:tasks[idx].items });
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ok:true,items:tasks[idx].items}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // PATCH /api/wwp/tasks/:id/items/:itemId/empaque — confirmar empaque [cualquier rol]
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/oi_\d+\/empaque$/) && req.method === 'PATCH') {
+    const _jpEmp = requireJwt(req, res); if (!_jpEmp) return;
+    try {
+      const parts = reqPath.split('/');
+      const taskId = parts[4]; const itemId = parts[6];
+      const d = await readBody(req);
+      // status: 'confirmed' | 'partial'  + justificacion (requerida si partial)
+      if (!d.status || !['confirmed','partial'].includes(d.status)) throw new Error('status debe ser confirmed o partial');
+      if (d.status === 'partial' && !String(d.justificacion||'').trim()) throw new Error('justificacion requerida cuando status=partial');
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      const itemIdx = (tasks[idx].items||[]).findIndex(it => it.item_id === itemId);
+      if (itemIdx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Artículo no encontrado'})); return; }
+      tasks[idx].items[itemIdx].empaque_confirmacion = {
+        status: d.status,
+        justificacion: String(d.justificacion||'').trim(),
+        by: _jpEmp.sub,
+        at: new Date().toISOString()
+      };
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('empaque_confirmado', tasks[idx], {taskId, itemId, confirmacion: tasks[idx].items[itemIdx].empaque_confirmacion});
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, confirmacion: tasks[idx].items[itemIdx].empaque_confirmacion}));
     } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;
   }
@@ -2914,7 +3209,9 @@ const server = http.createServer(async (req, res) => {
   // Fotos de averías desde av-fotos/
   if (reqPath.startsWith('/av-fotos/')) filePath = path.join(AV_FOTOS_DIR, path.basename(decodeURIComponent(reqPath)));
   // Fotos de evidencia WWP desde wwp-fotos/
-  if (reqPath.startsWith('/wwp-fotos/')) filePath = path.join(WWP_FOTOS_DIR, path.basename(reqPath));
+  if (reqPath.startsWith('/wwp-fotos/'))     filePath = path.join(WWP_FOTOS_DIR, path.basename(reqPath));
+  // Fotos de materiales de empaque desde empaque-fotos/
+  if (reqPath.startsWith('/empaque-fotos/')) filePath = path.join(EMP_FOTOS_DIR, path.basename(decodeURIComponent(reqPath)));
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
