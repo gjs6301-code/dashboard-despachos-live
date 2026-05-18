@@ -523,20 +523,47 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .emp-mat-btn.edit{background:#eff6ff;color:#1d4ed8}
 .emp-mat-btn.del{background:#fff1f2;color:#be123c}
 .emp-mat-btn:hover{opacity:.8}
-/* Reglas */
-.emp-regla-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
-.emp-regla-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
-.emp-regla-categ{flex:1}
-.emp-regla-categ-name{font-size:12px;font-weight:700;color:var(--text-primary)}
-.emp-regla-categ-path{font-size:10px;color:var(--text-muted);margin-top:2px}
-.emp-regla-mats{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.emp-regla-mat-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:5px;font-size:10px;font-weight:600;color:#0369a1}
-.emp-regla-mat-chip .ord{background:#0369a1;color:#fff;border-radius:3px;padding:0 4px;font-size:9px}
-.emp-regla-actions{display:flex;gap:6px;flex-shrink:0}
-.emp-regla-btn{padding:4px 10px;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
-.emp-regla-btn.edit{background:#eff6ff;color:#1d4ed8}
-.emp-regla-btn.del{background:#fff1f2;color:#be123c}
-.emp-regla-btn:hover{opacity:.8}
+/* Árbol de reglas por familia */
+.emp-tree-search-wrap{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.emp-tree-search{flex:1;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none}
+.emp-tree-search:focus{border-color:#0369a1;box-shadow:0 0 0 2px rgba(3,105,161,.12)}
+.emp-tree-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:24px}
+.emp-tree-table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+.emp-tree-table thead th{background:#f8fafc;padding:9px 10px;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:2}
+.emp-tree-categ-hdr{min-width:240px;text-align:left!important}
+.emp-tree-mat-hdr{width:145px;text-align:center}
+.emp-tree-row{border-bottom:1px solid var(--border-light);transition:background .1s}
+.emp-tree-row:last-child{border-bottom:none}
+.emp-tree-row:hover{background:#f8fafc}
+.emp-tree-row.has-rule{background:#f0f9ff}
+.emp-tree-row.has-rule:hover{background:#e0f2fe}
+.emp-tree-row.hidden-row{display:none}
+.emp-tree-categ-cell{padding:6px 8px;white-space:nowrap;cursor:default}
+.emp-tree-categ-cell-inner{display:flex;align-items:center;gap:5px}
+.emp-tree-lv0 .emp-tree-categ-cell{font-weight:800;color:var(--text-primary);font-size:13px;background:#f1f5f9}
+.emp-tree-lv1 .emp-tree-categ-cell{font-weight:700;color:#0f4c81}
+.emp-tree-lv2 .emp-tree-categ-cell{font-weight:600;color:var(--text-primary)}
+.emp-tree-lv3 .emp-tree-categ-cell,.emp-tree-lv4 .emp-tree-categ-cell{color:var(--text-muted)}
+.emp-tree-expand{background:none;border:none;cursor:pointer;padding:1px 4px;border-radius:3px;font-size:10px;color:#64748b;line-height:1;flex-shrink:0;transition:background .1s}
+.emp-tree-expand:hover{background:#e2e8f0}
+.emp-tree-mat-cell{padding:4px 5px;text-align:center;vertical-align:middle;border-left:1px solid var(--border-light)}
+.emp-tree-mat-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px 3px 4px;background:#e0f2fe;border:1px solid #7dd3fc;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;color:#0369a1;max-width:130px;transition:background .12s}
+.emp-tree-mat-chip:hover{background:#bae6fd}
+.emp-tree-mat-chip-thumb{width:22px;height:22px;border-radius:4px;object-fit:cover;flex-shrink:0}
+.emp-tree-mat-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:10px}
+.emp-tree-mat-chip-rm{background:none;border:none;cursor:pointer;color:#0369a1;font-size:12px;font-weight:700;padding:0 0 0 2px;line-height:1;flex-shrink:0;transition:color .12s}
+.emp-tree-mat-chip-rm:hover{color:#dc2626}
+.emp-tree-mat-add{background:none;border:1px dashed #cbd5e1;border-radius:6px;color:#94a3b8;font-size:10px;padding:4px 8px;cursor:pointer;width:100%;transition:all .12s;white-space:nowrap}
+.emp-tree-mat-add:hover{border-color:#0369a1;color:#0369a1;background:#f0f9ff}
+/* Inline picker */
+.emp-inline-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);z-index:4000;min-width:210px;max-height:260px;display:flex;flex-direction:column}
+.emp-inline-picker-search{padding:8px 10px;border:none;border-bottom:1px solid var(--border);font-size:12px;outline:none;border-radius:10px 10px 0 0;font-family:inherit}
+.emp-inline-picker-list{overflow-y:auto;flex:1}
+.emp-inline-picker-item{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;transition:background .1s}
+.emp-inline-picker-item:hover{background:#f0f9ff}
+.emp-inline-picker-thumb{width:26px;height:26px;border-radius:5px;object-fit:cover;background:#e0f2fe;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px}
+.emp-inline-picker-name{flex:1;font-weight:600;color:var(--text-primary)}
+.emp-inline-picker-empty{padding:14px;text-align:center;color:var(--text-muted);font-size:12px}
 /* Modal editor material */
 .emp-mat-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2100;display:none;align-items:center;justify-content:center}
 .emp-mat-editor-overlay.open{display:flex}
@@ -545,14 +572,7 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .emp-mat-editor-hdr h3{font-size:15px;font-weight:700;color:var(--text-primary)}
 .emp-mat-editor-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
 .emp-mat-editor-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
-/* Modal editor regla */
-.emp-reg-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2100;display:none;align-items:center;justify-content:center}
-.emp-reg-editor-overlay.open{display:flex}
-.emp-reg-editor-box{background:var(--surface);border-radius:14px;width:100%;max-width:580px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;margin:16px}
-.emp-reg-editor-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.emp-reg-editor-hdr h3{font-size:15px;font-weight:700;color:var(--text-primary)}
-.emp-reg-editor-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
-.emp-reg-editor-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+/* (editor de regla por modal eliminado — ahora inline en la tabla) */
 .emp-mat-sortable{display:flex;flex-direction:column;gap:6px}
 .emp-mat-sortable-row{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:7px 10px}
 .emp-mat-sortable-ord{width:22px;text-align:center;font-size:11px;font-weight:700;color:#64748b;background:#e2e8f0;border-radius:4px;padding:1px 4px;flex-shrink:0}
@@ -2952,13 +2972,16 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
       </div>
 
       <!-- Sub-sección 2: Reglas por familia -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-top:1px solid var(--border);padding-top:20px">
-        <div class="emp-section-title" style="margin:0">🔗 Reglas por Familia de Artículos</div>
-        <button class="btn-primary" onclick="empOpenReglaEditor(null)" style="font-size:12px;padding:7px 14px">+ Nueva Regla</button>
+      <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:12px">
+        <div class="emp-section-title" style="margin:0 0 4px">🔗 Reglas por Familia de Artículos</div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px">Haz clic en cualquier celda para asignar un material. El orden de columnas (1°→4°) es el orden de aplicación. La regla más específica de la jerarquía tiene prioridad.</p>
+        <div class="emp-tree-search-wrap">
+          <input type="text" class="emp-tree-search" id="emp-tree-search" placeholder="🔍 Filtrar familias: Alfombra, Sala, Mesas…" oninput="empFilterTree(this.value)">
+          <button onclick="empFilterTree('');document.getElementById('emp-tree-search').value=''" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#f1f5f9;font-size:11px;cursor:pointer">✕ Limpiar</button>
+        </div>
       </div>
-      <p style="font-size:11px;color:var(--text-muted);margin:-8px 0 12px">El sistema aplica la regla más específica disponible en la jerarquía de categorías Odoo.</p>
-      <div class="emp-regla-list" id="emp-regla-list">
-        <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">Cargando reglas…</div>
+      <div class="emp-tree-wrap">
+        <div id="emp-regla-list" style="padding:30px;text-align:center;color:var(--text-muted);font-size:13px">Cargando jerarquía de categorías…</div>
       </div>
     </div>
     <!-- /tab-empaque -->
@@ -3003,39 +3026,10 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
   </div>
 </div>
 
-<!-- Modal: editor de regla (categoría → materiales) -->
-<div class="emp-reg-editor-overlay" id="modal-emp-reg">
-  <div class="emp-reg-editor-box">
-    <div class="emp-reg-editor-hdr">
-      <h3 id="emp-reg-editor-title">Nueva Regla de Empaque</h3>
-      <button onclick="empCloseReglaEditor()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">×</button>
-    </div>
-    <div class="emp-reg-editor-body">
-      <input type="hidden" id="emp-reg-id">
-      <div class="form-group">
-        <label class="form-label">Categoría Odoo *</label>
-        <input type="text" id="emp-reg-categ-search" class="form-input" placeholder="Escribe para buscar: Sala, Alfombra, Dormitorio…" oninput="empFilterCateg(this.value)" autocomplete="off">
-        <div id="emp-reg-categ-dropdown" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;width:calc(100% - 40px);box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
-        <input type="hidden" id="emp-reg-categ-id">
-        <div id="emp-reg-categ-selected" style="display:none;margin-top:6px;padding:6px 10px;background:#f0f9ff;border-radius:6px;font-size:11px;color:#0369a1;font-weight:600"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Materiales asignados (en orden de aplicación) *</label>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <select id="emp-reg-mat-picker" class="form-select" style="flex:1;font-size:12px">
-            <option value="">— Selecciona un material —</option>
-          </select>
-          <button onclick="empRegAddMat()" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#f1f5f9;font-size:12px;cursor:pointer;font-weight:700">+ Agregar</button>
-        </div>
-        <div class="emp-mat-sortable" id="emp-reg-sortable"></div>
-        <p style="font-size:10px;color:var(--text-muted);margin:5px 0 0">Usa ↑ ↓ para ordenar. El orden indica la secuencia de aplicación.</p>
-      </div>
-    </div>
-    <div class="emp-reg-editor-footer">
-      <button onclick="empCloseReglaEditor()" style="padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer">Cancelar</button>
-      <button onclick="empSaveRegla()" class="btn-primary" style="font-size:12px;padding:7px 18px">Guardar Regla</button>
-    </div>
-  </div>
+<!-- Picker inline de material (se posiciona vía JS) -->
+<div class="emp-inline-picker" id="emp-inline-picker" style="display:none">
+  <input type="text" class="emp-inline-picker-search" id="emp-picker-search" placeholder="Buscar material…" oninput="empPickerFilter(this.value)" autocomplete="off">
+  <div class="emp-inline-picker-list" id="emp-picker-list"></div>
 </div>
 
 <!-- Lightbox de foto ampliada -->
@@ -10455,12 +10449,15 @@ var _empMateriales = [];      // catálogo completo
 var _empReglas = [];          // reglas por categoría
 var _empCategorias = [];      // árbol Odoo (cacheado)
 var _empMatEditorId = null;   // null = nuevo
-var _empRegEditorId = null;   // null = nuevo
-var _empRegSortList = [];     // [{materialId, orden}] en el editor de regla
+var _empRegEditorId = null;   // (legacy, no usado)
+var _empRegSortList = [];     // (legacy, no usado)
 
 // ── Carga inicial ─────────────────────────────────────────────────────────
 function empInit() {
-  Promise.all([empLoadMateriales(), empLoadReglas(), empLoadCategorias()]);
+  // Primero categorías + reglas en paralelo, luego renderizar árbol
+  Promise.all([empLoadMateriales(), empLoadReglas(), empLoadCategorias()]).then(function() {
+    empRenderCategTree();
+  });
 }
 
 function empLoadMateriales() {
@@ -10470,7 +10467,7 @@ function empLoadMateriales() {
 }
 function empLoadReglas() {
   return apiFetch('/api/empaque/reglas').then(function(r) {
-    if (r.ok) { _empReglas = r.reglas || []; empRenderReglaList(); }
+    if (r.ok) { _empReglas = r.reglas || []; }
   });
 }
 function empLoadCategorias() {
@@ -10506,39 +10503,317 @@ function empRenderMatGrid() {
   }).join('');
 }
 
-// ── Render: lista de reglas ───────────────────────────────────────────────
-function empRenderReglaList() {
-  var list = document.getElementById('emp-regla-list');
-  if (!list) return;
-  if (!_empReglas.length) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">No hay reglas. Agrega la primera con <strong>+ Nueva Regla</strong>.</div>';
+// ── Árbol de categorías + tabla inline ───────────────────────────────────
+
+var _empTreeRows = [];      // filas planas del árbol: {cat, level, visible, hasChildren, collapsed}
+var _empPickerCategId = null;
+var _empPickerSlot = null;
+var _empPickerQuery = '';
+
+// Construye y renderiza el árbol completo de categorías
+function empRenderCategTree() {
+  var container = document.getElementById('emp-regla-list');
+  if (!container) return;
+  if (!_empCategorias.length) {
+    container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted);font-size:13px">Cargando categorías de Odoo…</div>';
     return;
   }
+
+  // Construir mapa children: parentId → [childIds]
+  var childrenOf = {};
+  _empCategorias.forEach(function(c) {
+    var pid = c.parent_id ? c.parent_id[0] : null;
+    if (!childrenOf[pid]) childrenOf[pid] = [];
+    childrenOf[pid].push(c);
+  });
+
+  // Ordenar hijos alfabéticamente
+  Object.keys(childrenOf).forEach(function(pid) {
+    childrenOf[pid].sort(function(a,b){ return a.name.localeCompare(b.name); });
+  });
+
+  // Encontrar raíces relevantes (categorías con complete_name sin " / " = top-level, excluir "All")
+  var roots = _empCategorias.filter(function(c) {
+    return c.complete_name && !c.complete_name.includes(' / ') && c.name !== 'All';
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+
+  // Aplanar en depth-first
+  _empTreeRows = [];
+  function flatten(cat, level) {
+    var children = childrenOf[cat.id] || [];
+    var hasChildren = children.length > 0;
+    _empTreeRows.push({ cat: cat, level: level, hasChildren: hasChildren, collapsed: level >= 2, visible: true });
+    if (!hasChildren) return;
+    children.forEach(function(ch) { flatten(ch, level + 1); });
+  }
+  roots.forEach(function(r) { flatten(r, 0); });
+
+  // Aplicar estado collapsed inicial: ocultar hijos de nivel >= 2
+  _empApplyCollapse();
+
+  // Render tabla
+  _empRenderTable();
+}
+
+function _empApplyCollapse() {
+  // Marca visible/hidden según collapsed de ancestros
+  var collapsedSet = {};
+  _empTreeRows.forEach(function(row) {
+    if (row.hasChildren && row.collapsed) collapsedSet[row.cat.id] = true;
+  });
+  // Recorrer y marcar hidden si algún ancestro está colapsado
+  var hiddenParents = {};
+  _empTreeRows.forEach(function(row) {
+    var pid = row.cat.parent_id ? row.cat.parent_id[0] : null;
+    if (hiddenParents[pid] || collapsedSet[pid]) {
+      row.visible = false;
+      if (row.hasChildren) hiddenParents[row.cat.id] = true;
+    } else {
+      row.visible = true;
+    }
+  });
+}
+
+function _empRenderTable() {
+  var container = document.getElementById('emp-regla-list');
+  if (!container) return;
+
   var matMap = {}; _empMateriales.forEach(function(m) { matMap[m.id] = m; });
-  list.innerHTML = _empReglas.map(function(r) {
-    var chips = (r.materiales || [])
-      .sort(function(a,b) { return (a.orden||0)-(b.orden||0); })
-      .map(function(m, i) {
-        var mat = matMap[m.materialId];
-        if (!mat) return '';
-        return '<span class="emp-regla-mat-chip"><span class="ord">' + (i+1) + '</span>' + esc(mat.nombre) + '</span>';
-      }).join('');
-    var pathParts = (r.categ_nombre || '').split(' / ');
-    var shortName = pathParts[pathParts.length - 1];
-    var pathStr = pathParts.length > 1 ? pathParts.slice(0,-1).join(' / ') : '';
-    return '<div class="emp-regla-card">' +
-      '<div class="emp-regla-categ">' +
-        '<div class="emp-regla-categ-name">📂 ' + esc(shortName) + '</div>' +
-        (pathStr ? '<div class="emp-regla-categ-path">' + esc(pathStr) + '</div>' : '') +
-        '<div class="emp-regla-mats">' + (chips || '<span style="font-size:10px;color:var(--text-muted)">Sin materiales asignados</span>') + '</div>' +
-      '</div>' +
-      '<div class="emp-regla-actions">' +
-        '<button class="emp-regla-btn edit" onclick="empOpenReglaEditor(\'' + r.id + '\')">✏️</button>' +
-        '<button class="emp-regla-btn del" onclick="empDeleteRegla(\'' + r.id + '\', this)">🗑</button>' +
-      '</div>' +
+  var reglaMap = {}; _empReglas.forEach(function(r) { reglaMap[r.categ_id] = r; });
+
+  var html = '<table class="emp-tree-table"><thead><tr>' +
+    '<th class="emp-tree-categ-hdr">Familia de Artículos</th>' +
+    '<th class="emp-tree-mat-hdr">1° Material</th>' +
+    '<th class="emp-tree-mat-hdr">2° Material</th>' +
+    '<th class="emp-tree-mat-hdr">3° Material</th>' +
+    '<th class="emp-tree-mat-hdr">4° Material</th>' +
+    '</tr></thead><tbody>';
+
+  _empTreeRows.forEach(function(row, rowIdx) {
+    var cat = row.cat;
+    var regla = reglaMap[cat.id];
+    var mats = regla ? (regla.materiales || []).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);}) : [];
+    var hasRule = mats.length > 0;
+
+    var rowClass = 'emp-tree-row emp-tree-lv' + Math.min(row.level, 4) + (hasRule ? ' has-rule' : '') + (row.visible ? '' : ' hidden-row');
+    var indent = row.level * 18;
+
+    html += '<tr class="' + rowClass + '" data-categ="' + cat.id + '" data-idx="' + rowIdx + '">';
+
+    // Celda de categoría
+    html += '<td class="emp-tree-categ-cell" style="padding-left:' + (indent + 8) + 'px">';
+    html += '<div class="emp-tree-categ-cell-inner">';
+    if (row.hasChildren) {
+      html += '<button class="emp-tree-expand" onclick="empToggleNode(' + rowIdx + ')">' + (row.collapsed ? '▶' : '▼') + '</button>';
+    } else {
+      html += '<span style="width:16px;display:inline-block;flex-shrink:0"></span>';
+    }
+    if (row.level === 0) html += '<span style="margin-right:3px">📁</span>';
+    else if (row.hasChildren) html += '<span style="margin-right:3px">📂</span>';
+    else html += '<span style="margin-right:3px">📄</span>';
+    html += '<span style="font-size:' + (row.level === 0 ? '13' : row.level === 1 ? '12' : '11') + 'px">' + esc(cat.name) + '</span>';
+    html += '</div></td>';
+
+    // 4 celdas de material
+    for (var slot = 0; slot < 4; slot++) {
+      var matEntry = mats[slot] || null;
+      var mat = matEntry ? matMap[matEntry.materialId] : null;
+      html += '<td class="emp-tree-mat-cell">';
+      if (mat) {
+        html += '<div class="emp-tree-mat-chip" onclick="empInlinePickMat(' + cat.id + ',' + slot + ',this)">';
+        if (mat.foto_url) {
+          html += '<img class="emp-tree-mat-chip-thumb" src="' + esc(mat.foto_url) + '" onerror="this.style.display=\'none\'">';
+        } else {
+          html += '<span style="width:22px;height:22px;background:#bae6fd;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">📦</span>';
+        }
+        html += '<span class="emp-tree-mat-chip-name" title="' + esc(mat.nombre) + '">' + esc(mat.nombre) + '</span>';
+        html += '<button class="emp-tree-mat-chip-rm" onclick="event.stopPropagation();empInlineClearMat(' + cat.id + ',' + slot + ')">×</button>';
+        html += '</div>';
+      } else {
+        html += '<button class="emp-tree-mat-add" onclick="empInlinePickMat(' + cat.id + ',' + slot + ',this)">+ Agregar</button>';
+      }
+      html += '</td>';
+    }
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// Toggle expand/collapse de un nodo del árbol
+function empToggleNode(rowIdx) {
+  var row = _empTreeRows[rowIdx];
+  if (!row || !row.hasChildren) return;
+  row.collapsed = !row.collapsed;
+  _empApplyCollapse();
+  // Update DOM en vez de re-renderizar completo (más rápido)
+  var table = document.querySelector('.emp-tree-table tbody');
+  if (!table) { _empRenderTable(); return; }
+  var rows = table.querySelectorAll('tr');
+  _empTreeRows.forEach(function(r, i) {
+    if (rows[i]) {
+      rows[i].classList.toggle('hidden-row', !r.visible);
+    }
+  });
+  // Actualizar icono del botón
+  var btn = table.querySelectorAll('tr')[rowIdx];
+  if (btn) {
+    var expBtn = btn.querySelector('.emp-tree-expand');
+    if (expBtn) expBtn.textContent = row.collapsed ? '▶' : '▼';
+  }
+}
+
+// Filtrar filas del árbol por texto
+function empFilterTree(q) {
+  var rows = document.querySelectorAll('.emp-tree-table .emp-tree-row');
+  if (!q) {
+    // Restaurar estado colapsado original
+    _empApplyCollapse();
+    rows.forEach(function(r, i) { r.classList.toggle('hidden-row', !_empTreeRows[i].visible); });
+    return;
+  }
+  var lower = q.toLowerCase();
+  // Mostrar solo filas que hagan match (y sus ancestros)
+  var matchSet = new Set();
+  _empTreeRows.forEach(function(row, i) {
+    if (row.cat.complete_name && row.cat.complete_name.toLowerCase().includes(lower)) {
+      matchSet.add(i);
+      // Agregar ancestros para mantener contexto
+      var pid = row.cat.parent_id ? row.cat.parent_id[0] : null;
+      while (pid) {
+        var pidx = _empTreeRows.findIndex(function(r){ return r.cat.id === pid; });
+        if (pidx >= 0) { matchSet.add(pidx); pid = _empTreeRows[pidx].cat.parent_id ? _empTreeRows[pidx].cat.parent_id[0] : null; }
+        else break;
+      }
+    }
+  });
+  rows.forEach(function(r, i) { r.classList.toggle('hidden-row', !matchSet.has(i)); });
+}
+
+// ── Picker inline ─────────────────────────────────────────────────────────
+function empInlinePickMat(categId, slot, triggerEl) {
+  _empPickerCategId = categId;
+  _empPickerSlot = slot;
+  _empPickerQuery = '';
+  var picker = document.getElementById('emp-inline-picker');
+  var search = document.getElementById('emp-picker-search');
+  if (!picker) return;
+  search.value = '';
+  empPickerFilter('');
+  picker.style.display = 'flex';
+  // Posicionar cerca del trigger
+  var rect = triggerEl.getBoundingClientRect();
+  var ph = 280; // altura aprox del picker
+  var top = rect.bottom + 4;
+  if (top + ph > window.innerHeight) top = rect.top - ph - 4;
+  picker.style.top  = Math.max(8, top) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
+  setTimeout(function(){ search.focus(); }, 30);
+}
+
+function empPickerFilter(q) {
+  _empPickerQuery = q.toLowerCase();
+  var list = document.getElementById('emp-picker-list');
+  if (!list) return;
+  var filtered = _empMateriales.filter(function(m){
+    return !_empPickerQuery || m.nombre.toLowerCase().includes(_empPickerQuery) || (m.descripcion||'').toLowerCase().includes(_empPickerQuery);
+  });
+  if (!filtered.length) {
+    list.innerHTML = '<div class="emp-inline-picker-empty">Sin resultados</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(function(m) {
+    var thumbHtml = m.foto_url
+      ? '<img class="emp-inline-picker-thumb" src="' + esc(m.foto_url) + '" onerror="this.style.display=\'none\'">'
+      : '<div class="emp-inline-picker-thumb">📦</div>';
+    return '<div class="emp-inline-picker-item" onclick="empInlineApplyMat(\'' + m.id + '\')">' +
+      thumbHtml +
+      '<span class="emp-inline-picker-name">' + esc(m.nombre) + '</span>' +
     '</div>';
   }).join('');
 }
+
+function empInlineApplyMat(matId) {
+  empClosePicker();
+  if (_empPickerCategId === null || _empPickerSlot === null) return;
+  var categId = _empPickerCategId;
+  var slot    = _empPickerSlot;
+
+  // Obtener la regla actual o crear nueva
+  var regla = _empReglas.find(function(r){ return r.categ_id === categId; });
+  var mats  = regla ? (regla.materiales || []).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);}) : [];
+
+  // Evitar duplicado del mismo material en otra posición
+  var dupeIdx = mats.findIndex(function(m){ return m.materialId === matId; });
+  if (dupeIdx >= 0 && dupeIdx !== slot) {
+    showToast('Ese material ya está asignado en la posición ' + (dupeIdx+1), 'warning'); return;
+  }
+
+  // Rellenar posiciones intermedias vacías con null placeholder si hace falta
+  while (mats.length <= slot) mats.push(null);
+  mats[slot] = { materialId: matId, orden: slot + 1 };
+  // Limpiar nulls y reordenar
+  var cleanMats = mats.map(function(m,i){ return m ? {materialId:m.materialId, orden:i+1} : null; }).filter(Boolean);
+
+  var categ = _empCategorias.find(function(c){ return c.id === categId; });
+  var body = { categ_id: categId, categ_nombre: categ ? categ.complete_name : '', materiales: cleanMats };
+
+  apiFetch('/api/empaque/reglas', {method:'POST', body:JSON.stringify(body)}).then(function(r) {
+    if (!r.ok) { showToast('Error al guardar', 'error'); return; }
+    // Actualizar _empReglas local
+    var idx = _empReglas.findIndex(function(x){ return x.categ_id === categId; });
+    if (idx >= 0) _empReglas[idx] = r.regla; else _empReglas.push(r.regla);
+    _empRenderTable();
+    showToast('Material asignado', 'success');
+  });
+}
+
+function empInlineClearMat(categId, slot) {
+  var regla = _empReglas.find(function(r){ return r.categ_id === categId; });
+  if (!regla) return;
+  var mats = (regla.materiales || []).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);});
+  // Quitar el slot
+  var newMats = mats.filter(function(m,i){ return i !== slot; }).map(function(m,i){ return {materialId:m.materialId, orden:i+1}; });
+
+  var categ = _empCategorias.find(function(c){ return c.id === categId; });
+  if (!newMats.length) {
+    // Eliminar regla completa
+    apiFetch('/api/empaque/reglas/' + regla.id, {method:'DELETE'}).then(function(r) {
+      if (!r.ok) { showToast('Error al limpiar', 'error'); return; }
+      _empReglas = _empReglas.filter(function(x){ return x.categ_id !== categId; });
+      _empRenderTable();
+    });
+  } else {
+    var body = {categ_id: categId, categ_nombre: categ ? categ.complete_name : '', materiales: newMats};
+    apiFetch('/api/empaque/reglas', {method:'POST', body:JSON.stringify(body)}).then(function(r) {
+      if (!r.ok) { showToast('Error al limpiar', 'error'); return; }
+      var idx = _empReglas.findIndex(function(x){ return x.categ_id === categId; });
+      if (idx >= 0) _empReglas[idx] = r.regla;
+      _empRenderTable();
+    });
+  }
+}
+
+function empClosePicker() {
+  var picker = document.getElementById('emp-inline-picker');
+  if (picker) picker.style.display = 'none';
+  _empPickerCategId = null; _empPickerSlot = null;
+}
+
+// Cerrar picker al hacer clic fuera
+document.addEventListener('click', function(e) {
+  var picker = document.getElementById('emp-inline-picker');
+  if (picker && picker.style.display !== 'none') {
+    if (!picker.contains(e.target) && !e.target.classList.contains('emp-tree-mat-add') && !e.target.classList.contains('emp-tree-mat-chip')) {
+      empClosePicker();
+    }
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') empClosePicker();
+});
 
 // ── Editor de material ────────────────────────────────────────────────────
 function empOpenMatEditor(matId) {
@@ -10647,148 +10922,7 @@ function empDeleteMat(matId, btn) {
   });
 }
 
-// ── Editor de regla ───────────────────────────────────────────────────────
-function empOpenReglaEditor(regId) {
-  _empRegEditorId = regId;
-  _empRegSortList = [];
-  document.getElementById('emp-reg-editor-title').textContent = regId ? 'Editar Regla' : 'Nueva Regla de Empaque';
-  document.getElementById('emp-reg-id').value = regId || '';
-  document.getElementById('emp-reg-categ-search').value = '';
-  document.getElementById('emp-reg-categ-id').value = '';
-  document.getElementById('emp-reg-categ-selected').style.display = 'none';
-  document.getElementById('emp-reg-categ-selected').textContent = '';
-  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
-  // Poblar picker de materiales
-  var picker = document.getElementById('emp-reg-mat-picker');
-  picker.innerHTML = '<option value="">— Selecciona un material —</option>' +
-    _empMateriales.map(function(m) { return '<option value="' + m.id + '">' + esc(m.nombre) + '</option>'; }).join('');
-
-  if (regId) {
-    var reg = _empReglas.find(function(r) { return r.id === regId; });
-    if (reg) {
-      document.getElementById('emp-reg-categ-search').value = reg.categ_nombre;
-      document.getElementById('emp-reg-categ-id').value = reg.categ_id;
-      var sel = document.getElementById('emp-reg-categ-selected');
-      sel.textContent = '✓ ' + reg.categ_nombre;
-      sel.style.display = 'block';
-      _empRegSortList = (reg.materiales || []).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);});
-    }
-  }
-  empRenderRegSortable();
-  document.getElementById('modal-emp-reg').classList.add('open');
-  // Ensure categories are loaded
-  empLoadCategorias();
-}
-function empCloseReglaEditor() {
-  document.getElementById('modal-emp-reg').classList.remove('open');
-  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
-  _empRegEditorId = null;
-}
-
-function empFilterCateg(q) {
-  var dd = document.getElementById('emp-reg-categ-dropdown');
-  if (!q || q.length < 2) { dd.style.display = 'none'; return; }
-  var lower = q.toLowerCase();
-  var matches = _empCategorias.filter(function(c) {
-    return c.complete_name && c.complete_name.toLowerCase().includes(lower);
-  }).slice(0, 15);
-  if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.style.display = 'block';
-  dd.innerHTML = matches.map(function(c) {
-    var parts = (c.complete_name||'').split(' / ');
-    var leaf  = parts[parts.length-1];
-    var path  = parts.slice(0,-1).join(' / ');
-    return '<div onclick="empSelectCateg(' + c.id + ',\'' + esc(c.complete_name) + '\')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);hover:background:#f1f5f9">' +
-      '<div style="font-size:12px;font-weight:700;color:var(--text-primary)">' + esc(leaf) + '</div>' +
-      (path ? '<div style="font-size:10px;color:var(--text-muted)">' + esc(path) + '</div>' : '') +
-    '</div>';
-  }).join('');
-}
-function empSelectCateg(id, nombre) {
-  document.getElementById('emp-reg-categ-id').value = id;
-  document.getElementById('emp-reg-categ-search').value = nombre;
-  var sel = document.getElementById('emp-reg-categ-selected');
-  sel.textContent = '✓ ' + nombre;
-  sel.style.display = 'block';
-  document.getElementById('emp-reg-categ-dropdown').style.display = 'none';
-}
-
-function empRegAddMat() {
-  var picker = document.getElementById('emp-reg-mat-picker');
-  var matId = picker.value;
-  if (!matId) return;
-  if (_empRegSortList.some(function(m) { return m.materialId === matId; })) {
-    showToast('Ese material ya está en la lista', 'warning'); return;
-  }
-  _empRegSortList.push({materialId: matId, orden: _empRegSortList.length + 1});
-  picker.value = '';
-  empRenderRegSortable();
-}
-
-function empRenderRegSortable() {
-  var container = document.getElementById('emp-reg-sortable');
-  if (!container) return;
-  var matMap = {}; _empMateriales.forEach(function(m) { matMap[m.id] = m; });
-  if (!_empRegSortList.length) {
-    container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;border:1px dashed var(--border);border-radius:8px">Agrega materiales usando el selector de arriba</div>';
-    return;
-  }
-  container.innerHTML = _empRegSortList.map(function(item, i) {
-    var mat = matMap[item.materialId] || {};
-    var thumbHtml = mat.foto_url
-      ? '<img class="emp-mat-sortable-thumb" src="' + mat.foto_url + '" alt="">'
-      : '<div class="emp-mat-sortable-thumb" style="background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:14px">📦</div>';
-    return '<div class="emp-mat-sortable-row" data-idx="' + i + '">' +
-      '<span class="emp-mat-sortable-ord">' + (i+1) + '</span>' +
-      thumbHtml +
-      '<span class="emp-mat-sortable-name">' + esc(mat.nombre || item.materialId) + '</span>' +
-      '<button class="emp-mat-sortable-up" onclick="empRegMoveUp(' + i + ')" ' + (i===0?'disabled':'' ) + '>↑</button>' +
-      '<button class="emp-mat-sortable-dn" onclick="empRegMoveDn(' + i + ')" ' + (i===_empRegSortList.length-1?'disabled':'') + '>↓</button>' +
-      '<button class="emp-mat-sortable-rm" onclick="empRegRemove(' + i + ')">×</button>' +
-    '</div>';
-  }).join('');
-}
-function empRegMoveUp(i) {
-  if (i <= 0) return;
-  var tmp = _empRegSortList[i-1]; _empRegSortList[i-1] = _empRegSortList[i]; _empRegSortList[i] = tmp;
-  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
-  empRenderRegSortable();
-}
-function empRegMoveDn(i) {
-  if (i >= _empRegSortList.length-1) return;
-  var tmp = _empRegSortList[i+1]; _empRegSortList[i+1] = _empRegSortList[i]; _empRegSortList[i] = tmp;
-  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
-  empRenderRegSortable();
-}
-function empRegRemove(i) {
-  _empRegSortList.splice(i, 1);
-  _empRegSortList.forEach(function(m,j){ m.orden = j+1; });
-  empRenderRegSortable();
-}
-
-function empSaveRegla() {
-  var categId   = document.getElementById('emp-reg-categ-id').value;
-  var categNom  = document.getElementById('emp-reg-categ-search').value.trim();
-  if (!categId) { alert('Selecciona una categoría'); return; }
-  if (!_empRegSortList.length) { alert('Agrega al menos un material'); return; }
-  var body = {categ_id: Number(categId), categ_nombre: categNom, materiales: _empRegSortList};
-  apiFetch('/api/empaque/reglas', {method:'POST', body: JSON.stringify(body)}).then(function(r) {
-    if (!r.ok) { showToast('Error: ' + (r.error||''), 'error'); return; }
-    empCloseReglaEditor();
-    empLoadReglas();
-    showToast('Regla guardada', 'success');
-  });
-}
-
-function empDeleteRegla(regId, btn) {
-  if (!confirm('¿Eliminar esta regla de empaque?')) return;
-  var orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
-  apiFetch('/api/empaque/reglas/' + regId, {method:'DELETE'}).then(function(r) {
-    if (!r.ok) { btn.textContent = orig; btn.disabled = false; showToast('Error al eliminar', 'error'); return; }
-    empLoadReglas();
-    showToast('Regla eliminada', 'success');
-  });
-}
+// (editor de regla por modal eliminado — reemplazado por tabla inline con árbol)
 
 // ── Lightbox ─────────────────────────────────────────────────────────────
 function empOpenLightbox(url) {
