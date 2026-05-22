@@ -5514,14 +5514,43 @@ function addGuiaFoto(taskId) {
     title: 'Foto de guía',
     multiple: false,
     onFiles: async function(files) {
-      var instruccion = (prompt('Instrucción para esta foto (opcional):') || '').trim();
+      // Comprimir primero
       var fotos = [];
       for (var i = 0; i < files.length; i++) {
         var b64 = await _compressImage(files[i]);
         if (!b64) continue;
-        fotos.push({data: b64, ext: 'jpg', instruccion: instruccion});
+        fotos.push({data: b64, ext: 'jpg', instruccion: ''});
       }
       if (!fotos.length) return;
+
+      // Mini-overlay para instrucción (reemplaza prompt() que iOS bloquea en PWA)
+      var instruccion = await new Promise(function(resolve) {
+        var ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+        var thumb = '<img src="'+fotos[0].data+'" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0">';
+        ov.innerHTML = '<div style="background:var(--surface);border-radius:14px;padding:20px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.3)">'
+          + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">'+thumb
+          + '<div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Foto de guía agregada</div>'
+          + '<div style="font-size:12px;color:var(--text-3)">Escribe la instrucción para el ejecutor (opcional)</div></div></div>'
+          + '<input id="_guia_instr_inp" type="text" maxlength="150" placeholder="ej: Verificar estado, Apartar, Fotografiar daño…" autocomplete="off"'
+          + ' style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;background:var(--surface-2);color:var(--text);outline:none;margin-bottom:14px">'
+          + '<div style="display:flex;gap:8px;justify-content:flex-end">'
+          + '<button id="_guia_skip_btn" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-2);font-size:13px;cursor:pointer">Sin instrucción</button>'
+          + '<button id="_guia_ok_btn" style="padding:8px 18px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Subir foto</button>'
+          + '</div></div>';
+        document.body.appendChild(ov);
+        var inp = document.getElementById('_guia_instr_inp');
+        setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 80);
+        function finish(val) {
+          document.body.removeChild(ov);
+          resolve((val||'').trim());
+        }
+        document.getElementById('_guia_ok_btn').onclick   = function(){ finish(inp.value); };
+        document.getElementById('_guia_skip_btn').onclick = function(){ finish(''); };
+        inp.onkeydown = function(e){ if(e.key==='Enter'){ e.preventDefault(); finish(inp.value); } };
+      });
+
+      fotos.forEach(function(f){ f.instruccion = instruccion; });
       toast('Subiendo foto de guía…');
       try {
         var r = await authFetch('/api/wwp/tasks/'+taskId+'/fotos-guia', {
@@ -5529,10 +5558,10 @@ function addGuiaFoto(taskId) {
           body: JSON.stringify({fotos: fotos, by: _user.name})
         });
         var d = await r.json();
-        if (!d.ok) { toast(d.error||'Error'); return; }
+        if (!d.ok) { toast(d.error||'Error al subir foto de guía'); return; }
         toast('Foto de guía agregada');
         openDrawer(taskId);
-      } catch(e) { toast(e.message); }
+      } catch(e) { toast('Error: '+e.message); }
     }
   });
 }
