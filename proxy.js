@@ -2855,8 +2855,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Redirect raíz → historial ─────────────────────────────────────────────
+  if (reqPath === '/') {
+    res.writeHead(302, { 'Location': '/historial.html' });
+    res.end();
+    return;
+  }
+
   // ── Servir archivos estáticos ─────────────────────────────────────────────
-  let filePath = path.join(__dirname, reqPath === '/' ? 'index.html' : reqPath);
+  let filePath = path.join(__dirname, reqPath);
   if (reqPath === '/historial') filePath = path.join(__dirname, 'historial.html');
   if (reqPath.startsWith('/av-fotos/'))  filePath = path.join(AV_FOTOS_DIR,  path.basename(reqPath));
   if (reqPath.startsWith('/wwp-fotos/')) filePath = path.join(WWP_FOTOS_DIR, path.basename(reqPath));
