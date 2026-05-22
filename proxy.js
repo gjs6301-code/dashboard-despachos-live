@@ -18,7 +18,7 @@ function saveJson(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// ── Leer credenciales desde .env.txt ────────────────────────────────────────
+// ── Leer credenciales desde .env.txt (opcional en producción) ───────────────
 function loadEnv(filename) {
   const candidates = [filename, path.join(__dirname, filename)];
   for (const f of candidates) {
@@ -32,7 +32,8 @@ function loadEnv(filename) {
       return env;
     }
   }
-  throw new Error('No se encontró .env.txt');
+  // En producción (Render) no hay .env.txt — las vars vienen de process.env
+  return {};
 }
 
 // ── Archivo de persistencia de averías ───────────────────────────────────────
@@ -295,12 +296,13 @@ function seedAuthUsers() {
 }
 
 const ENV        = loadEnv('.env.txt');
-const ODOO_URL   = ENV.ODOO_URL   || '';
-const ODOO_DB    = ENV.ODOO_DB    || '';
-const ODOO_USER  = ENV.ODOO_USER  || '';
-const ODOO_KEY   = ENV.ODOO_API_KEY || '';
+// process.env tiene prioridad (Render), luego .env.txt (desarrollo local)
+const ODOO_URL   = process.env.ODOO_URL   || ENV.ODOO_URL   || '';
+const ODOO_DB    = process.env.ODOO_DB    || ENV.ODOO_DB    || '';
+const ODOO_USER  = process.env.ODOO_USER  || ENV.ODOO_USER  || '';
+const ODOO_KEY   = process.env.ODOO_API_KEY || ENV.ODOO_API_KEY || '';
 const PORT       = parseInt(process.env.PORT || '3000', 10);
-const odooOrigin = new url.URL(ODOO_URL).origin; // https://altritempi.odoo.com
+const odooOrigin = ODOO_URL ? new url.URL(ODOO_URL).origin : ''; // vacío si no está configurado
 
 // ════════════════════════════════════════════════════════════════════════════
 // ── NOTIFICACIONES ───────────────────────────────────────────────────────
