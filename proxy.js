@@ -2189,7 +2189,9 @@ const server = http.createServer(async (req, res) => {
         odooRef: d.odooRef||'',
         location: d.location||'',
         dueDate: d.dueDate||null,
+        actionNote: d.actionNote||'',
         evidence: [],
+        fotos_guia: [],
         statusHistory: [{ status:'pending', date:now, by:d.createdBy||'', note:'' }],
         createdBy: d.createdBy||'',
         createdAt: now,
@@ -2330,6 +2332,7 @@ const server = http.createServer(async (req, res) => {
       if (d.odooRef!==undefined) tasks[idx].odooRef=d.odooRef;
       if (d.location!==undefined) tasks[idx].location=d.location;
       if (d.dueDate!==undefined) tasks[idx].dueDate=d.dueDate;
+      if (d.actionNote!==undefined) tasks[idx].actionNote=d.actionNote;
       tasks[idx].updatedAt=now;
       // ── Auto-completar tarea padre si todas las subtareas están done ──────
       const parentId = tasks[idx].parentId;
@@ -2857,6 +2860,140 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ok:true, confirmado: !!d.confirmado}));
     } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // ── POST /api/wwp/tasks/:id/fotos-guia — subir fotos de guía visual ──────────
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia$/) && req.method === 'POST') {
+    const _jpFg = requireJwt(req, res); if (!_jpFg) return;
+    const taskId = reqPath.split('/')[4];
+    try {
+      const d = await readBody(req);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      if (!tasks[idx].fotos_guia) tasks[idx].fotos_guia = [];
+      const saved = [];
+      (d.fotos||[]).forEach((f, fi) => {
+        const { b64, ext } = validatePhoto(f);
+        const ts = Date.now();
+        const fotoId = `fg_${ts}_${fi}`;
+        const fname = `${taskId}_${fotoId}.${ext}`;
+        fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64, 'base64'));
+        const entry = { id: fotoId, url: `/wwp-fotos/${fname}`, instruccion: f.instruccion||'', confirmado: false, evidencias: [], creado_by: d.by||'', creado_at: new Date().toISOString() };
+        tasks[idx].fotos_guia.push(entry);
+        saved.push(entry);
+      });
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('fotos_guia_created', tasks[idx], { taskId, fotos: saved });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, fotos: saved}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // ── DELETE /api/wwp/tasks/:id/fotos-guia/:fname — eliminar foto de guía ──────
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia\/[^/]+$/) && req.method === 'DELETE') {
+    const _jpFgDel = requireJwt(req, res); if (!_jpFgDel) return;
+    if (!requireRole(_jpFgDel, res, ROLE_PERMISSIONS.edit_task)) return;
+    const parts = reqPath.split('/');
+    const taskId = parts[4], fname = decodeURIComponent(parts[6]);
+    const tasks = loadWwpTasks();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
+    const fgArr = tasks[idx].fotos_guia || [];
+    const fgEntry = fgArr.find(f => f.url.endsWith('/'+fname) || f.id === fname);
+    if (fgEntry) {
+      try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(fgEntry.url))); } catch(e) {}
+      // eliminar evidencias asociadas
+      (fgEntry.evidencias||[]).forEach(ev => { try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(ev.url))); } catch(e) {} });
+    }
+    tasks[idx].fotos_guia = fgArr.filter(f => !f.url.endsWith('/'+fname) && f.id !== fname);
+    tasks[idx].updatedAt = new Date().toISOString();
+    saveWwpTasks(tasks);
+    broadcastWwpTasks('fotos_guia_deleted', tasks[idx], { taskId, fname });
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
+    return;
+  }
+
+  // ── PATCH /api/wwp/tasks/:id/fotos-guia/:fotoId/confirmar ────────────────────
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia\/[^/]+\/confirmar$/) && req.method === 'PATCH') {
+    const _jpFgConf = requireJwt(req, res); if (!_jpFgConf) return;
+    const parts = reqPath.split('/');
+    const taskId = parts[4], fotoId = decodeURIComponent(parts[6]);
+    try {
+      const d = await readBody(req);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      const fgIdx = (tasks[idx].fotos_guia||[]).findIndex(f => f.id === fotoId);
+      if (fgIdx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Foto no encontrada'})); return; }
+      tasks[idx].fotos_guia[fgIdx].confirmado = !!d.confirmado;
+      tasks[idx].fotos_guia[fgIdx].confirmado_by = d.confirmado ? (d.by||_jpFgConf.name||'') : null;
+      tasks[idx].fotos_guia[fgIdx].confirmado_at = d.confirmado ? new Date().toISOString() : null;
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('fotos_guia_confirmado', tasks[idx], { taskId, fotoId, confirmado: !!d.confirmado });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, confirmado: !!d.confirmado}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // ── POST /api/wwp/tasks/:id/fotos-guia/:fotoId/evidencia — agregar evidencia ─
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia\/[^/]+\/evidencia$/) && req.method === 'POST') {
+    const _jpFgEv = requireJwt(req, res); if (!_jpFgEv) return;
+    const parts = reqPath.split('/');
+    const taskId = parts[4], fotoId = decodeURIComponent(parts[6]);
+    try {
+      const d = await readBody(req);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      const fgIdx = (tasks[idx].fotos_guia||[]).findIndex(f => f.id === fotoId);
+      if (fgIdx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Foto de guía no encontrada'})); return; }
+      if (!tasks[idx].fotos_guia[fgIdx].evidencias) tasks[idx].fotos_guia[fgIdx].evidencias = [];
+      const saved = [];
+      (d.fotos||[]).forEach((f, fi) => {
+        const { b64, ext } = validatePhoto(f);
+        const ts = Date.now();
+        const fname = `${taskId}_${fotoId}_ev_${ts}_${fi}.${ext}`;
+        fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64, 'base64'));
+        const entry = { id: `fgev_${ts}_${fi}`, url: `/wwp-fotos/${fname}`, uploaded_by: d.by||'', uploaded_at: new Date().toISOString() };
+        tasks[idx].fotos_guia[fgIdx].evidencias.push(entry);
+        saved.push(entry);
+      });
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('fotos_guia_evidencia_created', tasks[idx], { taskId, fotoId, evidencia: saved });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, evidencia: saved}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // ── DELETE /api/wwp/tasks/:id/fotos-guia/:fotoId/evidencia/:fname ────────────
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia\/[^/]+\/evidencia\/.+$/) && req.method === 'DELETE') {
+    const _jpFgEvDel = requireJwt(req, res); if (!_jpFgEvDel) return;
+    const parts = reqPath.split('/');
+    const taskId = parts[4], fotoId = decodeURIComponent(parts[6]), evFname = decodeURIComponent(parts[8]);
+    const tasks = loadWwpTasks();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
+    const fgIdx = (tasks[idx].fotos_guia||[]).findIndex(f => f.id === fotoId);
+    if (fgIdx !== -1) {
+      const evArr = tasks[idx].fotos_guia[fgIdx].evidencias || [];
+      const evEntry = evArr.find(e => e.url.endsWith('/'+evFname) || e.id === evFname);
+      if (evEntry) { try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(evEntry.url))); } catch(e) {} }
+      tasks[idx].fotos_guia[fgIdx].evidencias = evArr.filter(e => !e.url.endsWith('/'+evFname) && e.id !== evFname);
+    }
+    tasks[idx].updatedAt = new Date().toISOString();
+    saveWwpTasks(tasks);
+    broadcastWwpTasks('fotos_guia_evidencia_deleted', tasks[idx], { taskId, fotoId, fname: evFname });
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
     return;
   }
 
