@@ -1821,7 +1821,7 @@ const server = http.createServer(async (req, res) => {
         user.resetToken       = crypto.randomBytes(32).toString('hex');
         user.resetTokenExpiry = new Date(Date.now()+60*60*1000).toISOString();
         saveAuthUsers(users);
-        const resetUrl = `http://localhost:3000/wwp.html?reset=${user.resetToken}`;
+        const resetUrl = `http://localhost:3000/historial.html?reset=${user.resetToken}`;
         console.warn(`\n📧 Reset password → ${user.name}\n   URL: ${resetUrl}\n`);
       }
     } catch {}
@@ -2862,6 +2862,13 @@ const server = http.createServer(async (req, res) => {
 
   // ── Redirect raíz → historial ─────────────────────────────────────────────
   if (reqPath === '/') {
+    res.writeHead(302, { 'Location': '/historial.html' });
+    res.end();
+    return;
+  }
+
+  // ── Redirect wwp.html → historial.html (versión standalone deprecada) ───────
+  if (reqPath === '/wwp.html' || reqPath === '/wwp') {
     res.writeHead(302, { 'Location': '/historial.html' });
     res.end();
     return;

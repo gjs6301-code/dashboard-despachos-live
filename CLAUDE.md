@@ -8,7 +8,7 @@ Todos los archivos editables están en la **carpeta raíz** del proyecto:
 | Archivo | Descripción |
 |---------|-------------|
 | `historial.html` | App principal (historial + WWP embebido) |
-| `wwp.html` | Workforce Platform standalone |
+| `wwp.html` | ⚠️ DEPRECADO — redirige a historial.html, no editar |
 | `index.html` | Dashboard de despachos |
 | `proxy.js` | Servidor Node.js (API + archivos estáticos) |
 | `lucide.min.js` | Librería de íconos (LOCAL, no CDN) |
@@ -21,8 +21,11 @@ Todos los archivos editables están en la **carpeta raíz** del proyecto:
 ## Servidor
 
 - Correr siempre: doble clic en `restart.bat`
-- URL: `http://localhost:3000`
+- URL local: `http://localhost:3000`
+- URL producción (Render): `https://altritempi-operaciones.onrender.com`
+- Entrada principal: `/historial.html` (la raíz `/` redirige automáticamente)
 - El servidor sirve desde **la raíz** (no desde ningún worktree)
+- Datos persistentes en Render: disco `/data` (DATA_DIR env var, 10 GB)
 
 ## Convenciones de código
 
