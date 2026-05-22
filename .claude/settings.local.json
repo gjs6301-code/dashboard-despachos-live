@@ -7,7 +7,10 @@
       "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\gh-cli\" -Recurse | Where-Object { $_.Name -eq \"gh.exe\" })",
       "Bash(node proxy.js)",
       "Bash(curl -s http://localhost:3000/api/odoo/auth)",
-      "Bash(curl -s http://localhost:3000/api/sheets)"
+      "Bash(curl -s http://localhost:3000/api/sheets)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git stash *)"
     ]
   }
 }
