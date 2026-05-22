@@ -30,6 +30,9 @@ temp_*.html
 # ── Dependencias ──────────────────────────────────────────────────────────────
 node_modules/
 
+# ── Backups de datos en tiempo de ejecución ──────────────────────────────────
+backups/
+
 # ── Herramientas de desarrollo ────────────────────────────────────────────────
-.claude/worktrees/
+.claude/
 .netlify/
