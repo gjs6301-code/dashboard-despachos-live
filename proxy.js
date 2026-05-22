@@ -36,20 +36,25 @@ function loadEnv(filename) {
   return {};
 }
 
+// ── Directorio de datos persistentes ────────────────────────────────────────
+// En Render: DATA_DIR=/data (disco persistente). En local: carpeta del proyecto.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 // ── Archivo de persistencia de averías ───────────────────────────────────────
-const AVERIAS_FILE  = path.join(__dirname, 'averias.json');
-const AV_FOTOS_DIR  = path.join(__dirname, 'av-fotos');
+const AVERIAS_FILE  = path.join(DATA_DIR, 'averias.json');
+const AV_FOTOS_DIR  = path.join(DATA_DIR, 'av-fotos');
 if (!fs.existsSync(AV_FOTOS_DIR)) fs.mkdirSync(AV_FOTOS_DIR, { recursive: true });
 
 function loadAverias() { return loadJson(AVERIAS_FILE, []); }
 function saveAverias(list) { saveJson(AVERIAS_FILE, list); }
 
 // ── WWP (Warehouse Workforce Platform) — persistencia ────────────────────────
-const WWP_TASKS_FILE  = path.join(__dirname, 'wwp-tasks.json');
-const WWP_ROLES_FILE  = path.join(__dirname, 'wwp-roles.json'); // { "oe_95": "admin", ... }
-const WWP_FOTOS_DIR   = path.join(__dirname, 'wwp-fotos');
-const WWP_LUNCH_FILE        = path.join(__dirname, 'wwp-lunch-breaks.json');
-const WWP_INSPECTIONS_FILE  = path.join(__dirname, 'wwp-inspecciones.json');
+const WWP_TASKS_FILE  = path.join(DATA_DIR, 'wwp-tasks.json');
+const WWP_ROLES_FILE  = path.join(DATA_DIR, 'wwp-roles.json');
+const WWP_FOTOS_DIR   = path.join(DATA_DIR, 'wwp-fotos');
+const WWP_LUNCH_FILE        = path.join(DATA_DIR, 'wwp-lunch-breaks.json');
+const WWP_INSPECTIONS_FILE  = path.join(DATA_DIR, 'wwp-inspecciones.json');
 if (!fs.existsSync(WWP_FOTOS_DIR)) fs.mkdirSync(WWP_FOTOS_DIR, { recursive: true });
 
 function loadLunchBreaks() { return loadJson(WWP_LUNCH_FILE, []); }
@@ -68,12 +73,12 @@ function wwpId(prefix) {
 }
 
 // ── WWP Auth — sin dependencias externas ────────────────────────────────────
-const WWP_AUTH_FILE     = path.join(__dirname, 'wwp-users-auth.json');
-const WWP_SESSIONS_FILE = path.join(__dirname, 'wwp-sessions.json');
+const WWP_AUTH_FILE     = path.join(DATA_DIR, 'wwp-users-auth.json');
+const WWP_SESSIONS_FILE = path.join(DATA_DIR, 'wwp-sessions.json');
 
 // Secreto JWT persistente
 const JWT_SECRET = (() => {
-  const secretFile = path.join(__dirname, '.jwt-secret');
+  const secretFile = path.join(DATA_DIR, '.jwt-secret');
   if (fs.existsSync(secretFile)) return fs.readFileSync(secretFile,'utf-8').trim();
   const s = crypto.randomBytes(32).toString('hex');
   fs.writeFileSync(secretFile, s, 'utf-8');
@@ -150,7 +155,7 @@ function sendJson(res, status, payload) {
 }
 
 // ── Audit log ───────────────────────────────────────────────────────────────
-const WWP_AUDIT_FILE = path.join(__dirname, 'wwp-audit.json');
+const WWP_AUDIT_FILE = path.join(DATA_DIR, 'wwp-audit.json');
 function appendAuditLog(event, data) {
   try {
     const logs = fs.existsSync(WWP_AUDIT_FILE)
@@ -324,7 +329,7 @@ setInterval(() => {
 // Almuerzo: mapa de timers activos userId → timeout handle
 const lunchTimerMap = new Map();
 
-const WWP_NOTIF_FILE = path.join(__dirname, 'wwp-notifications.json');
+const WWP_NOTIF_FILE = path.join(DATA_DIR, 'wwp-notifications.json');
 function loadNotifications()    { try { return JSON.parse(fs.readFileSync(WWP_NOTIF_FILE,'utf-8')); } catch { return []; } }
 function saveNotifications(arr) { fs.writeFileSync(WWP_NOTIF_FILE, JSON.stringify(arr)); }
 
