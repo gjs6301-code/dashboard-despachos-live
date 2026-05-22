@@ -3020,7 +3020,9 @@ const server = http.createServer(async (req, res) => {
   // ── Protección: path traversal + archivos sensibles ──────────────────────
   const _realPath = path.resolve(filePath);
   const _basePath = path.resolve(__dirname);
-  if (!_realPath.startsWith(_basePath)) {
+  const _dataPath = path.resolve(DATA_DIR);
+  // Permitir archivos bajo __dirname O bajo DATA_DIR (fotos persistentes en Render /data)
+  if (!_realPath.startsWith(_basePath) && !_realPath.startsWith(_dataPath)) {
     res.writeHead(403, {'Content-Type': 'text/plain'}); res.end('Forbidden'); return;
   }
   const _FORBIDDEN = new Set([
