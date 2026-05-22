@@ -15,16 +15,82 @@
 <meta name="description" content="Plataforma de gestión operativa — Altritempi">
 <style>
 :root{
-  --brand:#000000;--brand-light:#062465;--brand-dark:#0f2340;
+  --brand:#1b3b6f;--brand-light:#062465;--brand-dark:#0f2340;
   --green:#059669;--amber:#d97706;--red:#dc2626;--purple:#7c3aed;
-  --surface:#ffffff;--surface-2:#f8fafc;--surface-3:#f1f5f9;
-  --border:#e2e8f0;--border-focus:#2563eb;
-  --text:#0f172a;--text-2:#475569;--text-3:#94a3b8;
-  --radius:10px;--shadow:0 4px 24px rgba(0,0,0,.10);
+  --surface:#fafaf8;--surface-2:#f3f4f0;--surface-3:#e5e6e1;
+  --border:#d4d7d2;--border-focus:#2b6ad4;
+  --text:#1f2d3d;--text-2:#475569;--text-3:#94a3b8;
+  --bg:#f0f1ec;
+  --radius:10px;--shadow:0 4px 24px rgba(0,0,0,.08);
   --font:'Inter',system-ui,-apple-system,sans-serif;
+  /* tokens semánticos de color */
+  --green-bg:#e2f0e8;--green-text:#16643a;--green-dot:#1e9855;
+  --amber-bg:#fdf4e3;--amber-text:#7a4f0d;--amber-dot:#cc8500;
+  --red-bg:#f9e8e8;--red-text:#8b1a1a;--red-dot:#c42020;
+  --blue-bg:#e8f0fb;--blue-text:#184080;--blue-dot:#2a68b0;
+  --purple-bg:#f0ecf8;--purple-text:#522d7a;--purple-dot:#7c3aed;
+  --sky-bg:#e6f2fc;--sky-text:#0e5282;--sky-dot:#0284c7;
+  --orange-bg:#fceee2;--orange-text:#7c3410;--orange-dot:#c4510d;
+  --accent:#1b3b6f;--accent-hover:#142d56;--accent-light:#e5edf7;
 }
+[data-theme='dark']{
+  --brand:#0f1923;--brand-light:#1a2e50;--brand-dark:#080f1c;
+  --green:#2ecc6e;--amber:#e8a020;--red:#e84040;--purple:#9f6ef0;
+  --surface:#1e2633;--surface-2:#252e3d;--surface-3:#2e3748;
+  --border:#333f52;--border-focus:#4a9eff;
+  --text:#dde4ed;--text-2:#94a3b8;--text-3:#5b7391;
+  --bg:#151b25;
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+  /* tokens semánticos en dark */
+  --green-bg:#162a1e;--green-text:#5dd894;--green-dot:#2ecc6e;
+  --amber-bg:#2e2208;--amber-text:#f5b942;--amber-dot:#e8a020;
+  --red-bg:#2e1010;--red-text:#fc7272;--red-dot:#e84040;
+  --blue-bg:#112036;--blue-text:#7ab8f5;--blue-dot:#3a9eff;
+  --purple-bg:#1e1230;--purple-text:#b28af5;--purple-dot:#9f6ef0;
+  --sky-bg:#0e1e30;--sky-text:#62c4f5;--sky-dot:#0ea5e9;
+  --orange-bg:#2a1408;--orange-text:#f5a25a;--orange-dot:#e87020;
+  --accent:#2a5f9e;--accent-hover:#3370b5;--accent-light:#1e3252;
+}
+[data-theme='dark'] input:not([type='checkbox']):not([type='radio']),
+[data-theme='dark'] textarea,
+[data-theme='dark'] select{background:var(--surface-2)!important;color:var(--text)!important;border-color:var(--border)!important}
+
+/* ── Dark mode overrides para clases con colores hardcodeados ─────── */
+[data-theme='dark'] .b-pending   {background:var(--surface-3);color:var(--text-3)}
+[data-theme='dark'] .b-assigned  {background:var(--blue-bg);color:var(--blue-text)}
+[data-theme='dark'] .b-inprogress{background:var(--amber-bg);color:var(--amber-text)}
+[data-theme='dark'] .b-completed {background:var(--green-bg);color:var(--green-text)}
+[data-theme='dark'] .b-validated {background:var(--purple-bg);color:var(--purple-text)}
+[data-theme='dark'] .b-high      {background:var(--red-bg);color:var(--red-text)}
+[data-theme='dark'] .b-medium    {background:var(--amber-bg);color:var(--amber-text)}
+[data-theme='dark'] .b-low       {background:var(--green-bg);color:var(--green-text)}
+[data-theme='dark'] .tc-overdue-pill{background:var(--red-bg);color:var(--red-text);border-color:var(--red-dot)}
+[data-theme='dark'] .task-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.35);border-color:var(--border)}
+[data-theme='dark'] .sub-card:hover{border-color:var(--border)}
+[data-theme='dark'] .btn-danger{background:var(--red-bg);color:var(--red-text)}
+[data-theme='dark'] .btn-danger:hover{background:#3d1616}
+[data-theme='dark'] .btn-primary:disabled{background:var(--surface-3);color:var(--text-3);cursor:not-allowed}
+[data-theme='dark'] .sp-label.done{background:var(--green-bg);color:var(--green-text);border-color:var(--green-dot)}
+[data-theme='dark'] .item-badge-ok{background:var(--green-bg);color:var(--green-text)}
+[data-theme='dark'] .item-badge-pend{background:var(--amber-bg);color:var(--amber-text)}
+[data-theme='dark'] .item-loc-multi-tag{color:var(--blue-text);background:var(--blue-bg)}
+[data-theme='dark'] .item-row-modal:hover,
+[data-theme='dark'] .item-row-modal.sel{background:var(--surface-2)}
+[data-theme='dark'] .item-loc-single{color:var(--green-text);background:var(--green-bg)}
+[data-theme='dark'] .item-loc-row:hover{background:var(--surface-2)}
+[data-theme='dark'] .item-loc-avail{color:var(--green-text);background:var(--green-bg)}
+[data-theme='dark'] .item-loc-avail.loc-low{color:var(--red-text);background:var(--red-bg)}
+[data-theme='dark'] .item-loc-avail.loc-zero{color:var(--text-3);background:var(--surface-3)}
+[data-theme='dark'] .assign-multi-row.checked{background:var(--blue-bg)}
+[data-theme='dark'] .notif-item.unread{background:var(--blue-bg)}
+[data-theme='dark'] .notif-item.unread:hover{background:#1a3050}
+[data-theme='dark'] .presence-btn.offline{background:rgba(107,114,128,.25);color:#94a3b8}
+
+/* Warm mode — corrección de fondos fríos en light mode */
+.b-pending{background:var(--surface-2);color:var(--text-2)}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;color:var(--text)}
+body{font-family:var(--font);background:var(--bg);min-height:100dvh;color:var(--text)}
 
 /* ── LOGIN SCREEN ────────────────────────────────────────────────── */
 #screen-login{
@@ -95,10 +161,11 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
 
 /* Header */
 .app-header{
-  background:var(--brand);color:white;padding:0 20px;height:56px;
+  background:#1b3b6f;color:#fff;padding:0 20px;height:56px;
   display:flex;align-items:center;justify-content:space-between;
-  box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100;
+  border-bottom:3px solid #0e2347;position:sticky;top:0;z-index:100;
 }
+[data-theme='dark'] .app-header{background:#2a5f9e!important;border-bottom-color:#1e2d42!important}
 .app-header-left{display:flex;align-items:center;gap:10px}
 .app-header-icon{font-size:20px}
 .app-header-title{font-size:16px;font-weight:700}
@@ -137,6 +204,26 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
 
 /* Main content */
 .app-body{flex:1;padding:20px;max-width:1000px;margin:0 auto;width:100%}
+
+/* ── Transiciones de pantalla: fade + desplazamiento suave ───────── */
+@keyframes uiViewEnter{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes uiOverlayEnter{from{opacity:0}to{opacity:1}}
+@keyframes uiDialogEnter{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.ui-view-enter{animation:uiViewEnter .26s cubic-bezier(.2,0,0,1) both}
+.ui-screen-enter{animation:uiViewEnter .28s cubic-bezier(.2,0,0,1) both}
+.modal-overlay.open{animation:uiOverlayEnter .18s ease both}
+.modal-overlay.open .modal-card{animation:uiDialogEnter .22s cubic-bezier(.2,0,0,1) both}
+@media (prefers-reduced-motion:reduce){
+  .ui-view-enter,.ui-screen-enter,
+  .modal-overlay.open,
+  .modal-overlay.open .modal-card{animation:none!important}
+}
 
 /* ── TASKS PANEL ─────────────────────────────────────────────────── */
 .tasks-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
@@ -826,7 +913,70 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
   /* — Scrollable form in modal — */
   .modal-body{padding:16px}
 }
+
+/* ── INSPECCIÓN DE VEHÍCULOS ─────────────────────────────────────── */
+.insp-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.insp-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+.insp-table{width:100%;border-collapse:collapse;font-size:13px}
+.insp-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.insp-table td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
+.insp-table tr:last-child td{border-bottom:none}
+.insp-table tr:hover td{background:var(--surface-2)}
+.insp-status-ok{color:#059669;font-weight:700}
+.insp-status-warn{color:#d97706;font-weight:700}
+.insp-status-bad{color:#dc2626;font-weight:700}
+.insp-momento-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:#dbeafe;color:#1e40af}
+.insp-photos-badge{font-size:11px;font-weight:600;color:var(--text-3)}
+
+/* Checklist de componentes */
+.checklist-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:4px 0}
+.checklist-item{display:flex;flex-direction:column;gap:5px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.checklist-label{font-size:12px;font-weight:600;color:var(--text-2)}
+.checklist-radios{display:flex;gap:6px}
+.checklist-radio{display:none}
+.checklist-radio + label{
+  padding:3px 9px;border-radius:8px;border:1.5px solid var(--border);
+  font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--text-3);
+}
+.checklist-radio.ok + label{border-color:#bbf7d0}
+.checklist-radio.ok:checked + label{background:#059669;color:white;border-color:#059669}
+.checklist-radio.warn + label{border-color:#fde68a}
+.checklist-radio.warn:checked + label{background:#d97706;color:white;border-color:#d97706}
+.checklist-radio.bad + label{border-color:#fecaca}
+.checklist-radio.bad:checked + label{background:#dc2626;color:white;border-color:#dc2626}
+
+/* Foto preview en modal inspección */
+.insp-photo-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.insp-photo-thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.insp-photo-thumb img{width:100%;height:100%;object-fit:cover}
+.insp-photo-rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* Combustible selector visual */
+.fuel-selector{display:flex;gap:6px;flex-wrap:wrap}
+.fuel-opt{display:none}
+.fuel-opt + label{padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-2);transition:all .15s}
+.fuel-opt:checked + label{background:var(--brand-light);color:white;border-color:var(--brand-light)}
+@media(max-width:600px){
+  .checklist-grid{grid-template-columns:1fr}
+  .insp-table td,.insp-table th{padding:8px 10px;font-size:12px}
+}
 </style>
+<script>
+(function(){
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    localStorage.setItem('wwp_theme',t);
+    var btn=document.getElementById('theme-toggle-wwp');
+    if(btn) btn.textContent=t==='dark'?'☀️':'🌙';
+  }
+  applyTheme(localStorage.getItem('wwp_theme')||'light');
+  window._toggleTheme=function(){var c=document.documentElement.getAttribute('data-theme')||'light';applyTheme(c==='dark'?'light':'dark');};
+  document.addEventListener('DOMContentLoaded',function(){
+    var btn=document.getElementById('theme-toggle-wwp');
+    if(btn) btn.textContent=(document.documentElement.getAttribute('data-theme')==='dark')?'☀️':'🌙';
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -916,7 +1066,7 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
     </div>
     <div class="app-header-right">
       <!-- Botón Guía de Usuario — URL dinámica según rol, se actualiza en enterApp() -->
-      <a id="btn-guide" href="wwp-guide-staff.html" target="_blank" title="Guía de Usuario" style="background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">📖 Guía</a>
+      <a id="btn-guide" href="/wwp-guide-staff.html" target="_blank" title="Guía de Usuario" style="background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">📖 Guía</a>
       <!-- Timer de almuerzo (visible solo cuando status=lunch) -->
       <span id="lunch-timer-wrap" title="Tiempo en almuerzo">
         🍴 <span id="lunch-timer-display">00:00</span>
@@ -939,6 +1089,8 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
           </div>
         </div>
       </div>
+      <!-- Botón tema claro/oscuro -->
+      <button id="theme-toggle-wwp" onclick="window._toggleTheme()" title="Cambiar tema" class="notif-btn">🌙</button>
       <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Notificaciones">
         🔔<span class="notif-badge" id="notif-badge"></span>
       </button>
@@ -1050,6 +1202,35 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
           </thead>
           <tbody id="lunch-table-body">
             <tr><td colspan="7" style="text-align:center;color:var(--text-2);padding:24px">Selecciona una fecha para ver los registros</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Inspección de vehículos -->
+      <div class="sec-header" style="margin:24px 0 12px">🚗 INSPECCIÓN DE VEHÍCULOS</div>
+      <div class="insp-toolbar">
+        <input type="date" id="insp-filter-date" class="lunch-filter" onchange="loadInspecciones()">
+        <input type="text" id="insp-filter-plate" class="lunch-filter" placeholder="Filtrar por placa…" oninput="loadInspecciones()" style="max-width:160px">
+        <button class="btn-sm" onclick="loadInspecciones()" style="margin-left:0">🔄 Actualizar</button>
+        <button class="btn-new" onclick="openNewInspeccionModal()" style="margin-left:auto">🚗 Nueva Inspección</button>
+      </div>
+      <div class="insp-table-wrap">
+        <table class="insp-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Placa</th>
+              <th>Modelo</th>
+              <th>Conductor</th>
+              <th>Momento</th>
+              <th>Combustible</th>
+              <th>Odómetro</th>
+              <th>Estado</th>
+              <th>Fotos</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="insp-table-body">
+            <tr><td colspan="10" style="text-align:center;color:var(--text-3);padding:24px">Selecciona una fecha o haz clic en Actualizar</td></tr>
           </tbody>
         </table>
       </div>
@@ -1237,6 +1418,84 @@ body{font-family:var(--font);background:var(--brand-dark);min-height:100dvh;colo
   </div>
 </div>
 
+<!-- ════════════════════ MODAL INSPECCIÓN VEHÍCULO ══════════════════════ -->
+<div class="modal-overlay" id="modal-inspeccion">
+  <div class="modal-card" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title">🚗 Nueva Inspección de Vehículo</span>
+      <button class="modal-close" onclick="closeInspeccionModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Datos del vehículo -->
+      <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Datos del Vehículo</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Placa *</label>
+          <input id="if-placa" class="form-input" placeholder="Ej: A123456" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo / Descripción</label>
+          <input id="if-modelo" class="form-input" placeholder="Ej: Toyota Hilux 2022">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Conductor *</label>
+          <input id="if-conductor" class="form-input" placeholder="Nombre del conductor">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Momento *</label>
+          <select id="if-momento" class="form-select">
+            <option value="inicio_ruta">🟢 Inicio de ruta</option>
+            <option value="fin_ruta">🔴 Fin de ruta</option>
+            <option value="general">📋 Inspección general</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Odómetro (km)</label>
+          <input id="if-odometro" class="form-input" type="number" min="0" placeholder="Ej: 45320">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nivel de combustible</label>
+          <div class="fuel-selector" style="margin-top:4px">
+            <input type="radio" name="if-fuel" id="fuel-full" value="Lleno" class="fuel-opt"><label for="fuel-full">🟢 Lleno</label>
+            <input type="radio" name="if-fuel" id="fuel-3q"   value="3/4"   class="fuel-opt"><label for="fuel-3q">3/4</label>
+            <input type="radio" name="if-fuel" id="fuel-half" value="1/2"   class="fuel-opt"><label for="fuel-half">1/2</label>
+            <input type="radio" name="if-fuel" id="fuel-1q"   value="1/4"   class="fuel-opt"><label for="fuel-1q">1/4</label>
+            <input type="radio" name="if-fuel" id="fuel-low"  value="Bajo"  class="fuel-opt"><label for="fuel-low">🔴 Bajo</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist de componentes -->
+      <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 10px">Estado de Componentes</div>
+      <div class="checklist-grid" id="if-checklist">
+        <!-- generado por JS -->
+      </div>
+
+      <!-- Observaciones -->
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">Observaciones</label>
+        <textarea id="if-observaciones" class="form-input" rows="3" placeholder="Daños, anomalías u observaciones adicionales…" style="resize:vertical"></textarea>
+      </div>
+
+      <!-- Fotos -->
+      <div class="form-group">
+        <label class="form-label">Fotos de evidencia</label>
+        <div class="insp-photo-grid" id="if-photo-grid"></div>
+        <button type="button" class="btn-add-photo" style="margin-top:8px" onclick="document.getElementById('if-photo-input').click()">📷 Agregar foto</button>
+        <input type="file" id="if-photo-input" accept="image/*" multiple style="display:none" onchange="onInspPhotosSelected(event)">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" style="background:#6b7280" onclick="closeInspeccionModal()">Cancelar</button>
+      <button class="btn-primary" id="if-submit-btn" onclick="submitInspeccion()">Guardar Inspección</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1267,6 +1526,31 @@ function wwpServerUrl(path) {
 }
 
 const ROLE_LABELS = {admin:'Admin',manager:'Encargado',assistant:'Auxiliar'};
+
+function uiMotionReduced() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function uiPlayEnter(el, className) {
+  if (!el || uiMotionReduced()) return;
+  var motionClass = className || 'ui-view-enter';
+  el.classList.remove('ui-view-enter', 'ui-screen-enter');
+  void el.offsetWidth;
+  el.classList.add(motionClass);
+  if (el._uiMotionTimer) clearTimeout(el._uiMotionTimer);
+  el._uiMotionTimer = setTimeout(function() {
+    el.classList.remove(motionClass);
+  }, 340);
+}
+function uiSetVisible(el, visible, displayValue, className) {
+  if (!el) return;
+  if (visible) {
+    el.style.display = displayValue || '';
+    uiPlayEnter(el, className);
+  } else {
+    el.style.display = 'none';
+    el.classList.remove('ui-view-enter', 'ui-screen-enter');
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // RBAC — Permisos por módulo (única fuente de verdad en el frontend)
@@ -1358,10 +1642,10 @@ const STATUS_CSS = {pending:'b-pending',assigned:'b-assigned',in_progress:'b-inp
 // SCREEN MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════
 function showScreen(s) {
-  document.getElementById('screen-login').style.display = s==='login'?'flex':'none';
-  document.getElementById('screen-forgot').style.display = s==='forgot'?'flex':'none';
-  document.getElementById('screen-reset').style.display = s==='reset'?'flex':'none';
-  document.getElementById('screen-app').style.display = s==='app'?'flex':'none';
+  uiSetVisible(document.getElementById('screen-login'), s==='login', 'flex', 'ui-screen-enter');
+  uiSetVisible(document.getElementById('screen-forgot'), s==='forgot', 'flex', 'ui-screen-enter');
+  uiSetVisible(document.getElementById('screen-reset'), s==='reset', 'flex', 'ui-screen-enter');
+  uiSetVisible(document.getElementById('screen-app'), s==='app', 'flex', 'ui-screen-enter');
   if (s==='app') document.getElementById('screen-app').classList.add('active');
   else document.getElementById('screen-app').classList.remove('active');
 }
@@ -1377,7 +1661,7 @@ async function doLogin() {
   const remember = document.getElementById('f-remember').checked;
   const errEl = document.getElementById('login-error');
   errEl.classList.remove('show');
-  if (!email) { showErr(errEl,'Por favor escribe el correo'); return; }
+  if (!email||!password) { showErr(errEl,'Por favor completa todos los campos'); return; }
   const btn = document.getElementById('btn-login');
   btn.disabled = true; btn.textContent = 'Ingresando…';
   try {
@@ -1387,7 +1671,7 @@ async function doLogin() {
     _token = d.accessToken; _refreshToken = d.refreshToken; _user = d.user;
     saveSession(remember);
     enterApp();
-  } catch(e) { showErr(errEl,'Error de conexión con el servidor: '+(e && e.message ? e.message : e)); btn.disabled=false; btn.textContent='Entrar'; }
+  } catch(e) { showErr(errEl,'Error de conexión con el servidor'); btn.disabled=false; btn.textContent='Entrar'; }
 }
 
 async function doRefresh() {
@@ -1421,54 +1705,16 @@ function saveSession(persist) {
   else { sessionStorage.setItem('wwp_auth',data); localStorage.removeItem('wwp_auth'); }
 }
 
-async function authFetch(url, opts={}, timeoutMs) {
+async function authFetch(url, opts={}) {
   opts.headers = {...(opts.headers||{}), 'Authorization':'Bearer '+_token, 'Content-Type':'application/json'};
-  let r = await fetchWithTimeout(url, opts, timeoutMs);
+  let r = await fetch(url, opts);
   if (r.status===401) {
     const ok = await doRefresh();
     if (!ok) { doLogout(); throw new Error('Sesión expirada'); }
     opts.headers['Authorization'] = 'Bearer '+_token;
-    r = await fetchWithTimeout(url, opts, timeoutMs);
+    r = await fetch(url, opts);
   }
   return r;
-}
-
-function fetchWithTimeout(url, opts, timeoutMs) {
-  if (!timeoutMs || typeof AbortController === 'undefined') return fetch(url, opts);
-  const ctrl = new AbortController();
-  const timer = setTimeout(function(){ ctrl.abort(); }, timeoutMs);
-  const merged = {...(opts||{}), signal: ctrl.signal};
-  return fetch(url, merged).finally(function(){ clearTimeout(timer); });
-}
-
-function xhrJson(url, token, timeoutMs) {
-  return new Promise(function(resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.timeout = timeoutMs || 15000;
-    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-    xhr.setRequestHeader('Accept', 'application/json');
-    xhr.onload = function() {
-      var data = null;
-      try { data = xhr.responseText ? JSON.parse(xhr.responseText) : null; }
-      catch(e) { reject(new Error('Respuesta inválida del servidor')); return; }
-      resolve({status:xhr.status, ok:xhr.status >= 200 && xhr.status < 300, data:data});
-    };
-    xhr.onerror = function() { reject(new Error('Error de red al cargar tareas')); };
-    xhr.ontimeout = function() { reject(new Error('Tiempo agotado cargando tareas')); };
-    xhr.send();
-  });
-}
-
-async function authGetJson(url, timeoutMs) {
-  var r = await xhrJson(url, _token, timeoutMs);
-  if (r.status === 401) {
-    var ok = await doRefresh();
-    if (!ok) { doLogout(); throw new Error('Sesión expirada'); }
-    r = await xhrJson(url, _token, timeoutMs);
-  }
-  if (!r.ok) throw new Error((r.data && r.data.error) || ('Error del servidor: ' + r.status));
-  return r.data;
 }
 
 async function doForgot() {
@@ -1925,7 +2171,7 @@ function enterApp() {
   // Guía de usuario: admin → guía completa, encargado/auxiliar → guía staff
   var guideBtn = document.getElementById('btn-guide');
   if (guideBtn) {
-    guideBtn.href = (_user.role === 'admin') ? 'wwp-guide.html' : 'wwp-guide-staff.html';
+    guideBtn.href = (_user.role === 'admin') ? '/wwp-guide.html' : '/wwp-guide-staff.html';
   }
 
   // ── Construir nav dinámicamente según rol (RBAC) ──────────────────────
@@ -1979,7 +2225,7 @@ function enterApp() {
   connectSSE();
   connectWwpRealtime();
   // Request browser notification permission (non-intrusive — only if not decided yet)
-  if ('Notification' in window && Notification.permission === 'default') {
+  if (Notification && Notification.permission === 'default') {
     setTimeout(() => Notification.requestPermission(), 3000);
   }
 }
@@ -2030,9 +2276,9 @@ function switchTab(tab) {
   if (!guardTab(tab)) return;
   _currentTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
-  document.getElementById('tab-tasks').style.display = tab==='tasks'?'':'none';
-  document.getElementById('tab-dashboard').style.display = tab==='dashboard'?'':'none';
-  document.getElementById('tab-users').style.display = tab==='users'?'':'none';
+  ['tasks','dashboard','users'].forEach(function(id) {
+    uiSetVisible(document.getElementById('tab-' + id), tab === id, '', 'ui-view-enter');
+  });
   if (tab==='dashboard') loadDashboard();
   if (tab==='users') loadUsers();
   closeProfileMenu();
@@ -2042,13 +2288,12 @@ function switchTab(tab) {
 // TASKS
 // ═══════════════════════════════════════════════════════════════════════
 async function loadTasks() {
-  const listEl = document.getElementById('tasks-list');
-  listEl.innerHTML='<div class="loading"><div class="spinner"></div><br>Cargando tareas…</div>';
+  document.getElementById('tasks-list').innerHTML='<div class="loading"><div class="spinner"></div><br>Cargando tareas…</div>';
   try {
-    const data = await authGetJson('/api/wwp/tasks', 15000);
-    _tasks = Array.isArray(data) ? data : (data.tasks || []);
+    const r = await authFetch('/api/wwp/tasks');
+    _tasks = await r.json();
     renderTasks();
-  } catch(e) { listEl.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+  } catch(e) { document.getElementById('tasks-list').innerHTML='<div class="loading">Error: '+e.message+'</div>'; }
 }
 
 function filterTasks() {
@@ -2703,6 +2948,10 @@ async function loadDashboard() {
   // Cargar reporte de almuerzos
   initLunchReport();
   loadLunchReport();
+  // Cargar inspecciones
+  const inspDateEl = document.getElementById('insp-filter-date');
+  if (inspDateEl && !inspDateEl.value) inspDateEl.value = new Date().toISOString().slice(0,10);
+  loadInspecciones();
 }
 
 function initLunchReport() {
@@ -2770,6 +3019,184 @@ async function loadLunchReport() {
     document.getElementById('lunch-table-body').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-2);padding:20px">⚠️ ${msg}</td></tr>`;
     ['lk-total','lk-compliant','lk-exceeded','lk-avg'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='—'; });
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INSPECCIÓN DE VEHÍCULOS
+// ═══════════════════════════════════════════════════════════════════════
+const INSP_CHECKLIST_ITEMS = [
+  {key:'frenos',     label:'Frenos'},
+  {key:'llantas',    label:'Llantas'},
+  {key:'luces_del',  label:'Luces delanteras'},
+  {key:'luces_tra',  label:'Luces traseras'},
+  {key:'espejos',    label:'Espejos'},
+  {key:'limpiadores',label:'Limpiadores'},
+  {key:'extintor',   label:'Extintor'},
+  {key:'documentos', label:'Documentos'},
+  {key:'cinturones', label:'Cinturones'},
+  {key:'carroceria', label:'Carrocería'},
+];
+
+var _inspPhotos = []; // [{data:base64, ext}]
+
+function buildChecklist() {
+  const grid = document.getElementById('if-checklist');
+  if (!grid) return;
+  grid.innerHTML = INSP_CHECKLIST_ITEMS.map(item => `
+    <div class="checklist-item">
+      <span class="checklist-label">${item.label}</span>
+      <div class="checklist-radios">
+        <input type="radio" class="checklist-radio ok"  name="cl-${item.key}" id="cl-${item.key}-ok"   value="Bueno">
+        <label for="cl-${item.key}-ok">Bueno</label>
+        <input type="radio" class="checklist-radio warn" name="cl-${item.key}" id="cl-${item.key}-warn" value="Regular">
+        <label for="cl-${item.key}-warn">Regular</label>
+        <input type="radio" class="checklist-radio bad"  name="cl-${item.key}" id="cl-${item.key}-bad"  value="Malo">
+        <label for="cl-${item.key}-bad">Malo</label>
+      </div>
+    </div>`).join('');
+}
+
+function openNewInspeccionModal() {
+  buildChecklist();
+  _inspPhotos = [];
+  document.getElementById('if-photo-grid').innerHTML = '';
+  document.getElementById('if-placa').value       = '';
+  document.getElementById('if-modelo').value      = '';
+  document.getElementById('if-conductor').value   = _user?.name || '';
+  document.getElementById('if-momento').value     = 'inicio_ruta';
+  document.getElementById('if-odometro').value    = '';
+  document.getElementById('if-observaciones').value = '';
+  document.querySelectorAll('input[name^="if-fuel"]').forEach(r => r.checked = false);
+  document.getElementById('modal-inspeccion').classList.add('active');
+}
+
+function closeInspeccionModal() {
+  document.getElementById('modal-inspeccion').classList.remove('active');
+}
+
+function onInspPhotosSelected(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const b64 = ev.target.result.split(',')[1];
+      const ext  = file.name.split('.').pop().toLowerCase();
+      _inspPhotos.push({data: b64, ext});
+      renderInspPhotoGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function renderInspPhotoGrid() {
+  const grid = document.getElementById('if-photo-grid');
+  grid.innerHTML = _inspPhotos.map((p, i) => `
+    <div class="insp-photo-thumb">
+      <img src="data:image/${p.ext};base64,${p.data}" alt="foto ${i+1}">
+      <button class="insp-photo-rm" onclick="removeInspPhoto(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeInspPhoto(idx) {
+  _inspPhotos.splice(idx, 1);
+  renderInspPhotoGrid();
+}
+
+async function submitInspeccion() {
+  const placa     = document.getElementById('if-placa').value.trim().toUpperCase();
+  const conductor = document.getElementById('if-conductor').value.trim();
+  const momento   = document.getElementById('if-momento').value;
+  if (!placa || !conductor) { showToast('Placa y conductor son obligatorios','error'); return; }
+
+  const checklist = {};
+  INSP_CHECKLIST_ITEMS.forEach(item => {
+    const sel = document.querySelector(`input[name="cl-${item.key}"]:checked`);
+    checklist[item.key] = sel ? sel.value : null;
+  });
+
+  const fuelSel = document.querySelector('input[name="if-fuel"]:checked');
+  const payload = {
+    placa,
+    modelo:       document.getElementById('if-modelo').value.trim(),
+    conductor,
+    momento,
+    odometro:     Number(document.getElementById('if-odometro').value) || null,
+    combustible:  fuelSel ? fuelSel.value : null,
+    checklist,
+    observaciones: document.getElementById('if-observaciones').value.trim(),
+    fotos:        _inspPhotos,
+  };
+
+  const btn = document.getElementById('if-submit-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const r = await authFetch('/api/wwp/inspections', {method:'POST', body: JSON.stringify(payload)});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Error al guardar');
+    closeInspeccionModal();
+    showToast('✅ Inspección guardada correctamente');
+    loadInspecciones();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar Inspección';
+  }
+}
+
+async function loadInspecciones() {
+  const tbody = document.getElementById('insp-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+  const date  = document.getElementById('insp-filter-date')?.value  || '';
+  const plate = document.getElementById('insp-filter-plate')?.value || '';
+  try {
+    const params = new URLSearchParams();
+    if (date)  params.set('date', date);
+    if (plate) params.set('plate', plate);
+    const r = await authFetch('/api/wwp/inspections?' + params.toString());
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Error');
+    if (!d.inspections.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-3);padding:24px">Sin inspecciones registradas</td></tr>';
+      return;
+    }
+    const momentoLabel = {inicio_ruta:'Inicio ruta', fin_ruta:'Fin ruta', general:'General'};
+    tbody.innerHTML = d.inspections.map(insp => {
+      const vals = Object.values(insp.checklist || {}).filter(Boolean);
+      const hasBad  = vals.includes('Malo');
+      const hasWarn = vals.includes('Regular');
+      const estadoClass = hasBad ? 'insp-status-bad' : hasWarn ? 'insp-status-warn' : 'insp-status-ok';
+      const estadoTxt   = hasBad ? '🔴 Malo' : hasWarn ? '🟡 Regular' : vals.length ? '🟢 Bueno' : '—';
+      const fecha = insp.fecha ? insp.fecha : (insp.createdAt||'').slice(0,10);
+      const fotoCount = (insp.fotos||[]).length;
+      return `<tr>
+        <td>${fecha}</td>
+        <td><strong>${esc(insp.placa)}</strong></td>
+        <td style="color:var(--text-2)">${esc(insp.modelo||'—')}</td>
+        <td>${esc(insp.conductor)}</td>
+        <td><span class="insp-momento-badge">${momentoLabel[insp.momento]||insp.momento}</span></td>
+        <td>${insp.combustible||'—'}</td>
+        <td>${insp.odometro ? insp.odometro.toLocaleString()+' km' : '—'}</td>
+        <td class="${estadoClass}">${estadoTxt}</td>
+        <td class="insp-photos-badge">${fotoCount ? '📷 '+fotoCount : '—'}</td>
+        <td><button class="btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" onclick="deleteInspeccion('${insp.id}')">🗑</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-2);padding:20px">⚠️ ${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function deleteInspeccion(id) {
+  if (!confirm('¿Eliminar esta inspección?')) return;
+  try {
+    const r = await authFetch('/api/wwp/inspections/'+id, {method:'DELETE'});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error||'Error');
+    showToast('Inspección eliminada');
+    loadInspecciones();
+  } catch(e) { showToast('Error: '+e.message,'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
