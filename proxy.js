@@ -3070,6 +3070,29 @@ const server = http.createServer(async (req, res) => {
     if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
     const fgArr = tasks[idx].fotos_guia || [];
     const fgEntry = fgArr.find(f => f.url.endsWith('/'+fname) || f.id === fname);
+    // ── Verificar propiedad de la foto ────────────────────────────────────
+    if (fgEntry && _jpFgDel.role !== 'admin') {
+      const authUsers   = loadAuthUsers();
+      const deleter     = authUsers.find(u => u.id === _jpFgDel.id);
+      const deleterName = deleter ? deleter.name : '';
+      const uploaderName = fgEntry.creado_by || '';
+      const isOwn = uploaderName === deleterName;
+      if (!isOwn) {
+        if (_jpFgDel.role === 'manager') {
+          // Encargado solo puede borrar fotos de auxiliares
+          const uploader = authUsers.find(u => u.name === uploaderName);
+          if (uploader && uploader.role !== 'assistant') {
+            res.writeHead(403,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({ok:false,error:'Sin permiso para eliminar esta foto'}));
+            return;
+          }
+        } else {
+          res.writeHead(403,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false,error:'Solo puedes eliminar tus propias fotos'}));
+          return;
+        }
+      }
+    }
     if (fgEntry) {
       try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(fgEntry.url))); } catch(e) {}
       // eliminar evidencias asociadas

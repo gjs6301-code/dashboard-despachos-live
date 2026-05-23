@@ -5103,6 +5103,16 @@ function renderDrawer(t) {
 
   const canEdit = can('edit_task');
   const canValidate = can('validate_task');
+  // Permiso de borrar foto de guía: admin=todas, encargado=propias+auxiliares, auxiliar=solo propias
+  const canDeleteThisGuiaFoto = (f) => {
+    if (_user.role === 'admin') return true;
+    if ((f.creado_by||'') === _user.name) return true;
+    if (_user.role === 'manager') {
+      const uploader = (_authUsers||[]).find(u => u.name === f.creado_by);
+      return !uploader || uploader.role === 'assistant';
+    }
+    return false;
+  };
   const myId = 'oe_'+_user.odooId;
   const isResponsibleCloser = _user.role==='admin' ||
     t.managerId === _user.id ||
@@ -5138,13 +5148,19 @@ function renderDrawer(t) {
     }).join('');
 
     actionHtml += `<div style="margin-bottom:16px">
-      <div class="sec-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="sec-header" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none"
+        onclick="(function(el){var b=document.getElementById('dr-assign-body');var open=b.style.display!=='none';b.style.display=open?'none':'';el.querySelector('.dr-chev').textContent=open?'▸':'▾';})(this)">
         <span>${assigningAssistants ? 'ASIGNAR AUXILIARES' : 'ASIGNAR ENCARGADO'}</span>
-        <span id="dr-assign-count" style="font-size:11px;color:var(--text-3);font-weight:600"></span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span id="dr-assign-count" style="font-size:11px;color:var(--text-3);font-weight:600"></span>
+          <span class="dr-chev" style="font-size:13px;color:var(--text-muted)">▸</span>
+        </span>
       </div>
-      <div class="assign-multi-list" id="dr-assign-list">${rowsHtml}</div>
-      <div style="display:flex;justify-content:flex-end;margin-top:8px">
-        <button class="btn-primary" onclick="assignManager('${t.id}')">Asignar</button>
+      <div id="dr-assign-body" style="display:none">
+        <div class="assign-multi-list" id="dr-assign-list">${rowsHtml}</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn-primary" onclick="assignManager('${t.id}')">Asignar</button>
+        </div>
       </div>
     </div>`;
   }
@@ -5298,7 +5314,7 @@ function renderDrawer(t) {
         <div style="flex-shrink:0">
           <img src="${mediaUrl(f.url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block"
             onclick="openLightbox('${mediaUrl(f.url)}')" onerror="this.src='data:image/svg+xml,<svg/>'">
-          ${(!isClosedTask && canEdit)?`<button onclick="deleteGuiaFoto('${t.id}','${f.url.split('/').pop()}')" style="margin-top:4px;width:72px;padding:2px;font-size:10px;color:var(--red-text);background:none;border:1px solid var(--red-dot);border-radius:4px;cursor:pointer">Eliminar</button>`:''}
+          ${(!isClosedTask && canDeleteThisGuiaFoto(f))?`<button onclick="deleteGuiaFoto('${t.id}','${f.url.split('/').pop()}')" style="margin-top:4px;width:72px;padding:2px;font-size:10px;color:var(--red-text);background:none;border:1px solid var(--red-dot);border-radius:4px;cursor:pointer">Eliminar</button>`:''}
         </div>
         <div style="flex:1;min-width:0">
           ${f.instruccion?`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;padding:5px 8px;background:rgba(37,99,235,.06);border-radius:6px;border-left:2px solid var(--accent)">${esc(f.instruccion)}</div>`:''}
