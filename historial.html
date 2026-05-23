@@ -5148,15 +5148,17 @@ function renderDrawer(t) {
     }).join('');
 
     actionHtml += `<div style="margin-bottom:16px">
-      <div class="sec-header" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none"
-        onclick="(function(el){var b=document.getElementById('dr-assign-body');var open=b.style.display!=='none';b.style.display=open?'none':'';el.querySelector('.dr-chev').textContent=open?'▸':'▾';})(this)">
-        <span>${assigningAssistants ? 'ASIGNAR AUXILIARES' : 'ASIGNAR ENCARGADO'}</span>
-        <span style="display:flex;align-items:center;gap:8px">
-          <span id="dr-assign-count" style="font-size:11px;color:var(--text-3);font-weight:600"></span>
-          <span class="dr-chev" style="font-size:13px;color:var(--text-muted)">▸</span>
+      <button onclick="(function(btn){var b=document.getElementById('dr-assign-body');var open=b.style.display!=='none';b.style.display=open?'none':'';btn.querySelector('.dr-chev').style.transform=open?'':'rotate(90deg)';btn.style.borderRadius=open?'8px':'8px 8px 0 0';})(this)"
+        style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 13px;
+               background:var(--surface-2);border:1.5px solid var(--border);border-radius:8px;
+               cursor:pointer;user-select:none;transition:background .15s;gap:8px">
+        <span style="display:flex;align-items:center;gap:7px">
+          <span class="dr-chev" style="font-size:14px;color:var(--accent);transition:transform .2s;display:inline-block">▶</span>
+          <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">${assigningAssistants ? 'Asignar auxiliares' : 'Asignar encargado'}</span>
         </span>
-      </div>
-      <div id="dr-assign-body" style="display:none">
+        <span id="dr-assign-count" style="font-size:11px;color:var(--text-3);font-weight:600"></span>
+      </button>
+      <div id="dr-assign-body" style="display:none;border:1.5px solid var(--border);border-top:none;border-radius:0 0 8px 8px;padding:10px 10px 12px">
         <div class="assign-multi-list" id="dr-assign-list">${rowsHtml}</div>
         <div style="display:flex;justify-content:flex-end;margin-top:8px">
           <button class="btn-primary" onclick="assignManager('${t.id}')">Asignar</button>
