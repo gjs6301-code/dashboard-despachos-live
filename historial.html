@@ -8926,7 +8926,7 @@ async function buscarArticuloDesc(query){
       var nombre=(p.name||'').split('\n')[0].trim();
       var ref=p.default_code||'';
       var bar=p.barcode||'';
-      h+='<div class="art-desc-item" onclick="artDescSelect('+JSON.stringify(ref||bar||nombre)+')">'
+      h+='<div class="art-desc-item" onclick="artDescSelect('+JSON.stringify(ref||bar||nombre).replace(/"/g,'&quot;')+')">'
         +'<div style="font-size:12px;font-weight:600;color:var(--text-primary)">'+escH(nombre)+'</div>'
         +'<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'
         +(ref?'<span style="font-family:monospace">'+escH(ref)+'</span>':'')
