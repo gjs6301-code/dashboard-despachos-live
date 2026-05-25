@@ -935,8 +935,10 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 }
 @media(max-width:700px){.pol-kpi-row{grid-template-columns:1fr 1fr}.pol-page-hdr{margin-bottom:14px}}
 @media(max-width:700px){
-  .veh-check-hdr,.veh-check-row{grid-template-columns:1fr 44px 44px}
-  .veh-check-hdr span:last-child,.veh-check-row .veh-obs-input{display:none}
+  .veh-check-hdr{grid-template-columns:1fr 44px 44px}
+  .veh-check-hdr span:last-child{display:none}
+  .veh-check-row{grid-template-columns:1fr 44px 44px;row-gap:6px;padding-bottom:10px}
+  .veh-check-row .veh-obs-input{grid-column:1/-1;display:block}
   .veh-form-grid{grid-template-columns:1fr 1fr}
   .veh-form-grid .span3{grid-column:span 2}
 }
