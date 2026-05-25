@@ -194,6 +194,10 @@
 [data-theme='dark'] .task-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.35);border-color:var(--border)}
 [data-theme='dark'] .tc-overdue-pill{background:var(--red-bg);color:var(--red-text);border-color:var(--red-dot)}
 [data-theme='dark'] .sub-card:hover{border-color:var(--border)}
+/* Semáforo dark mode — colores más oscuros y apagados */
+[data-theme='dark'] .task-card[style*="fdeaea"],[data-theme='dark'] .task-list-row[style*="fdeaea"],[data-theme='dark'] .kanban-mini-card[style*="fdeaea"]{background:#2e1010!important;border-color:#7a3030!important;border-left-color:#7a3030!important}
+[data-theme='dark'] .task-card[style*="fef8ec"],[data-theme='dark'] .task-list-row[style*="fef8ec"],[data-theme='dark'] .kanban-mini-card[style*="fef8ec"]{background:#2a1e08!important;border-color:#7a5a20!important;border-left-color:#7a5a20!important}
+[data-theme='dark'] .task-card[style*="edf6f0"],[data-theme='dark'] .task-list-row[style*="edf6f0"],[data-theme='dark'] .kanban-mini-card[style*="edf6f0"]{background:#0e2018!important;border-color:#2e6040!important;border-left-color:#2e6040!important}
 
 /* Botones */
 [data-theme='dark'] .btn-danger{background:var(--red-bg);color:var(--red-text)}
@@ -5193,10 +5197,40 @@ function setTaskView(v) {
   filterTasks();
 }
 
+/* ── Semáforo de fecha límite ─────────────────────────────────────────────────
+   Retorna 'overdue' | 'soon' | 'ontime' | null
+   El color persiste independientemente del estado de la tarea.           */
+function dueTier(t) {
+  if (!t.dueDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due   = new Date(t.dueDate + 'T00:00:00');
+  const diff  = Math.round((due - today) / 864e5); // días hasta vencimiento
+  if (diff < 0)  return 'overdue';
+  if (diff <= 3) return 'soon';
+  return 'ontime';
+}
+const DUE_ROW_STYLE = {
+  overdue: 'background:#fdeaea;border-left:3px solid #e8a0a0;',
+  soon:    'background:#fef8ec;border-left:3px solid #e8c97a;',
+  ontime:  'background:#edf6f0;border-left:3px solid #90c4a4;',
+};
+const DUE_CARD_STYLE = {
+  overdue: 'background:#fdeaea;border-color:#e8a0a0;',
+  soon:    'background:#fef8ec;border-color:#e8c97a;',
+  ontime:  'background:#edf6f0;border-color:#90c4a4;',
+};
+const DUE_DATE_COLOR = {
+  overdue: 'color:#a94040;font-weight:700;',
+  soon:    'color:#8a6020;font-weight:700;',
+  ontime:  'color:#2e7050;',
+};
+
 /* Vista Lista — fila compacta, mismo tamaño de fuente */
 function renderListRow(t) {
   const today = new Date().toISOString().slice(0,10);
   const overdue = t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status);
+  const tier = dueTier(t);
+  const rowStyle = tier ? DUE_ROW_STYLE[tier] : '';
   const mgr = t.managerId ? (_authUsers||[]).find(u=>u.id===t.managerId) : null;
   const subs = _tasks.filter(s=>s.parentId===t.id);
   const doneSubs = subs.filter(s=>['completed','validated'].includes(s.status)).length;
@@ -5205,10 +5239,10 @@ function renderListRow(t) {
   const meta = [];
   if (mgr) meta.push(`<span style="display:flex;align-items:center;gap:3px">${avatarHtml(mgr,15)}<span>${esc(mgr.name.split(' ')[0])}</span></span>`);
   if (t.odooRef) meta.push(`<span>${esc(t.odooRef)}</span>`);
-  if (t.dueDate) meta.push(`<span class="${overdue?'tc-overdue-val':''}">${t.dueDate}</span>`);
+  if (t.dueDate) meta.push(`<span style="${tier?DUE_DATE_COLOR[tier]:''}">${t.dueDate}</span>`);
   if (subs.length) meta.push(`<span>${doneSubs}/${subs.length} sub</span>`);
   if (t.location) meta.push(`<span>${esc(t.location)}</span>`);
-  return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')">
+  return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${rowStyle}">
     <span style="width:8px;height:8px;border-radius:50%;background:${priorityColor};flex-shrink:0;display:inline-block"></span>
     <div class="task-list-main">
       <span class="task-list-title">${esc(t.title)}</span>
@@ -5237,12 +5271,14 @@ function renderKanbanView(tasks) {
     const cards = ct.map(t=>{
       const mgr = t.managerId?(_authUsers||[]).find(u=>u.id===t.managerId):null;
       const overdue = t.dueDate&&t.dueDate<today&&!['completed','validated'].includes(t.status);
-      return `<div class="kanban-mini-card" onclick="openDrawer('${t.id}')">
+      const tier = dueTier(t);
+      const cardStyle = tier ? DUE_CARD_STYLE[tier] : '';
+      const dateStyle = tier ? DUE_DATE_COLOR[tier] : '';
+      return `<div class="kanban-mini-card" onclick="openDrawer('${t.id}')" style="${cardStyle}">
         <div class="kanban-mini-title">${esc(t.title)}</div>
         <div class="kanban-mini-meta">
           ${mgr?avatarHtml(mgr,17)+'<span>'+esc(mgr.name.split(' ')[0])+'</span>':''}
-          ${overdue?'<span style="color:#dc2626;font-size:10px;font-weight:700">⚠ Vencida</span>':''}
-          ${t.dueDate&&!overdue?`<span style="margin-left:auto">${t.dueDate}</span>`:''}
+          ${t.dueDate?`<span style="margin-left:auto;${dateStyle}">${t.dueDate}</span>`:''}
         </div>
       </div>`;
     }).join('');
@@ -5309,7 +5345,7 @@ function renderTaskCard(t) {
   if (t.odooRef)  fields.push(`<div class="tc-field"><span class="tc-label">Orden Odoo</span><span class="tc-value"><i data-lucide="clipboard-list" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(t.odooRef)}</span></div>`);
   if (mgr)        fields.push(`<div class="tc-field"><span class="tc-label">Responsable</span><div class="tc-user">${avatarHtml(mgr,20)}<span>${esc(mgr.name.split(' ')[0])}</span></div></div>`);
   else if (t.assignedTo) fields.push(`<div class="tc-field"><span class="tc-label">Responsable</span><span class="tc-value"><i data-lucide="user-round" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${userName(t.assignedTo)}</span></div>`);
-  if (t.dueDate)  fields.push(`<div class="tc-field"><span class="tc-label">Fecha Límite</span><span class="tc-value${overdue?' tc-overdue-val':''}"><i data-lucide="calendar" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${t.dueDate}</span></div>`);
+  if (t.dueDate)  fields.push(`<div class="tc-field"><span class="tc-label">Fecha Límite</span><span class="tc-value" style="${tier?DUE_DATE_COLOR[tier]:''}"><i data-lucide="calendar" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${t.dueDate}</span></div>`);
   if (t.location) fields.push(`<div class="tc-field"><span class="tc-label">Localidad</span><span class="tc-value"><i data-lucide="map-pin" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(t.location)}</span></div>`);
   if (subs.length) fields.push(`<div class="tc-field"><span class="tc-label">Subtareas</span><span class="tc-value"><i data-lucide="list-checks" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${doneSubs}/${subs.length}</span></div>`);
   const auxIds = taskAuxiliaryIds(t);
@@ -5318,7 +5354,8 @@ function renderTaskCard(t) {
     fields.push(`<div class="tc-field tc-field-full"><span class="tc-label">Auxiliares</span><span class="tc-value"><i data-lucide="users" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(aNames)}</span></div>`);
   }
 
-  return `<div class="task-card" data-status="${t.status}" onclick="openDrawer('${t.id}')">
+  const tier = dueTier(t);
+  return `<div class="task-card" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${tier?DUE_CARD_STYLE[tier]:''}">
     <div class="tc-header">
       <div class="tc-title">${esc(t.title)}</div>
       ${overdue ? '<span class="tc-overdue-pill"><i data-lucide="alert-triangle" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>Vencida</span>' : ''}
