@@ -1935,6 +1935,9 @@ body{font-family:var(--font);min-height:100dvh}
 .kanban-col-body{padding:8px;flex:1;display:flex;flex-direction:column;gap:7px;overflow-y:auto}
 .kanban-mini-card{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:9px 11px;cursor:pointer;transition:box-shadow .12s,border-color .12s}
 .kanban-mini-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.1);border-color:var(--accent)}
+.kanban-mini-card[draggable="true"]{cursor:grab}
+.kanban-mini-card[draggable="true"]:active{cursor:grabbing}
+.kanban-drop-over{background:var(--accent-light)!important;border-radius:8px;outline:2px dashed var(--accent)}
 .kanban-mini-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.35}
 .kanban-mini-meta{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);flex-wrap:wrap}
 .kanban-empty{font-size:12px;color:var(--text-muted);text-align:center;padding:20px 0;opacity:.6}
@@ -3395,6 +3398,12 @@ body{font-family:var(--font);min-height:100dvh}
           <span class="rpt-card-badge" id="rpt-wwp-badge">—</span>
         </div>
         <p class="rpt-card-obj">Analiza el rendimiento individual de cada colaborador del equipo operativo: tareas asignadas, completadas y validadas por persona, distribución por estado y registro de pausas de almuerzo. Sirve como herramienta de gestión de equipo basada en datos objetivos del sistema de tareas WWP, sin requerir supervisión presencial.</p>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <label style="font-size:12px;font-weight:600;color:var(--text-2);white-space:nowrap">Colaborador:</label>
+          <select id="rpt-wwp-user-filter" class="filter-sel" style="min-width:160px" onchange="renderRptWWP(parseInt((document.getElementById('rpt-periodo')||{}).value||30))">
+            <option value="">Todos</option>
+          </select>
+        </div>
         <div class="rpt-kpis" id="rpt-kpis-wwp"></div>
         <div id="rpt-charts-wwp"></div>
       </div>
@@ -3600,6 +3609,17 @@ body{font-family:var(--font);min-height:100dvh}
       <!-- KPIs de tareas -->
       <div class="sec-header" style="margin-bottom:12px"><i data-lucide="bar-chart-2" class="sec-hdr-icon"></i>RESUMEN DE TAREAS</div>
       <div class="kpi-grid" id="kpi-grid"><div class="loading"><div class="spinner"></div><br>Cargando…</div></div>
+
+      <!-- Tendencia de tareas — últimos 14 días -->
+      <div class="sec-header" style="margin:24px 0 12px"><i data-lucide="trending-up" class="sec-hdr-icon"></i>ACTIVIDAD — ÚLTIMOS 14 DÍAS</div>
+      <div id="dash-trend-wrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:4px">
+        <div style="display:flex;gap:16px;margin-bottom:10px;font-size:11px;font-weight:700">
+          <span style="color:var(--accent)">■ Creadas</span>
+          <span style="color:#059669">■ Completadas</span>
+        </div>
+        <div id="dash-trend-chart" style="min-height:80px;display:flex;align-items:flex-end;gap:4px"></div>
+        <div id="dash-trend-labels" style="display:flex;gap:4px;margin-top:4px;font-size:9px;color:var(--text-muted)"></div>
+      </div>
 
       <!-- Reporte de almuerzos -->
       <div class="sec-header" style="margin:24px 0 12px"><i data-lucide="utensils" class="sec-hdr-icon"></i>CONTROL DE ALMUERZOS</div>
@@ -5914,7 +5934,10 @@ function renderKanbanView(tasks) {
       const tier = dueTier(t);
       const cardStyle = tier ? DUE_CARD_STYLE[tier] : '';
       const dateStyle = tier ? DUE_DATE_COLOR[tier] : '';
-      return `<div class="kanban-mini-card" onclick="openDrawer('${t.id}')" style="${cardStyle}">
+      return `<div class="kanban-mini-card" onclick="openDrawer('${t.id}')" style="${cardStyle}"
+        draggable="true"
+        ondragstart="event.dataTransfer.setData('taskId','${t.id}');event.currentTarget.style.opacity='.5'"
+        ondragend="event.currentTarget.style.opacity=''">
         <div class="kanban-mini-title">${esc(t.title)}</div>
         <div class="kanban-mini-meta">
           ${mgr?avatarHtml(mgr,17)+'<span>'+esc(mgr.name.split(' ')[0])+'</span>':''}
@@ -5927,9 +5950,38 @@ function renderKanbanView(tasks) {
         <span class="badge ${col.css}">${col.label}</span>
         <span class="kanban-count">${ct.length}</span>
       </div>
-      <div class="kanban-col-body">${cards||'<div class="kanban-empty">Sin tareas</div>'}</div>
+      <div class="kanban-col-body"
+        ondragover="event.preventDefault();event.currentTarget.classList.add('kanban-drop-over')"
+        ondragleave="event.currentTarget.classList.remove('kanban-drop-over')"
+        ondrop="event.currentTarget.classList.remove('kanban-drop-over');kanbanDrop(event,'${col.key}')"
+      >${cards||'<div class="kanban-empty">Sin tareas</div>'}</div>
     </div>`;
   }).join('')}</div>`;
+}
+
+async function kanbanDrop(event, newStatus) {
+  event.preventDefault();
+  var taskId = event.dataTransfer.getData('taskId');
+  if (!taskId) return;
+  var task = (_tasks||[]).find(function(t){ return t.id===taskId; });
+  if (!task || task.status===newStatus) return;
+  var STATUS_LABEL = {pending:'Pendiente',assigned:'Asignado',in_progress:'En Progreso',completed:'Completado',validated:'Validado'};
+  if (!can('tasks_edit')) { toast('Sin permiso para mover tareas'); return; }
+  try {
+    var r = await authFetch('/api/wwp/tasks/'+taskId, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: newStatus})
+    });
+    if (r.ok) {
+      task.status = newStatus;
+      toast('✓ Movida a ' + (STATUS_LABEL[newStatus]||newStatus));
+      filterTasks();
+    } else {
+      var err = await r.json().catch(function(){ return {}; });
+      toast('Error: ' + (err.error||r.status));
+    }
+  } catch(e) { toast('Error: '+e.message); }
 }
 
 /* Vista Por persona — agrupado por encargado asignado */
@@ -7165,6 +7217,34 @@ async function loadDashboard() {
   loadLunchReport();
   // Cargar historial de inspecciones de vehículos
   vehLoadList();
+  // Gráfica de tendencia — últimos 14 días
+  (function(){
+    var today = new Date();
+    var days = [];
+    for (var i = 13; i >= 0; i--) {
+      var d = new Date(today); d.setDate(d.getDate() - i);
+      days.push(d.toISOString().slice(0,10));
+    }
+    var all = (_tasks||[]).filter(function(t){ return !t.parentId; });
+    var created   = days.map(function(day){ return all.filter(function(t){ return (t.createdAt||'').slice(0,10)===day; }).length; });
+    var completed = days.map(function(day){ return all.filter(function(t){ return ['completed','validated'].includes(t.status)&&(t.updatedAt||'').slice(0,10)===day; }).length; });
+    var maxVal = Math.max(1, Math.max.apply(null, created.concat(completed)));
+    var chartEl  = document.getElementById('dash-trend-chart');
+    var labelsEl = document.getElementById('dash-trend-labels');
+    if (!chartEl) return;
+    chartEl.innerHTML = days.map(function(day, i){
+      var ch = Math.max(created[i]?2:0,   Math.round(created[i]/maxVal*80));
+      var dh = Math.max(completed[i]?2:0, Math.round(completed[i]/maxVal*80));
+      return '<div style="flex:1;display:flex;flex-direction:row;align-items:flex-end;justify-content:center;gap:1px;height:80px">'
+        +'<div title="'+day+': '+created[i]+' creada'+(created[i]===1?'':'s')+'" style="flex:1;height:'+ch+'px;background:var(--accent);border-radius:2px 2px 0 0;opacity:.85;cursor:default"></div>'
+        +'<div title="'+day+': '+completed[i]+' completada'+(completed[i]===1?'':'s')+'" style="flex:1;height:'+dh+'px;background:#059669;border-radius:2px 2px 0 0;opacity:.85;cursor:default"></div>'
+        +'</div>';
+    }).join('');
+    if (labelsEl) labelsEl.innerHTML = days.map(function(day, i){
+      var d = day.slice(5).replace('-','/');
+      return '<div style="flex:1;text-align:center">'+(i%2===1?d:'')+'</div>';
+    }).join('');
+  })();
 }
 
 function initLunchReport() {
@@ -12025,12 +12105,30 @@ async function renderRptWWP(days){
     var tasks=Array.isArray(tasksRaw)?tasksRaw:(tasksRaw&&Array.isArray(tasksRaw.tasks)?tasksRaw.tasks:[]);
     var lunches=Array.isArray(lunchRaw)?lunchRaw:(lunchRaw&&Array.isArray(lunchRaw.breaks)?lunchRaw.breaks:[]);
 
+    // Poblar dropdown de colaborador (solo primera vez o si cambió la lista)
+    var userSel = document.getElementById('rpt-wwp-user-filter');
+    if (userSel && userSel.options.length <= 1) {
+      var seenIds = new Set();
+      (_authUsers||[]).forEach(function(u){
+        if (seenIds.has(u.id)) return; seenIds.add(u.id);
+        var opt = document.createElement('option');
+        opt.value = u.id; opt.textContent = u.name;
+        userSel.appendChild(opt);
+      });
+    }
+    var selectedUserId = userSel ? userSel.value : '';
+
     // Filter tasks by period
     var recent=tasks.filter((t) => {
       var d=new Date(t.createdAt||t.created_at||t.date||0);
       return d>=cutoff;
     });
     if(!recent.length&&tasks.length) recent=tasks; // fallback to all if none match
+
+    // Filter by selected collaborator
+    if (selectedUserId) {
+      recent = recent.filter(function(t){ return t.managerId===selectedUserId || t.assignedTo===selectedUserId; });
+    }
 
     var completed=recent.filter((t) => {return t.status==='completed'||t.status==='validated';});
     var validated=recent.filter((t) => {return t.status==='validated';});
