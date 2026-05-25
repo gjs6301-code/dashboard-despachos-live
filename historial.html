@@ -1870,6 +1870,10 @@ body{font-family:var(--font);min-height:100dvh}
 .guided-tooltip-arrow{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #1b3b6f;margin-left:20px}
 /* Pantalla de pasos */
 .guided-back-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px 6px;border-radius:6px;display:flex;align-items:center;flex-shrink:0}
+.guided-phase-pills{display:flex;gap:4px;flex:1;overflow:hidden}
+.guided-phase-pill{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;border:1.5px solid var(--border-light);color:var(--text-muted);white-space:nowrap;background:var(--surface-2)}
+.guided-phase-pill.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+.guided-phase-pill.done{background:var(--green-bg);color:var(--green-text);border-color:var(--green-dot)}
 .guided-progress-wrap{height:4px;background:var(--border-light)}
 .guided-progress-bar{height:4px;background:var(--purple);transition:width .3s ease;border-radius:0 2px 2px 0}
 .guided-step-body{padding:16px 16px 8px;min-height:120px}
@@ -3521,64 +3525,22 @@ body{font-family:var(--font);min-height:100dvh}
 
       <!-- ── MODO GUIADO ──────────────────────────────────────── -->
       <div id="guided-panel" class="guided-panel" style="display:none">
-
-        <!-- Pantalla 1: selección de proceso -->
-        <div id="guided-screen-pick">
-          <div class="guided-panel-hdr">
-            <span class="guided-panel-title"><i data-lucide="compass" style="width:15px;height:15px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:6px"></i>¿Qué proceso vas a realizar?</span>
-            <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
-          </div>
-          <div class="guided-actions">
-            <button class="guided-action" onclick="startGuideProcess('dispatch_order')">
-              <span class="guided-action-icon" style="background:#e8f0fb"><i data-lucide="truck" style="stroke:#1b3b6f"></i></span>
-              <span class="guided-action-text"><strong>Orden de Despacho</strong><small>Preparar y despachar artículos al cliente</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-            <button class="guided-action" onclick="startGuideProcess('packaging')">
-              <span class="guided-action-icon" style="background:#fceee2"><i data-lucide="box" style="stroke:#c4510d"></i></span>
-              <span class="guided-action-text"><strong>Embalaje</strong><small>Empacar artículos según las reglas de empaque</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-            <button class="guided-action" onclick="startGuideProcess('item_pickup')">
-              <span class="guided-action-icon" style="background:#e2f0e8"><i data-lucide="package-check" style="stroke:#16643a"></i></span>
-              <span class="guided-action-text"><strong>Recogida de Artículos</strong><small>Recoger y consolidar artículos en almacén</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-            <button class="guided-action" onclick="startGuideProcess('truck_loading')">
-              <span class="guided-action-icon" style="background:#f0ecf8"><i data-lucide="forklift" style="stroke:#7c3aed"></i></span>
-              <span class="guided-action-text"><strong>Carga en Camión</strong><small>Cargar y verificar la carga del vehículo</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-            <button class="guided-action" onclick="startGuideProcess('warehouse_move')">
-              <span class="guided-action-icon" style="background:#fdf4e3"><i data-lucide="warehouse" style="stroke:#7a4f0d"></i></span>
-              <span class="guided-action-text"><strong>Movimiento de Almacén</strong><small>Trasladar artículos entre ubicaciones</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-            <button class="guided-action" onclick="startGuideProcess('general')">
-              <span class="guided-action-icon" style="background:#f3f4f0"><i data-lucide="clipboard-list" style="stroke:#4a5568"></i></span>
-              <span class="guided-action-text"><strong>Tarea General</strong><small>Cualquier otra tarea operativa</small></span>
-              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
-            </button>
-          </div>
+        <div class="guided-panel-hdr">
+          <div class="guided-phase-pills" id="guided-phase-pills"></div>
+          <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
         </div>
-
-        <!-- Pantalla 2: pasos del proceso -->
-        <div id="guided-screen-steps" style="display:none">
-          <div class="guided-panel-hdr">
-            <button class="guided-back-btn" onclick="guidedBackToPick()"><i data-lucide="arrow-left" style="width:14px;height:14px;stroke:currentColor"></i></button>
-            <span class="guided-panel-title" id="guided-process-label" style="flex:1;margin:0 8px"></span>
-            <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
-          </div>
-          <!-- Progress bar -->
-          <div class="guided-progress-wrap">
-            <div class="guided-progress-bar" id="guided-progress-bar"></div>
-          </div>
-          <div class="guided-step-body" id="guided-step-body"></div>
-          <div class="guided-step-nav">
-            <button class="guided-nav-btn secondary" id="guided-btn-prev" onclick="guidedStepPrev()"><i data-lucide="arrow-left" style="width:14px;height:14px;stroke:currentColor;margin-right:4px"></i>Anterior</button>
-            <span class="guided-step-counter" id="guided-step-counter"></span>
-            <button class="guided-nav-btn primary"  id="guided-btn-next" onclick="guidedStepNext()">Siguiente<i data-lucide="arrow-right" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i></button>
-          </div>
+        <div class="guided-progress-wrap">
+          <div class="guided-progress-bar" id="guided-progress-bar"></div>
+        </div>
+        <div class="guided-step-body" id="guided-step-body"></div>
+        <div class="guided-step-nav">
+          <button class="guided-nav-btn secondary" id="guided-btn-prev" onclick="guidedStepPrev()">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;stroke:currentColor;margin-right:4px"></i>Anterior
+          </button>
+          <span class="guided-step-counter" id="guided-step-counter"></span>
+          <button class="guided-nav-btn primary" id="guided-btn-next" onclick="guidedStepNext()">
+            Siguiente<i data-lucide="arrow-right" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i>
+          </button>
         </div>
       </div>
 
@@ -5342,16 +5304,105 @@ function setTaskView(v) {
 }
 
 // ════════════════════════════════════════════════════
-//  MODO GUIADO — Proceso completo por categoría
+//  MODO GUIADO — Flujo completo: Crear → Fotos → Completar
 // ════════════════════════════════════════════════════
 var _guidedOpen        = false;
 var _guidedHighlightEl = null;
 var _guidedTooltipTimer= null;
 var _guidedStepIdx     = 0;
-var _guidedProcess     = null;
 
-// ── Definición de procesos ────────────────────────────────────────────────
-var GUIDE_PROCESSES = {
+// ── Fases del proceso completo ───────────────────────────────────────────
+var GUIDED_PHASES = [
+  { label: '1. Crear', color: '#1b3b6f' },
+  { label: '2. Fotos', color: '#7c3aed' },
+  { label: '3. Completar', color: '#059669' }
+];
+
+var GUIDED_STEPS = [
+  // ── FASE 1: CREAR TAREA ──────────────────────────────────────────────
+  { phase: 0,
+    icon: 'plus-circle', color: '#1b3b6f', bg: '#e8f0fb',
+    title: 'Pulsa "+ Nueva Tarea"',
+    desc: 'En la barra superior de la sección Tareas encontrarás el botón "+ Nueva Tarea". Pulsalo para abrir el formulario de creación.',
+    target: '#btn-new-task',
+    tip: 'Si no ves el botón, verifica que tienes permiso de creación. Contacta al administrador si es necesario.' },
+
+  { phase: 0,
+    icon: 'file-text', color: '#1b3b6f', bg: '#e8f0fb',
+    title: 'Completa el formulario',
+    desc: 'Llena el título de la tarea, selecciona el tipo (Despacho, Embalaje, Recogida…) y agrega una descripción clara de lo que se debe hacer.',
+    tip: 'Sé específico en el título: incluye el número de orden o referencia del cliente.' },
+
+  { phase: 0,
+    icon: 'package', color: '#1b3b6f', bg: '#e8f0fb',
+    title: 'Agrega los artículos',
+    desc: 'En la sección "Artículos" del formulario, busca y selecciona los artículos que corresponden a esta tarea. Puedes buscar por código de referencia, barcode o nombre.',
+    tip: 'Verifica cantidades y referencias antes de guardar.' },
+
+  { phase: 0,
+    icon: 'user-check', color: '#1b3b6f', bg: '#e8f0fb',
+    title: 'Asigna un responsable',
+    desc: 'Selecciona el operador o responsable de ejecutar la tarea. También puedes asignar una fecha límite para darle seguimiento con el semáforo de colores.',
+    target: '#filter-user',
+    tip: 'Una tarea sin responsable queda en estado "Pendiente" hasta que alguien la tome.' },
+
+  { phase: 0,
+    icon: 'save', color: '#059669', bg: '#e2f0e8',
+    title: 'Guarda la tarea',
+    desc: 'Pulsa "Crear tarea" para guardarla. Aparecerá en la lista y el responsable recibirá una notificación automática.',
+    tip: 'La tarea queda en estado "Pendiente" o "Asignado" según si tiene responsable.' },
+
+  // ── FASE 2: CARGAR FOTOS ─────────────────────────────────────────────
+  { phase: 1,
+    icon: 'mouse-pointer-click', color: '#7c3aed', bg: '#f0ecf8',
+    title: 'Abre la tarea e inicia',
+    desc: 'Localiza tu tarea en la lista y pulsa sobre ella para abrirla. Dentro del panel, pulsa "Iniciar tarea" para registrar que comenzaste.',
+    target: '#tasks-list',
+    tip: 'Si la tarea está en estado "Pendiente", iniciarla la cambia a "En progreso".' },
+
+  { phase: 1,
+    icon: 'camera', color: '#7c3aed', bg: '#f0ecf8',
+    title: 'Fotografía cada artículo',
+    desc: 'En la sección "Artículos" de la tarea, pulsa el ícono de cámara en cada artículo. Toma la foto o selecciónala de tu galería y adjúntala como evidencia.',
+    tip: 'La foto debe mostrar claramente el artículo en buen estado, empacado o en su ubicación según el tipo de tarea.' },
+
+  { phase: 1,
+    icon: 'image', color: '#7c3aed', bg: '#f0ecf8',
+    title: 'Fotos adicionales (opcional)',
+    desc: 'Si necesitas adjuntar evidencia general de la tarea (camión cargado, área de trabajo, etc.), usa la sección "Evidencia general" al final del panel de la tarea.',
+    tip: 'Puedes agregar múltiples fotos por artículo y también fotos generales de la tarea.' },
+
+  { phase: 1,
+    icon: 'check-square', color: '#7c3aed', bg: '#f0ecf8',
+    title: 'Confirma cada artículo',
+    desc: 'Una vez adjuntada la foto, pulsa "Confirmar" en cada artículo. El artículo cambia a estado confirmado (✓ verde). Repite para todos los artículos de la lista.',
+    tip: 'No puedes completar la tarea si hay artículos sin confirmar.' },
+
+  // ── FASE 3: COMPLETAR TAREA ─────────────────────────────────────────
+  { phase: 2,
+    icon: 'list-checks', color: '#059669', bg: '#e2f0e8',
+    title: 'Verifica que todo esté listo',
+    desc: 'Revisa que todos los artículos tienen foto adjunta y están marcados como confirmados (✓). El contador en la parte superior del panel te muestra el avance.',
+    tip: 'Si algún artículo está incompleto, el botón "Completar" permanece deshabilitado.' },
+
+  { phase: 2,
+    icon: 'send', color: '#059669', bg: '#e2f0e8',
+    title: 'Pulsa "Completar tarea"',
+    desc: 'Cuando todos los artículos estén confirmados, pulsa el botón "Completar tarea". La tarea pasa a estado "Completado" y el supervisor recibe una notificación para revisarla.',
+    tip: '¡Ya terminaste tu parte! Ahora el supervisor revisará y validará la tarea.' },
+
+  { phase: 2,
+    icon: 'shield-check', color: '#059669', bg: '#e2f0e8',
+    title: '¡Proceso completado!',
+    desc: 'La tarea quedará en estado "Completado" hasta que el supervisor la valide. Una vez validada, el ciclo está cerrado y aparecerá en el historial.',
+    tip: 'Puedes ver el estado de todas tus tareas en la vista Kanban o filtrar por "Validado" en la lista.' }
+];
+
+// Número de pasos de cada fase (para el pill)
+var _PHASE_ENDS = [4, 8, 11]; // último índice de cada fase (0-based)
+
+// Legado: mantener referencia vacía para no romper si algún sitio lo llama
+var GUIDE_PROCESSES = {};
   dispatch_order: {
     label: 'Orden de Despacho',
     color: '#1b3b6f', bg: '#e8f0fb', icon: 'truck',
@@ -5531,19 +5582,14 @@ var GUIDE_PROCESSES = {
 function toggleGuidedMode() {
   if (_guidedOpen) { closeGuidedMode(); return; }
   _guidedOpen = true;
+  _guidedStepIdx = 0;
   var panel = document.getElementById('guided-panel');
   var btn   = document.getElementById('btn-guided-mode');
-  if (panel) { panel.style.display = ''; }
+  if (panel) panel.style.display = '';
   if (btn)   btn.classList.add('active');
-  // Mostrar pantalla de selección
-  _guidedShowScreen('pick');
+  _guidedRenderStep();
   if (panel) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   if (window.lucide) lucide.createIcons();
-}
-
-function _guidedShowScreen(screen) {
-  document.getElementById('guided-screen-pick').style.display  = (screen==='pick')  ? '' : 'none';
-  document.getElementById('guided-screen-steps').style.display = (screen==='steps') ? '' : 'none';
 }
 
 function closeGuidedMode() {
@@ -5565,45 +5611,35 @@ function closeGuidedTooltip() {
   }
 }
 
-function guidedBackToPick() {
-  closeGuidedTooltip();
-  _guidedProcess = null;
-  _guidedStepIdx = 0;
-  _guidedShowScreen('pick');
-  if (window.lucide) lucide.createIcons();
-}
-
-function startGuideProcess(type) {
-  var proc = GUIDE_PROCESSES[type];
-  if (!proc) return;
-  _guidedProcess = proc;
-  _guidedStepIdx = 0;
-  // Aplicar filtro de tipo en la lista
-  var filterType = document.getElementById('filter-type');
-  if (filterType && type !== 'general') {
-    filterType.value = type;
-    filterTasks();
-  }
-  document.getElementById('guided-process-label').textContent = proc.label;
-  _guidedShowScreen('steps');
-  _guidedRenderStep();
-  if (window.lucide) lucide.createIcons();
-}
+// Compatibilidad con llamadas antiguas — ignorar silenciosamente
+function guidedBackToPick() {}
+function startGuideProcess() {}
 
 function _guidedRenderStep() {
-  var proc  = _guidedProcess;
-  var steps = proc.steps;
+  var steps = GUIDED_STEPS;
   var idx   = _guidedStepIdx;
   var step  = steps[idx];
   var total = steps.length;
 
-  // Progress bar
+  // ── Phase pills ──────────────────────────────────────────────────────
+  var pillsHtml = '';
+  GUIDED_PHASES.forEach(function(ph, pi) {
+    var phaseIdx = pi;
+    var cls = 'guided-phase-pill';
+    var currentPhase = step.phase;
+    if (phaseIdx < currentPhase) cls += ' done';
+    else if (phaseIdx === currentPhase) cls += ' active';
+    pillsHtml += '<span class="'+cls+'">'+ph.label+'</span>';
+  });
+  document.getElementById('guided-phase-pills').innerHTML = pillsHtml;
+
+  // ── Progress bar ─────────────────────────────────────────────────────
   document.getElementById('guided-progress-bar').style.width = (((idx+1)/total)*100)+'%';
 
-  // Counter
+  // ── Counter ───────────────────────────────────────────────────────────
   document.getElementById('guided-step-counter').textContent = 'Paso '+(idx+1)+' de '+total;
 
-  // Botones prev/next
+  // ── Nav buttons ───────────────────────────────────────────────────────
   document.getElementById('guided-btn-prev').disabled = (idx === 0);
   var nextBtn = document.getElementById('guided-btn-next');
   if (idx === total-1) {
@@ -5612,22 +5648,19 @@ function _guidedRenderStep() {
     nextBtn.innerHTML = 'Siguiente <i data-lucide="arrow-right" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i>';
   }
 
-  // Cuerpo del paso
-  var color = step.color || proc.color;
-  var bg    = step.bg    || proc.bg;
-  var iconName = step.icon || proc.icon;
-  var iconHtml = '<div class="guided-step-icon" style="background:'+bg+'">'
-    +'<i data-lucide="'+iconName+'" style="stroke:'+color+'"></i></div>';
-
-  var tipHtml = step.tip
+  // ── Step body ─────────────────────────────────────────────────────────
+  var phColor  = GUIDED_PHASES[step.phase].color;
+  var iconHtml = '<div class="guided-step-icon" style="background:'+step.bg+'">'
+    + '<i data-lucide="'+step.icon+'" style="stroke:'+step.color+'"></i></div>';
+  var tipHtml  = step.tip
     ? '<div class="guided-step-tip"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>'+step.tip+'</div>'
     : '';
 
   document.getElementById('guided-step-body').innerHTML =
-    '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">'
+    '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">'
     + iconHtml
     + '<div style="flex:1">'
-    +   '<div class="guided-step-num" style="background:'+color+'">'+(idx+1)+'</div>'
+    +   '<div class="guided-step-num" style="background:'+phColor+'">'+(idx+1)+'</div>'
     +   '<div class="guided-step-title">'+step.title+'</div>'
     + '</div>'
     + '</div>'
@@ -5636,22 +5669,21 @@ function _guidedRenderStep() {
 
   if (window.lucide) lucide.createIcons();
 
-  // Highlight + tooltip si hay target
+  // ── Highlight & tooltip ───────────────────────────────────────────────
   closeGuidedTooltip();
   if (step.target) {
     var el = document.querySelector(step.target);
     if (el) {
       setTimeout(function() {
         el.scrollIntoView({ behavior:'smooth', block:'center' });
-        setTimeout(function() { _showGuidedTooltip(el, step.title+': '+step.desc.split('.')[0]+'.'); }, 350);
+        setTimeout(function() { _showGuidedTooltip(el, step.title); }, 350);
       }, 200);
     }
   }
 }
 
 function guidedStepNext() {
-  var total = _guidedProcess.steps.length;
-  if (_guidedStepIdx >= total-1) { closeGuidedMode(); return; }
+  if (_guidedStepIdx >= GUIDED_STEPS.length - 1) { closeGuidedMode(); return; }
   _guidedStepIdx++;
   _guidedRenderStep();
 }
