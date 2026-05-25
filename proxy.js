@@ -49,6 +49,22 @@ if (!fs.existsSync(AV_FOTOS_DIR)) fs.mkdirSync(AV_FOTOS_DIR, { recursive: true }
 function loadAverias() { return loadJson(AVERIAS_FILE, []); }
 function saveAverias(list) { saveJson(AVERIAS_FILE, list); }
 
+// ── Empaque — persistencia ────────────────────────────────────────────────────
+const EMP_MATERIALES_FILE = path.join(DATA_DIR, 'emp-materiales.json');
+const EMP_REGLAS_FILE     = path.join(DATA_DIR, 'emp-reglas.json');
+const EMP_FOTOS_DIR       = path.join(DATA_DIR, 'emp-fotos');
+if (!fs.existsSync(EMP_FOTOS_DIR)) fs.mkdirSync(EMP_FOTOS_DIR, { recursive: true });
+
+function loadEmpMateriales() { return loadJson(EMP_MATERIALES_FILE, []); }
+function saveEmpMateriales(d) { saveJson(EMP_MATERIALES_FILE, d); }
+function loadEmpReglas()      { return loadJson(EMP_REGLAS_FILE, []); }
+function saveEmpReglas(d)     { saveJson(EMP_REGLAS_FILE, d); }
+
+// Cache de categorías Odoo para empaque (se refresca cada 30 min)
+let _empCategCache = null;
+let _empCategCacheAt = 0;
+const EMP_CATEG_TTL = 30 * 60 * 1000;
+
 // ── WWP (Warehouse Workforce Platform) — persistencia ────────────────────────
 const WWP_TASKS_FILE  = path.join(DATA_DIR, 'wwp-tasks.json');
 const WWP_ROLES_FILE  = path.join(DATA_DIR, 'wwp-roles.json');
@@ -3268,6 +3284,200 @@ const server = http.createServer(async (req, res) => {
     broadcastWwpTasks('fotos_guia_evidencia_deleted', tasks[idx], { taskId, fotoId, fname: evFname });
     res.writeHead(200,{'Content-Type':'application/json'});
     res.end(JSON.stringify({ok:true}));
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // EMPAQUE — catálogo de materiales, reglas por categoría, resolución
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // GET /api/empaque/materiales
+  if (reqPath === '/api/empaque/materiales' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({ ok: true, materiales: loadEmpMateriales() }));
+    return;
+  }
+
+  // POST /api/empaque/materiales
+  if (reqPath === '/api/empaque/materiales' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const d = await readBody(req);
+      if (!d.nombre) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Nombre requerido'})); return; }
+      const mats = loadEmpMateriales();
+      const mat = { id: 'em_' + Date.now(), nombre: d.nombre.trim(), descripcion: (d.descripcion||'').trim(), foto_url: d.foto_url||null };
+      mats.push(mat);
+      saveEmpMateriales(mats);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, material: mat }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // PATCH /api/empaque/materiales/:id
+  if (reqPath.match(/^\/api\/empaque\/materiales\/em_[a-z0-9_]+$/) && req.method === 'PATCH') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const id = reqPath.split('/').pop();
+      const d  = await readBody(req);
+      const mats = loadEmpMateriales();
+      const idx  = mats.findIndex(m => m.id === id);
+      if (idx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      if (d.nombre !== undefined) mats[idx].nombre = d.nombre.trim();
+      if (d.descripcion !== undefined) mats[idx].descripcion = d.descripcion.trim();
+      if (d.foto_url !== undefined) mats[idx].foto_url = d.foto_url;
+      saveEmpMateriales(mats);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, material: mats[idx] }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // POST /api/empaque/materiales/:id/foto
+  if (reqPath.match(/^\/api\/empaque\/materiales\/em_[a-z0-9_]+\/foto$/) && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const id = reqPath.split('/')[4];
+      const d  = await readBody(req);
+      if (!d.data) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Imagen requerida'})); return; }
+      const buf  = Buffer.from(d.data, 'base64');
+      const ext  = (d.ext || 'jpg').replace(/[^a-z]/g, '');
+      const fname = id + '_' + Date.now() + '.' + ext;
+      const fpath = path.join(EMP_FOTOS_DIR, fname);
+      fs.writeFileSync(fpath, buf);
+      const url = '/api/empaque/foto/' + fname;
+      const mats = loadEmpMateriales();
+      const idx  = mats.findIndex(m => m.id === id);
+      if (idx >= 0) { mats[idx].foto_url = url; saveEmpMateriales(mats); }
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, url }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/empaque/foto/:fname — serve foto material
+  if (reqPath.match(/^\/api\/empaque\/foto\/.+$/) && req.method === 'GET') {
+    const fname = path.basename(reqPath);
+    const fpath = path.join(EMP_FOTOS_DIR, fname);
+    if (!fs.existsSync(fpath)) { res.writeHead(404); res.end(); return; }
+    const ext = path.extname(fname).slice(1).toLowerCase();
+    const mime = {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'}[ext]||'image/jpeg';
+    res.writeHead(200,{'Content-Type':mime,'Cache-Control':'public,max-age=31536000'});
+    fs.createReadStream(fpath).pipe(res);
+    return;
+  }
+
+  // DELETE /api/empaque/materiales/:id
+  if (reqPath.match(/^\/api\/empaque\/materiales\/em_[a-z0-9_]+$/) && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const id = reqPath.split('/').pop();
+      let mats = loadEmpMateriales();
+      mats = mats.filter(m => m.id !== id);
+      saveEmpMateriales(mats);
+      // Limpiar referencias en reglas
+      let reglas = loadEmpReglas();
+      reglas = reglas.map(r => ({ ...r, materiales: (r.materiales||[]).filter(m => m.materialId !== id) })).filter(r => (r.materiales||[]).length > 0);
+      saveEmpReglas(reglas);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/empaque/reglas
+  if (reqPath === '/api/empaque/reglas' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ ok: true, reglas: loadEmpReglas() }));
+    return;
+  }
+
+  // POST /api/empaque/reglas — upsert (crea o reemplaza por categ_id)
+  if (reqPath === '/api/empaque/reglas' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const d = await readBody(req);
+      if (!d.categ_id) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'categ_id requerido'})); return; }
+      let reglas = loadEmpReglas();
+      const idx  = reglas.findIndex(r => r.categ_id === d.categ_id);
+      const regla = {
+        id: idx >= 0 ? reglas[idx].id : ('er_' + Date.now()),
+        categ_id: d.categ_id,
+        categ_nombre: d.categ_nombre || '',
+        materiales: (d.materiales || []).map((m, i) => ({ materialId: m.materialId, orden: m.orden ?? (i+1) }))
+      };
+      if (idx >= 0) reglas[idx] = regla; else reglas.push(regla);
+      saveEmpReglas(reglas);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, regla }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // DELETE /api/empaque/reglas/:id
+  if (reqPath.match(/^\/api\/empaque\/reglas\/er_[a-z0-9_]+$/) && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const id = reqPath.split('/').pop();
+      let reglas = loadEmpReglas();
+      reglas = reglas.filter(r => r.id !== id);
+      saveEmpReglas(reglas);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/empaque/categorias — categorías Odoo (con caché 30min)
+  if (reqPath === '/api/empaque/categorias' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const now = Date.now();
+      if (_empCategCache && (now - _empCategCacheAt) < EMP_CATEG_TTL) {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: true, categorias: _empCategCache }));
+        return;
+      }
+      await authenticate();
+      const cats = await odooCall('product.category', 'search_read',
+        [[]], { fields: ['id','name','parent_id','complete_name'], limit: 500 });
+      _empCategCache   = cats || [];
+      _empCategCacheAt = now;
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, categorias: _empCategCache }));
+    } catch(e) {
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, categorias: _empCategCache || [] }));
+    }
+    return;
+  }
+
+  // GET /api/empaque/resolve?categ_ids=1,2,3
+  // Devuelve { ok, result: { "<categ_id>": { materiales: [...] } } }
+  // Los materiales están ordenados por 'orden' según las reglas configuradas
+  if (reqPath === '/api/empaque/resolve' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const qs      = url.parse(req.url, true).query;
+      const ids     = (qs.categ_ids || '').split(',').map(s => parseInt(s, 10)).filter(Boolean);
+      const reglas  = loadEmpReglas();
+      const mats    = loadEmpMateriales();
+      const result  = {};
+      ids.forEach(cid => {
+        const regla = reglas.find(r => r.categ_id === cid);
+        if (!regla) { result[cid] = { materiales: [] }; return; }
+        const sorted = (regla.materiales || [])
+          .slice()
+          .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+          .map(rm => mats.find(m => m.id === rm.materialId))
+          .filter(Boolean);
+        result[cid] = { materiales: sorted };
+      });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, result }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;
   }
 
