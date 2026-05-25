@@ -2891,6 +2891,63 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Alias frontend: /api/vehiculos/* ─────────────────────────────────────
+  // El formulario HTML llama a estas rutas; internamente usan wwp-inspecciones.json
+
+  // GET /api/vehiculos/inspecciones — listar (filtro ?vehiculo=)
+  if (reqPath === '/api/vehiculos/inspecciones' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const qp = parsed.query || {};
+    let data = loadInspections();
+    if (qp.vehiculo) data = data.filter(i => i.vehiculo && i.vehiculo.toLowerCase().includes(qp.vehiculo.toLowerCase()));
+    data = data.slice().sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify(data));
+    return;
+  }
+
+  // POST /api/vehiculos/inspeccion — guardar inspección
+  if (reqPath === '/api/vehiculos/inspeccion' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const body = await readBody(req);
+    let payload;
+    try { payload = JSON.parse(body); } catch { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'JSON inválido'})); return; }
+    if (!payload.vehiculo && !payload.placa) {
+      res.writeHead(400,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({error:'Campo requerido: vehiculo o placa'}));
+      return;
+    }
+    const now = new Date().toISOString();
+    const insp = Object.assign({}, payload, {
+      id:          'insp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      createdAt:   now,
+      createdBy:   jp.userId,
+      createdByName: (loadAuthUsers().find(u=>u.id===jp.userId)||{}).name || jp.userId,
+    });
+    const all = loadInspections();
+    all.push(insp);
+    saveInspections(all);
+    res.writeHead(201, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true, id: insp.id}));
+    return;
+  }
+
+  // DELETE /api/vehiculos/inspeccion/:id — eliminar
+  if (reqPath.match(/^\/api\/vehiculos\/inspeccion\/[^/]+$/) && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireRole(jp, res, ROLE_PERMISSIONS.dashboard)) return;
+    const id = reqPath.split('/')[4];
+    let all = loadInspections();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx < 0) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'No encontrada'})); return; }
+    all.splice(idx, 1);
+    saveInspections(all);
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   // GET /api/wwp/odoo/orders?q= — buscar órdenes Odoo para asociar a tarea
   if (reqPath === '/api/wwp/odoo/orders' && req.method === 'GET') {
     const q = ((parsed.query||{}).q||'').trim();
