@@ -1599,6 +1599,12 @@ body{font-family:var(--font);min-height:100dvh}
 .remember-label{font-size:13px;color:var(--text-2)}
 .forgot-link{font-size:13px;color:var(--brand-light);text-decoration:none;font-weight:500}
 .forgot-link:hover{text-decoration:underline}
+.btn-export-tasks{
+  padding:6px 12px;border:1.5px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);color:var(--text-secondary);font-size:12px;font-weight:600;
+  cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;
+}
+.btn-export-tasks:hover{background:var(--surface-2);color:var(--text)}
 .btn-login{
   width:100%;padding:14px;background:var(--brand-light);color:white;border:none;
   border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;
@@ -2771,9 +2777,15 @@ body{font-family:var(--font);min-height:100dvh}
 <div id="screen-login">
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon"><i data-lucide="building-2"></i></div>
+      <div class="login-logo-icon" style="background:#696969;overflow:hidden;padding:0">
+        <svg viewBox="0 0 48 48" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" fill="#696969"/>
+          <text x="24" y="21" font-family="Georgia,'Times New Roman',serif" font-size="11" font-weight="400" fill="#e8e8e8" text-anchor="middle" letter-spacing="1">ALTRI</text>
+          <text x="24" y="34" font-family="Georgia,'Times New Roman',serif" font-size="11" font-weight="400" fill="#e8e8e8" text-anchor="middle" letter-spacing="1">TEMPI</text>
+        </svg>
+      </div>
       <div class="login-logo-text">
-        <h1>Workforce Platform</h1>
+        <h1>Ops AT</h1>
         <p>Altritempi · Operaciones</p>
       </div>
     </div>
@@ -3479,7 +3491,7 @@ body{font-family:var(--font);min-height:100dvh}
   </div>
 
   <nav class="app-nav" id="app-nav">
-    <button class="nav-tab active" data-tab="tasks" onclick="switchTab('tasks')"><span class="nav-tab-icon"><i data-lucide="clipboard-list"></i></span> Tareas</button>
+    <button class="nav-tab active" data-tab="tasks" onclick="switchTab('tasks')" style="position:relative"><span class="nav-tab-icon"><i data-lucide="clipboard-list"></i></span> Tareas<span id="tasks-overdue-badge" style="display:none;position:absolute;top:4px;right:4px;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:20px;line-height:1.4;pointer-events:none"></span></button>
     <!-- Dashboard y Usuarios se añaden dinámicamente en enterApp() según el rol -->
   </nav>
 
@@ -3512,8 +3524,26 @@ body{font-family:var(--font);min-height:100dvh}
           <select class="filter-sel" id="filter-user" onchange="filterTasks()">
             <option value="">Todos los usuarios</option>
           </select>
+          <select class="filter-sel" id="filter-priority" onchange="filterTasks()">
+            <option value="">Todas las prioridades</option>
+            <option value="high">🔴 Alta</option>
+            <option value="medium">🟡 Media</option>
+            <option value="low">🟢 Baja</option>
+          </select>
+          <select class="filter-sel" id="filter-due" onchange="filterTasks()">
+            <option value="">Todos los plazos</option>
+            <option value="overdue">⚠️ Vencidas</option>
+            <option value="today">📅 Hoy</option>
+            <option value="week">📆 Esta semana</option>
+            <option value="nodate">— Sin fecha</option>
+          </select>
         </div>
-        <button class="btn-new" id="btn-new-task" onclick="openNewTaskModal()" style="display:none">+ Nueva Tarea</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-new" id="btn-new-task" onclick="openNewTaskModal()" style="display:none">+ Nueva Tarea</button>
+          <button class="btn-export-tasks" id="btn-export-tasks" onclick="exportTasksCSV()" title="Exportar tareas filtradas a CSV" style="display:none">
+            <i data-lucide="download" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>CSV
+          </button>
+        </div>
       </div>
       <div class="tasks-view-bar">
         <button class="tv-btn active" data-view="list" onclick="setTaskView('list')" title="Lista">
@@ -5200,29 +5230,56 @@ async function loadTasks() {
     _tasks = Array.isArray(data) ? data : (data.tasks || []);
     populateTaskUserFilter();
     renderTasks();
+    // Toast de alerta si hay tareas vencidas
+    const today = new Date().toISOString().slice(0,10);
+    const overdue = _tasks.filter(t => !t.parentId && t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status));
+    if (overdue.length) toast('⚠️ ' + overdue.length + ' tarea' + (overdue.length>1?'s':'') + ' vencida' + (overdue.length>1?'s':''), 4500);
   } catch(e) { listEl.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
 }
 
 function filterTasks() {
-  const q = (document.getElementById('task-search').value||'').toLowerCase();
-  const st = document.getElementById('filter-status').value;
-  const ty = document.getElementById('filter-type').value;
-  const fu = document.getElementById('filter-user')?.value || '';
+  const q    = (document.getElementById('task-search').value||'').toLowerCase();
+  const st   = document.getElementById('filter-status').value;
+  const ty   = document.getElementById('filter-type').value;
+  const fu   = document.getElementById('filter-user')?.value || '';
+  const fp   = document.getElementById('filter-priority')?.value || '';
+  const fd   = document.getElementById('filter-due')?.value || '';
+  const today = new Date().toISOString().slice(0,10);
+  const endOfWeek = (function(){
+    var d = new Date(); d.setDate(d.getDate() + (6 - d.getDay())); return d.toISOString().slice(0,10);
+  })();
+
   const visible = _tasks.filter(t => {
-    if (t.parentId) return false; // Solo tareas padre en la lista principal
-    // RBAC local: admin ve todas; los demas ven tareas donde participan
-    // directa o indirectamente en el flujo hasta el cierre.
+    if (t.parentId) return false;
     if (_user && _user.role !== 'admin') {
       if (!canViewTaskLocal(t, _user.id)) return false;
     }
     if (st && t.status!==st) return false;
     if (ty && t.type!==ty) return false;
     if (fu && !taskParticipantIds(t).has(fu)) return false;
+    if (fp && (t.priority||'medium')!==fp) return false;
+    if (fd) {
+      const active = !['completed','validated'].includes(t.status);
+      if (fd==='overdue' && !(t.dueDate && t.dueDate < today && active)) return false;
+      if (fd==='today'   && t.dueDate !== today) return false;
+      if (fd==='week'    && !(t.dueDate && t.dueDate >= today && t.dueDate <= endOfWeek)) return false;
+      if (fd==='nodate'  && t.dueDate) return false;
+    }
     if (q && !(t.title.toLowerCase().includes(q)||(t.odooRef||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q))) return false;
     return true;
   });
+
+  // Badge de vencidas en el nav
+  _updateOverdueBadge();
+
+  // Mostrar/ocultar botón CSV (solo admin/manager)
+  var csvBtn = document.getElementById('btn-export-tasks');
+  if (csvBtn) csvBtn.style.display = (_user && ['admin','manager'].includes(_user.role)) ? '' : 'none';
+
   const el = document.getElementById('tasks-list');
   if (!visible.length) { el.innerHTML='<div class="task-empty">No hay tareas que mostrar</div>'; return; }
+  // Guardar lista filtrada para export
+  _filteredTasks = visible;
   switch (_taskView) {
     case 'cards':  el.innerHTML = visible.map(renderTaskCard).join(''); break;
     case 'kanban': el.innerHTML = renderKanbanView(visible); break;
@@ -5232,6 +5289,56 @@ function filterTasks() {
   if(window.lucide) lucide.createIcons();
 }
 function renderTasks() { filterTasks(); }
+
+var _filteredTasks = [];
+
+/** Actualiza el badge rojo de tareas vencidas en la pestaña Tareas */
+function _updateOverdueBadge() {
+  var today = new Date().toISOString().slice(0,10);
+  var overdue = _tasks.filter(function(t) {
+    return !t.parentId && t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status);
+  }).length;
+  var badge = document.getElementById('tasks-overdue-badge');
+  if (!badge) return;
+  if (overdue > 0) {
+    badge.textContent = overdue > 99 ? '99+' : overdue;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/** Exporta las tareas actualmente filtradas como CSV */
+function exportTasksCSV() {
+  var tasks = _filteredTasks.length ? _filteredTasks : _tasks.filter(function(t){ return !t.parentId; });
+  var STATUS_LABEL = {pending:'Pendiente',assigned:'Asignado',in_progress:'En Progreso',completed:'Completado',validated:'Validado'};
+  var TYPE_LABEL   = {dispatch_order:'Orden de Despacho',warehouse_move:'Movimiento Almacén',packaging:'Embalaje',item_pickup:'Recogida',truck_loading:'Carga Camión',general:'General'};
+  var PRIORITY_LABEL = {high:'Alta',medium:'Media',low:'Baja'};
+  var cols = ['ID','Título','Tipo','Estado','Prioridad','Responsable','Referencia Odoo','Ubicación','Fecha Vencimiento','Fecha Creación','Artículos'];
+  var rows = tasks.map(function(t) {
+    var mgr = (_authUsers||[]).find(function(u){ return u.id===t.managerId; });
+    return [
+      t.id,
+      t.title,
+      TYPE_LABEL[t.type]||t.type||'',
+      STATUS_LABEL[t.status]||t.status||'',
+      PRIORITY_LABEL[t.priority||'medium'],
+      mgr ? mgr.name : (t.assignedTo||''),
+      t.odooRef||'',
+      t.location||'',
+      t.dueDate||'',
+      (t.createdAt||'').slice(0,10),
+      (t.items||[]).length
+    ].map(function(v){ return '"'+(v+'').replace(/"/g,'""')+'"'; }).join(',');
+  });
+  var csv = cols.map(function(c){ return '"'+c+'"'; }).join(',') + '\n' + rows.join('\n');
+  var blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'tareas_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
 
 function taskParticipantIds(t) {
   const ids = new Set();
@@ -11939,10 +12046,19 @@ async function renderRptWWP(days){
       rptKpi('En progreso',inProg.length,'activas actualmente','var(--purple-text)')+
       rptKpi('Pendientes',pending.length,'sin iniciar',pending.length>5?'var(--amber-text)':'var(--text-primary)');
 
+    // Función helper: resuelve nombre del responsable desde managerId o assignedTo
+    function _wwpUserName(t) {
+      if (t.managerId) {
+        var u = (_authUsers||[]).find(function(u){ return u.id===t.managerId; });
+        if (u) return u.name;
+      }
+      return t.assignedTo||t.assigned_to||t.user||'Sin asignar';
+    }
+
     // Por colaborador
     var byUser={};
     recent.forEach((t) => {
-      var u=t.assignedTo||t.assigned_to||t.user||'Sin asignar';
+      var u=_wwpUserName(t);
       if(!byUser[u])byUser[u]={t:0,comp:0,val:0,prog:0,pend:0};
       byUser[u].t++;
       if(t.status==='completed'||t.status==='validated')byUser[u].comp++;
@@ -11953,7 +12069,7 @@ async function renderRptWWP(days){
 
     var userBarRows=Object.entries(byUser).sort(function(a,b){return b[1].t-a[1].t;}).map((e) => {
       var pct=e[1].t?Math.round(e[1].comp/e[1].t*100):0;
-      return {label:e[0],val:e[1].comp,color:rptGreen(pct,80,50)};
+      return {label:e[0].split(' ').slice(0,2).join(' '),val:e[1].comp,color:rptGreen(pct,80,50)};
     });
 
     var statusSegs=[
