@@ -1862,13 +1862,32 @@ body{font-family:var(--font);min-height:100dvh}
 .guided-action-arrow{color:var(--text-muted)}
 .guided-action-arrow svg{width:14px;height:14px;stroke:currentColor}
 /* Tooltip */
-.guided-tooltip{position:fixed;z-index:9001;max-width:260px;pointer-events:auto}
+.guided-tooltip{position:fixed;z-index:9001;max-width:270px;pointer-events:auto}
 .guided-tooltip-body{background:#1b3b6f;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;font-weight:500;line-height:1.4;display:flex;align-items:flex-start;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 .guided-tooltip-close{background:rgba(255,255,255,.15);border:none;cursor:pointer;border-radius:50%;padding:3px;color:#fff;flex-shrink:0;display:flex;align-items:center;margin-left:4px;line-height:1}
 .guided-tooltip-arrow{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #1b3b6f;margin-left:20px}
+/* Pantalla de pasos */
+.guided-back-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px 6px;border-radius:6px;display:flex;align-items:center;flex-shrink:0}
+.guided-progress-wrap{height:4px;background:var(--border-light)}
+.guided-progress-bar{height:4px;background:var(--purple);transition:width .3s ease;border-radius:0 2px 2px 0}
+.guided-step-body{padding:16px 16px 8px;min-height:120px}
+.guided-step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:12px;font-weight:700;margin-bottom:10px}
+.guided-step-title{font-size:14px;font-weight:700;color:var(--text-primary);margin:0 0 6px}
+.guided-step-desc{font-size:12px;color:var(--text-secondary);line-height:1.55;margin:0}
+.guided-step-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.guided-step-icon svg{width:20px;height:20px;stroke:currentColor}
+.guided-step-tip{margin-top:10px;padding:8px 10px;background:var(--accent-light);border-radius:8px;font-size:11px;color:var(--accent);border-left:3px solid var(--accent)}
+.guided-step-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--border-light);gap:8px}
+.guided-step-counter{font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.guided-nav-btn{padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:3px;transition:background .12s}
+.guided-nav-btn.primary{background:var(--purple);color:#fff}
+.guided-nav-btn.primary:hover{background:#6d28d9}
+.guided-nav-btn.secondary{background:var(--surface-2);color:var(--text-secondary);border:1.5px solid var(--border)}
+.guided-nav-btn.secondary:hover{background:var(--surface-3)}
+.guided-nav-btn:disabled{opacity:.4;cursor:not-allowed}
 /* Highlight pulsante en elemento guiado */
-.guided-highlight{animation:guidePulse 1.4s ease-in-out 3;outline:3px solid var(--purple)!important;outline-offset:3px;border-radius:var(--radius)!important}
-@keyframes guidePulse{0%,100%{outline-color:var(--purple);box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{outline-color:var(--purple);box-shadow:0 0 0 6px rgba(124,58,237,0)}}
+.guided-highlight{animation:guidePulse 1.6s ease-in-out 3;outline:3px solid var(--purple)!important;outline-offset:3px;border-radius:var(--radius)!important;position:relative;z-index:1}
+@keyframes guidePulse{0%,100%{outline-color:var(--purple);box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{outline-color:var(--purple);box-shadow:0 0 0 8px rgba(124,58,237,0)}}
 
 /* ── Vista Lista (compact rows) ─────────────────────────────────────── */
 .task-list-row{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border-light);cursor:pointer;transition:background .12s;border-left:3px solid transparent}
@@ -3490,41 +3509,70 @@ body{font-family:var(--font);min-height:100dvh}
 
       <!-- ── MODO GUIADO ──────────────────────────────────────── -->
       <div id="guided-panel" class="guided-panel" style="display:none">
-        <div class="guided-panel-hdr">
-          <span class="guided-panel-title"><i data-lucide="compass" style="width:15px;height:15px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:6px"></i>¿Qué quieres hacer?</span>
-          <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
+
+        <!-- Pantalla 1: selección de proceso -->
+        <div id="guided-screen-pick">
+          <div class="guided-panel-hdr">
+            <span class="guided-panel-title"><i data-lucide="compass" style="width:15px;height:15px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:6px"></i>¿Qué proceso vas a realizar?</span>
+            <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
+          </div>
+          <div class="guided-actions">
+            <button class="guided-action" onclick="startGuideProcess('dispatch_order')">
+              <span class="guided-action-icon" style="background:#e8f0fb"><i data-lucide="truck" style="stroke:#1b3b6f"></i></span>
+              <span class="guided-action-text"><strong>Orden de Despacho</strong><small>Preparar y despachar artículos al cliente</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+            <button class="guided-action" onclick="startGuideProcess('packaging')">
+              <span class="guided-action-icon" style="background:#fceee2"><i data-lucide="box" style="stroke:#c4510d"></i></span>
+              <span class="guided-action-text"><strong>Embalaje</strong><small>Empacar artículos según las reglas de empaque</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+            <button class="guided-action" onclick="startGuideProcess('item_pickup')">
+              <span class="guided-action-icon" style="background:#e2f0e8"><i data-lucide="package-check" style="stroke:#16643a"></i></span>
+              <span class="guided-action-text"><strong>Recogida de Artículos</strong><small>Recoger y consolidar artículos en almacén</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+            <button class="guided-action" onclick="startGuideProcess('truck_loading')">
+              <span class="guided-action-icon" style="background:#f0ecf8"><i data-lucide="forklift" style="stroke:#7c3aed"></i></span>
+              <span class="guided-action-text"><strong>Carga en Camión</strong><small>Cargar y verificar la carga del vehículo</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+            <button class="guided-action" onclick="startGuideProcess('warehouse_move')">
+              <span class="guided-action-icon" style="background:#fdf4e3"><i data-lucide="warehouse" style="stroke:#7a4f0d"></i></span>
+              <span class="guided-action-text"><strong>Movimiento de Almacén</strong><small>Trasladar artículos entre ubicaciones</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+            <button class="guided-action" onclick="startGuideProcess('general')">
+              <span class="guided-action-icon" style="background:#f3f4f0"><i data-lucide="clipboard-list" style="stroke:#4a5568"></i></span>
+              <span class="guided-action-text"><strong>Tarea General</strong><small>Cualquier otra tarea operativa</small></span>
+              <span class="guided-action-arrow"><i data-lucide="chevron-right"></i></span>
+            </button>
+          </div>
         </div>
-        <div class="guided-actions">
-          <button class="guided-action" onclick="guideAction('nueva-tarea')">
-            <span class="guided-action-icon"><i data-lucide="plus-circle"></i></span>
-            <span class="guided-action-text"><strong>Crear nueva tarea</strong><small>Agrega una tarea al equipo</small></span>
-            <span class="guided-action-arrow"><i data-lucide="arrow-right"></i></span>
-          </button>
-          <button class="guided-action" onclick="guideAction('buscar-tarea')">
-            <span class="guided-action-icon"><i data-lucide="search"></i></span>
-            <span class="guided-action-text"><strong>Buscar una tarea</strong><small>Filtra por nombre, orden u operador</small></span>
-            <span class="guided-action-arrow"><i data-lucide="arrow-right"></i></span>
-          </button>
-          <button class="guided-action" onclick="guideAction('filtrar-estado')">
-            <span class="guided-action-icon"><i data-lucide="filter"></i></span>
-            <span class="guided-action-text"><strong>Filtrar por estado</strong><small>Pendiente, en progreso, completada…</small></span>
-            <span class="guided-action-arrow"><i data-lucide="arrow-right"></i></span>
-          </button>
-          <button class="guided-action" onclick="guideAction('iniciar-tarea')">
-            <span class="guided-action-icon"><i data-lucide="play-circle"></i></span>
-            <span class="guided-action-text"><strong>Iniciar / avanzar tarea</strong><small>Abre una tarea y usa los botones de acción</small></span>
-            <span class="guided-action-arrow"><i data-lucide="arrow-right"></i></span>
-          </button>
-          <button class="guided-action" onclick="guideAction('cambiar-vista')">
-            <span class="guided-action-icon"><i data-lucide="layout-grid"></i></span>
-            <span class="guided-action-text"><strong>Cambiar vista</strong><small>Lista, tarjetas, kanban o por persona</small></span>
-            <span class="guided-action-arrow"><i data-lucide="arrow-right"></i></span>
-          </button>
+
+        <!-- Pantalla 2: pasos del proceso -->
+        <div id="guided-screen-steps" style="display:none">
+          <div class="guided-panel-hdr">
+            <button class="guided-back-btn" onclick="guidedBackToPick()"><i data-lucide="arrow-left" style="width:14px;height:14px;stroke:currentColor"></i></button>
+            <span class="guided-panel-title" id="guided-process-label" style="flex:1;margin:0 8px"></span>
+            <button class="guided-close" onclick="closeGuidedMode()"><i data-lucide="x"></i></button>
+          </div>
+          <!-- Progress bar -->
+          <div class="guided-progress-wrap">
+            <div class="guided-progress-bar" id="guided-progress-bar"></div>
+          </div>
+          <div class="guided-step-body" id="guided-step-body"></div>
+          <div class="guided-step-nav">
+            <button class="guided-nav-btn secondary" id="guided-btn-prev" onclick="guidedStepPrev()"><i data-lucide="arrow-left" style="width:14px;height:14px;stroke:currentColor;margin-right:4px"></i>Anterior</button>
+            <span class="guided-step-counter" id="guided-step-counter"></span>
+            <button class="guided-nav-btn primary"  id="guided-btn-next" onclick="guidedStepNext()">Siguiente<i data-lucide="arrow-right" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i></button>
+          </div>
         </div>
       </div>
+
       <!-- Tooltip del modo guiado -->
       <div id="guided-tooltip" class="guided-tooltip" style="display:none">
-        <div class="guided-tooltip-arrow"></div>
+        <div class="guided-tooltip-arrow" id="guided-tooltip-arrow"></div>
         <div class="guided-tooltip-body">
           <span id="guided-tooltip-text"></span>
           <button class="guided-tooltip-close" onclick="closeGuidedTooltip()"><i data-lucide="x" style="width:12px;height:12px;stroke:currentColor"></i></button>
@@ -5282,22 +5330,208 @@ function setTaskView(v) {
 }
 
 // ════════════════════════════════════════════════════
-//  MODO GUIADO — Tasks
+//  MODO GUIADO — Proceso completo por categoría
 // ════════════════════════════════════════════════════
-var _guidedOpen = false;
+var _guidedOpen        = false;
 var _guidedHighlightEl = null;
-var _guidedTooltipTimer = null;
+var _guidedTooltipTimer= null;
+var _guidedStepIdx     = 0;
+var _guidedProcess     = null;
+
+// ── Definición de procesos ────────────────────────────────────────────────
+var GUIDE_PROCESSES = {
+  dispatch_order: {
+    label: 'Orden de Despacho',
+    color: '#1b3b6f', bg: '#e8f0fb', icon: 'truck',
+    steps: [
+      { title: 'Localiza tu tarea',
+        desc: 'En la lista de tareas busca la Orden de Despacho asignada a ti. Puedes usar el buscador o el filtro de tipo.',
+        target: '#task-search', tip: 'Escribe el número de orden o tu nombre para encontrarla rápido.' },
+      { title: 'Abre la tarea',
+        desc: 'Pulsa sobre la fila de la tarea para abrir el panel de detalle.',
+        target: '#tasks-list', tip: 'El panel se abre por la derecha (o en pantalla completa en móvil).' },
+      { title: 'Revisa e inicia',
+        desc: 'Dentro de la tarea, pulsa "Iniciar tarea" para registrar que comenzaste. Revisa los artículos asignados en la sección Artículos.',
+        icon: 'play-circle', color: '#1b3b6f', bg: '#e8f0fb',
+        tip: 'Si no ves el botón "Iniciar", verifica que la tarea esté en estado Pendiente o Asignado.' },
+      { title: 'Prepara los artículos',
+        desc: 'Recoge cada artículo de la lista. Verifica referencias, cantidades y estado físico antes de empacar.',
+        icon: 'package', color: '#16643a', bg: '#e2f0e8',
+        tip: 'Si un artículo está averiado, regístralo en la sección Artículos Averiados antes de continuar.' },
+      { title: 'Verifica el empaque',
+        desc: 'Consulta la sección Empaque dentro de la tarea. Aplica los materiales indicados según la familia del artículo.',
+        icon: 'box', color: '#c4510d', bg: '#fceee2',
+        tip: 'Los materiales aparecen ordenados según la regla de empaque configurada para cada categoría.' },
+      { title: 'Toma fotos de evidencia',
+        desc: 'Fotografía el artículo empacado y listo para despacho. Adjunta la foto en la sección de evidencia de cada artículo.',
+        icon: 'camera', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'Sin foto de evidencia no podrás marcar el artículo como confirmado.' },
+      { title: 'Confirma cada artículo',
+        desc: 'Pulsa "Confirmar" en cada artículo de la lista. Cuando todos estén confirmados, el botón "Completar tarea" se habilitará.',
+        icon: 'check-square', color: '#16643a', bg: '#e2f0e8',
+        tip: 'Solo puedes completar la tarea cuando todos los artículos tienen foto y están confirmados.' },
+      { title: 'Completa la tarea',
+        desc: 'Pulsa "Completar tarea". La tarea pasa a estado Completado y el supervisor recibirá una notificación para validarla.',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Listo! El supervisor validará y la tarea quedará cerrada.' }
+    ]
+  },
+  packaging: {
+    label: 'Embalaje',
+    color: '#c4510d', bg: '#fceee2', icon: 'box',
+    steps: [
+      { title: 'Localiza tu tarea de Embalaje',
+        desc: 'Busca la tarea en la lista. Filtra por tipo "Embalaje" si hay muchas tareas activas.',
+        target: '#filter-type', tip: 'Selecciona "Embalaje" en el filtro de tipo para ver solo estas tareas.' },
+      { title: 'Abre la tarea',
+        desc: 'Pulsa sobre la tarea de embalaje para ver los artículos que debes empacar.',
+        target: '#tasks-list' },
+      { title: 'Inicia la tarea',
+        desc: 'Pulsa "Iniciar tarea" para registrar el inicio del proceso de embalaje.',
+        icon: 'play-circle', color: '#c4510d', bg: '#fceee2' },
+      { title: 'Consulta las reglas de empaque',
+        desc: 'En la sección Empaque de la tarea, verifica los materiales requeridos para cada artículo según su categoría. Los materiales aparecen en el orden correcto de aplicación.',
+        icon: 'clipboard-list', color: '#c4510d', bg: '#fceee2',
+        tip: 'El orden de los materiales es importante — sigue la secuencia indicada.' },
+      { title: 'Aplica los materiales',
+        desc: 'Usa los materiales listados en el orden indicado: protecciones internas primero, luego externas. Respeta las cantidades.',
+        icon: 'layers', color: '#7a4f0d', bg: '#fdf4e3',
+        tip: 'Si te falta algún material, notifica al supervisor antes de continuar.' },
+      { title: 'Fotografía el empaque',
+        desc: 'Toma foto del artículo correctamente empacado desde varios ángulos. Adjunta las fotos en la sección de evidencia.',
+        icon: 'camera', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'La foto debe mostrar claramente el empaque completo y el etiquetado.' },
+      { title: 'Confirma y completa',
+        desc: 'Confirma cada artículo empacado y pulsa "Completar tarea" cuando todo esté listo.',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Listo! El supervisor validará el embalaje.' }
+    ]
+  },
+  item_pickup: {
+    label: 'Recogida de Artículos',
+    color: '#16643a', bg: '#e2f0e8', icon: 'package-check',
+    steps: [
+      { title: 'Localiza tu tarea',
+        desc: 'Busca la tarea de Recogida en la lista. Filtra por tipo "Recogida de Artículos".',
+        target: '#filter-type', tip: 'Selecciona "Recogida de Artículos" en el filtro.' },
+      { title: 'Abre la tarea',
+        desc: 'Pulsa sobre la tarea para ver el listado de artículos que debes recoger y las ubicaciones.',
+        target: '#tasks-list' },
+      { title: 'Inicia y verifica ubicaciones',
+        desc: 'Pulsa "Iniciar tarea". Revisa la lista de artículos y sus ubicaciones de almacén indicadas.',
+        icon: 'map-pin', color: '#16643a', bg: '#e2f0e8',
+        tip: 'Las ubicaciones están vinculadas al stock en Odoo. Verifica que coincidan con la realidad.' },
+      { title: 'Recoge los artículos',
+        desc: 'Ve a cada ubicación y recoge los artículos indicados. Verifica referencia y cantidad.',
+        icon: 'package', color: '#16643a', bg: '#e2f0e8',
+        tip: 'Si un artículo no está en la ubicación indicada, anota la discrepancia en las notas de la tarea.' },
+      { title: 'Toma evidencia',
+        desc: 'Fotografía los artículos recogidos y adjunta la foto en cada artículo de la tarea.',
+        icon: 'camera', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'La foto de evidencia es obligatoria para confirmar la recogida.' },
+      { title: 'Confirma y completa',
+        desc: 'Confirma cada artículo recogido y pulsa "Completar tarea".',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Recogida completada! El supervisor validará.' }
+    ]
+  },
+  truck_loading: {
+    label: 'Carga en Camión',
+    color: '#7c3aed', bg: '#f0ecf8', icon: 'truck',
+    steps: [
+      { title: 'Localiza la tarea de carga',
+        desc: 'Busca la tarea de Carga en Camión en la lista de tareas.',
+        target: '#filter-type', tip: 'Filtra por "Carga en Camión" para encontrarla rápido.' },
+      { title: 'Abre la tarea',
+        desc: 'Pulsa sobre la tarea para ver los artículos que debes cargar y el vehículo asignado.',
+        target: '#tasks-list' },
+      { title: 'Verifica el vehículo',
+        desc: 'Confirma que el vehículo asignado está disponible y en condiciones. Revisa las notas de la tarea.',
+        icon: 'truck', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'Si el vehículo tiene una inspección pendiente, complétala antes de cargar.' },
+      { title: 'Inicia la carga',
+        desc: 'Pulsa "Iniciar tarea". Carga los artículos respetando el orden y distribución del peso.',
+        icon: 'package', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'Artículos pesados al fondo, frágiles encima. Verifica que estén bien asegurados.' },
+      { title: 'Registra evidencia de la carga',
+        desc: 'Toma fotos del camión cargado desde distintos ángulos. Adjunta las fotos en la tarea.',
+        icon: 'camera', color: '#7c3aed', bg: '#f0ecf8',
+        tip: 'Fotografía el interior del camión mostrando todos los artículos correctamente ubicados.' },
+      { title: 'Confirma y completa',
+        desc: 'Confirma cada artículo cargado y pulsa "Completar tarea" para notificar al supervisor.',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Carga lista! El vehículo puede partir una vez el supervisor valide.' }
+    ]
+  },
+  warehouse_move: {
+    label: 'Movimiento de Almacén',
+    color: '#7a4f0d', bg: '#fdf4e3', icon: 'warehouse',
+    steps: [
+      { title: 'Localiza la tarea',
+        desc: 'Busca la tarea de Movimiento de Almacén. Filtra por tipo si es necesario.',
+        target: '#filter-type', tip: 'Selecciona "Movimiento de Almacén" en el filtro de tipo.' },
+      { title: 'Abre la tarea',
+        desc: 'Pulsa sobre la tarea para ver los artículos a mover y las ubicaciones de origen y destino.',
+        target: '#tasks-list' },
+      { title: 'Verifica origen y destino',
+        desc: 'Revisa las ubicaciones de origen y destino indicadas. Confirma que el espacio en destino está disponible.',
+        icon: 'arrow-right', color: '#7a4f0d', bg: '#fdf4e3',
+        tip: 'Si el destino no tiene espacio, coordina con el supervisor antes de mover.' },
+      { title: 'Ejecuta el movimiento',
+        desc: 'Pulsa "Iniciar tarea". Traslada los artículos de la ubicación de origen al destino indicado.',
+        icon: 'move', color: '#7a4f0d', bg: '#fdf4e3',
+        tip: 'Registra en Odoo el movimiento de stock una vez completado físicamente.' },
+      { title: 'Fotografía el resultado',
+        desc: 'Toma foto de los artículos en su nueva ubicación. Adjunta la evidencia en la tarea.',
+        icon: 'camera', color: '#7c3aed', bg: '#f0ecf8' },
+      { title: 'Completa la tarea',
+        desc: 'Confirma los artículos movidos y pulsa "Completar tarea".',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Movimiento completado! El supervisor verificará el stock en Odoo.' }
+    ]
+  },
+  general: {
+    label: 'Tarea General',
+    color: '#4a5568', bg: '#f3f4f0', icon: 'clipboard-list',
+    steps: [
+      { title: 'Localiza tu tarea',
+        desc: 'Busca la tarea en la lista usando el buscador o filtrando por tu usuario.',
+        target: '#task-search', tip: 'Escribe tu nombre en el buscador para ver solo tus tareas.' },
+      { title: 'Abre y lee la tarea',
+        desc: 'Pulsa sobre la tarea para ver el detalle, descripción e instrucciones del supervisor.',
+        target: '#tasks-list' },
+      { title: 'Inicia la tarea',
+        desc: 'Pulsa "Iniciar tarea" para registrar que comenzaste a trabajar en ella.',
+        icon: 'play-circle', color: '#4a5568', bg: '#f3f4f0',
+        tip: 'El sistema registra la hora de inicio automáticamente.' },
+      { title: 'Ejecuta y documenta',
+        desc: 'Realiza la tarea según las instrucciones. Adjunta fotos o notas si es necesario.',
+        icon: 'file-text', color: '#4a5568', bg: '#f3f4f0',
+        tip: 'Usa el campo de notas para registrar cualquier observación importante.' },
+      { title: 'Completa la tarea',
+        desc: 'Cuando termines, pulsa "Completar tarea". El supervisor recibirá una notificación para revisar y validar.',
+        icon: 'check-circle', color: '#059669', bg: '#e2f0e8',
+        tip: '¡Tarea completada! Espera la validación del supervisor.' }
+    ]
+  }
+};
 
 function toggleGuidedMode() {
   if (_guidedOpen) { closeGuidedMode(); return; }
   _guidedOpen = true;
   var panel = document.getElementById('guided-panel');
   var btn   = document.getElementById('btn-guided-mode');
-  if (panel) panel.style.display = '';
+  if (panel) { panel.style.display = ''; }
   if (btn)   btn.classList.add('active');
-  // Scroll suavemente al panel
+  // Mostrar pantalla de selección
+  _guidedShowScreen('pick');
   if (panel) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   if (window.lucide) lucide.createIcons();
+}
+
+function _guidedShowScreen(screen) {
+  document.getElementById('guided-screen-pick').style.display  = (screen==='pick')  ? '' : 'none';
+  document.getElementById('guided-screen-steps').style.display = (screen==='steps') ? '' : 'none';
 }
 
 function closeGuidedMode() {
@@ -5319,74 +5553,127 @@ function closeGuidedTooltip() {
   }
 }
 
-function _showGuidedTooltip(targetEl, text, arrowDown) {
+function guidedBackToPick() {
+  closeGuidedTooltip();
+  _guidedProcess = null;
+  _guidedStepIdx = 0;
+  _guidedShowScreen('pick');
+  if (window.lucide) lucide.createIcons();
+}
+
+function startGuideProcess(type) {
+  var proc = GUIDE_PROCESSES[type];
+  if (!proc) return;
+  _guidedProcess = proc;
+  _guidedStepIdx = 0;
+  // Aplicar filtro de tipo en la lista
+  var filterType = document.getElementById('filter-type');
+  if (filterType && type !== 'general') {
+    filterType.value = type;
+    filterTasks();
+  }
+  document.getElementById('guided-process-label').textContent = proc.label;
+  _guidedShowScreen('steps');
+  _guidedRenderStep();
+  if (window.lucide) lucide.createIcons();
+}
+
+function _guidedRenderStep() {
+  var proc  = _guidedProcess;
+  var steps = proc.steps;
+  var idx   = _guidedStepIdx;
+  var step  = steps[idx];
+  var total = steps.length;
+
+  // Progress bar
+  document.getElementById('guided-progress-bar').style.width = (((idx+1)/total)*100)+'%';
+
+  // Counter
+  document.getElementById('guided-step-counter').textContent = 'Paso '+(idx+1)+' de '+total;
+
+  // Botones prev/next
+  document.getElementById('guided-btn-prev').disabled = (idx === 0);
+  var nextBtn = document.getElementById('guided-btn-next');
+  if (idx === total-1) {
+    nextBtn.innerHTML = 'Finalizar <i data-lucide="check" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i>';
+  } else {
+    nextBtn.innerHTML = 'Siguiente <i data-lucide="arrow-right" style="width:14px;height:14px;stroke:currentColor;margin-left:4px"></i>';
+  }
+
+  // Cuerpo del paso
+  var color = step.color || proc.color;
+  var bg    = step.bg    || proc.bg;
+  var iconName = step.icon || proc.icon;
+  var iconHtml = '<div class="guided-step-icon" style="background:'+bg+'">'
+    +'<i data-lucide="'+iconName+'" style="stroke:'+color+'"></i></div>';
+
+  var tipHtml = step.tip
+    ? '<div class="guided-step-tip"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>'+step.tip+'</div>'
+    : '';
+
+  document.getElementById('guided-step-body').innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">'
+    + iconHtml
+    + '<div style="flex:1">'
+    +   '<div class="guided-step-num" style="background:'+color+'">'+(idx+1)+'</div>'
+    +   '<div class="guided-step-title">'+step.title+'</div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="guided-step-desc">'+step.desc+'</div>'
+    + tipHtml;
+
+  if (window.lucide) lucide.createIcons();
+
+  // Highlight + tooltip si hay target
+  closeGuidedTooltip();
+  if (step.target) {
+    var el = document.querySelector(step.target);
+    if (el) {
+      setTimeout(function() {
+        el.scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(function() { _showGuidedTooltip(el, step.title+': '+step.desc.split('.')[0]+'.'); }, 350);
+      }, 200);
+    }
+  }
+}
+
+function guidedStepNext() {
+  var total = _guidedProcess.steps.length;
+  if (_guidedStepIdx >= total-1) { closeGuidedMode(); return; }
+  _guidedStepIdx++;
+  _guidedRenderStep();
+}
+
+function guidedStepPrev() {
+  if (_guidedStepIdx <= 0) return;
+  _guidedStepIdx--;
+  _guidedRenderStep();
+}
+
+function _showGuidedTooltip(targetEl, text) {
   closeGuidedTooltip();
   var tt = document.getElementById('guided-tooltip');
   if (!tt || !targetEl) return;
   document.getElementById('guided-tooltip-text').textContent = text;
-  // Posición relativa al target
-  var rect = targetEl.getBoundingClientRect();
-  tt.style.display = '';
-  // arrow: arriba del tooltip apunta al elemento (tooltip está abajo)
-  var arrow = tt.querySelector('.guided-tooltip-arrow');
-  var ttW = 260;
-  var left = Math.max(8, Math.min(rect.left, window.innerWidth - ttW - 8));
-  if (arrowDown) {
-    // tooltip arriba del elemento
-    tt.style.top  = (rect.top - 10 - tt.offsetHeight) + 'px';
-    if (arrow) { arrow.style.cssText='border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #1b3b6f;border-bottom:none;margin-left:20px'; }
-  } else {
-    // tooltip abajo del elemento
-    tt.style.top  = (rect.bottom + 10) + 'px';
-    if (arrow) { arrow.style.cssText='border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #1b3b6f;border-top:none;margin-left:20px'; }
-  }
+  var rect  = targetEl.getBoundingClientRect();
+  var arrow = document.getElementById('guided-tooltip-arrow');
+  var ttW   = 270;
+  var left  = Math.max(8, Math.min(rect.left, window.innerWidth - ttW - 8));
   tt.style.left = left + 'px';
+  tt.style.display = '';
+  // Posicionar abajo si hay espacio, arriba si no
+  var spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow > 120) {
+    tt.style.top = (rect.bottom + 8) + 'px';
+    if (arrow) arrow.style.cssText = 'border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #1b3b6f;border-top:none;margin-left:20px';
+  } else {
+    tt.style.top = (rect.top - 8 - 80) + 'px';
+    if (arrow) arrow.style.cssText = 'order:2;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #1b3b6f;border-bottom:none;margin-left:20px;margin-top:4px';
+  }
   if (window.lucide) lucide.createIcons();
-  // Añadir highlight pulsante al target
   _guidedHighlightEl = targetEl;
   targetEl.classList.add('guided-highlight');
-  // Auto-cerrar tooltip después de 6 segundos
-  _guidedTooltipTimer = setTimeout(closeGuidedTooltip, 6000);
-}
-
-function guideAction(action) {
-  // Cerrar el panel pero dejar el tooltip
-  var panel = document.getElementById('guided-panel');
-  if (panel) panel.style.display = 'none';
-  _guidedOpen = false;
-  var btn = document.getElementById('btn-guided-mode');
-  if (btn) btn.classList.remove('active');
-
-  var targetEl, text;
-  switch(action) {
-    case 'nueva-tarea':
-      targetEl = document.getElementById('btn-new-task');
-      if (!targetEl || targetEl.style.display==='none') {
-        targetEl = document.querySelector('.btn-new');
-      }
-      text = 'Pulsa aquí para crear una nueva tarea y asignarla al equipo.';
-      break;
-    case 'buscar-tarea':
-      targetEl = document.getElementById('task-search');
-      text = 'Escribe aquí para buscar tareas por nombre, orden o responsable.';
-      if (targetEl) targetEl.focus();
-      break;
-    case 'filtrar-estado':
-      targetEl = document.getElementById('filter-status');
-      text = 'Selecciona un estado para filtrar: Pendiente, En progreso, Completado…';
-      break;
-    case 'iniciar-tarea':
-      targetEl = document.querySelector('#tasks-list .task-list-row, #tasks-list .task-card');
-      text = 'Pulsa sobre cualquier tarea para abrirla, luego usa los botones de acción para iniciarla o avanzarla.';
-      break;
-    case 'cambiar-vista':
-      targetEl = document.querySelector('.tasks-view-bar');
-      text = 'Aquí puedes cambiar entre Lista, Tarjetas, Kanban y Vista por persona.';
-      break;
-  }
-  if (!targetEl) { closeGuidedTooltip(); return; }
-  targetEl.scrollIntoView({ behavior:'smooth', block:'center' });
-  setTimeout(function(){ _showGuidedTooltip(targetEl, text, false); }, 300);
+  _guidedTooltipTimer = setTimeout(closeGuidedTooltip, 7000);
 }
 
 /* ── Semáforo de fecha límite ─────────────────────────────────────────────────
