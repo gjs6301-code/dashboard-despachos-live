@@ -1554,10 +1554,10 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .wwp-subtask-breadcrumb a{color:var(--accent);cursor:pointer;text-decoration:none}
 .wwp-subtask-breadcrumb a:hover{text-decoration:underline}
 
-/* Block scroll by default — auth screens are position:fixed overlays;
-   JS removes this when navigating to the main app screens */
-html,body{overflow:hidden}
 body{font-family:var(--font);min-height:100dvh}
+/* Hide main screens by CSS so the body has no scroll height on load;
+   JS (showScreen/uiSetVisible) sets display inline when navigating */
+#screen-historial{display:none}
 
 /* ── LOGIN SCREEN ────────────────────────────────────────────────── */
 #screen-login{
@@ -4433,12 +4433,6 @@ function uiSetVisible(el, visible, displayValue, className) {
 // SCREEN MANAGEMENT (merged: 5 screens)
 // ═══════════════════════════════════════════════════════════════════════
 function showScreen(id) {
-  // Lock body scroll on auth screens so Android doesn't swallow touch
-  // events that should reach the position:fixed login overlay
-  var isAuth = id === 'screen-login' || id === 'screen-forgot' || id === 'screen-reset';
-  document.documentElement.style.overflow = isAuth ? 'hidden' : '';
-  document.body.style.overflow = isAuth ? 'hidden' : '';
-
   ['screen-login','screen-forgot','screen-reset','screen-historial','screen-app'].forEach((s) => {
     var el = document.getElementById(s);
     if (!el) return;
