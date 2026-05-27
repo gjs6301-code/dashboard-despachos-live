@@ -3255,6 +3255,7 @@ body{font-family:var(--font);min-height:100dvh}
           <thead><tr>
             <th style="width:52px">Imagen</th>
             <th class="rs-th" onclick="sortRs('ref')">Referencia <span class="rs-arr" id="rs-arr-ref">↕</span></th>
+            <th class="rs-th" onclick="sortRs('barcode')">Cód. Barras <span class="rs-arr" id="rs-arr-barcode">↕</span></th>
             <th class="rs-th" onclick="sortRs('name')">Nombre <span class="rs-arr" id="rs-arr-name">↕</span></th>
             <th class="rs-th" onclick="sortRs('almacen')">Almacén <span class="rs-arr" id="rs-arr-almacen">↕</span></th>
             <th class="rs-th" onclick="sortRs('ubicacion')">Ubicación <span class="rs-arr" id="rs-arr-ubicacion">↕</span></th>
@@ -8971,7 +8972,8 @@ function toggleDept(el){
 // ════════════════════════════════════════════════════
 var _rsLocsDone = false;
 var _rsItems    = [];
-var _rsSort     = { col: 'diasSin', dir: -1 }; // más días sin showroom primero por defecto
+var _rsSort     = { col: 'diasSin', dir: -1 };
+var _rsKitOpen  = {}; // idx → bool, cerrado por defecto // más días sin showroom primero por defecto
 
 function sortRs(col) {
   if (_rsSort.col === col) {
@@ -8982,7 +8984,7 @@ function sortRs(col) {
     _rsSort.dir = (col === 'diasSin' || col === 'qtyAlm') ? -1 : 1;
   }
   // Actualizar flechas en headers
-  ['ref','name','almacen','ubicacion','qtyAlm','ultimaVez','diasSin'].forEach(function(c) {
+  ['ref','barcode','name','almacen','ubicacion','qtyAlm','ultimaVez','diasSin'].forEach(function(c) {
     var el = document.getElementById('rs-arr-' + c);
     if (!el) return;
     if (c !== _rsSort.col) { el.textContent = '↕'; el.classList.remove('active'); }
@@ -9037,7 +9039,7 @@ async function runReposicionAnalysis(){
   tableWrap.style.display = 'none';
   emptyMsg.style.display  = 'none';
 
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">'
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-3)">'
     +'<div class="spinner" style="margin:0 auto 8px"></div>Consultando Odoo…</td></tr>';
   tableWrap.style.display = 'block';
 
@@ -9050,7 +9052,7 @@ async function runReposicionAnalysis(){
     if (btn) { btn.disabled = false; }
 
     if (!d.ok) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red-text)">'+esc(d.error||'Error al consultar')+'</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--red-text)">'+esc(d.error||'Error al consultar')+'</td></tr>';
       return;
     }
 
@@ -9079,8 +9081,54 @@ async function runReposicionAnalysis(){
   } catch(e) {
     if (btn) { btn.disabled = false; }
     var tbody2 = document.getElementById('rs-tbody');
-    tbody2.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red-text)">Error: '+esc(e.message)+'</td></tr>';
+    tbody2.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--red-text)">Error: '+esc(e.message)+'</td></tr>';
   }
+}
+
+// ── Helpers de fila para Reposición ──────────────────────────────────────────
+function _rsRowCells(item) {
+  var imgHtml = item.image
+    ? '<img class="rs-img" src="data:image/png;base64,'+item.image+'" alt="">'
+    : '<div class="rs-no-img"><i data-lucide="image-off" style="width:16px;height:16px;stroke:var(--text-muted)"></i></div>';
+
+  var diasHtml = item.diasSin === null
+    ? '<span class="rs-badge-nunca">Nunca</span>'
+    : item.diasSin >= 60
+      ? '<span class="rs-dias">'+item.diasSin+'d</span>'
+      : '<span class="rs-dias-warn">'+item.diasSin+'d</span>';
+
+  var ultimaVezHtml = item.ultimaVez
+    ? '<span style="font-size:11px;color:var(--text-secondary)">'+esc(item.ultimaVez)+'</span>'
+    : '<span class="rs-badge-nunca">Sin historial</span>';
+
+  var almHtml = (item.almacen||'—').split(' · ').map(function(a){
+    return '<span style="display:inline-block;padding:1px 6px;border-radius:10px;background:var(--blue-bg);color:var(--blue-text);font-size:10px;font-weight:700;margin:1px 2px 1px 0;white-space:nowrap">'+esc(a)+'</span>';
+  }).join('');
+
+  var ubHtml = '<span style="font-size:10px;color:var(--text-secondary);line-height:1.4">'
+    + esc((item.ubicacion||'—').replace(/ · /g,'\n')).replace(/\n/g,'<br>') + '</span>';
+
+  var bcHtml = item.barcode
+    ? '<span style="font-size:10px;font-family:monospace;color:var(--text-secondary)">'+esc(item.barcode)+'</span>'
+    : '<span style="color:var(--text-muted)">—</span>';
+
+  return '<td>'+imgHtml+'</td>'
+    +'<td style="font-size:11px;font-weight:700;color:var(--text-primary);white-space:nowrap">'+(item.ref?esc(item.ref):'<span style="color:var(--text-muted)">—</span>')+'</td>'
+    +'<td>'+bcHtml+'</td>'
+    +'<td style="font-size:12px;color:var(--text-primary);max-width:200px">'+esc(item.name||'—')+'</td>'
+    +'<td>'+almHtml+'</td>'
+    +'<td style="max-width:160px">'+ubHtml+'</td>'
+    +'<td style="text-align:right;font-size:12px;font-weight:600;color:var(--green-text)">'+(item.qtyAlm||0).toFixed(0)+'</td>'
+    +'<td style="text-align:center">'+ultimaVezHtml+'</td>'
+    +'<td style="text-align:right">'+diasHtml+'</td>';
+}
+
+function rsToggleKit(idx) {
+  _rsKitOpen[idx] = !_rsKitOpen[idx];
+  var open = _rsKitOpen[idx];
+  document.querySelectorAll('.rs-set-row-'+idx).forEach(function(r){ r.style.display = open ? '' : 'none'; });
+  var chev = document.getElementById('rs-chev-'+idx);
+  if (chev) chev.style.transform = open ? 'rotate(90deg)' : '';
 }
 
 function renderReposicion(){
@@ -9088,55 +9136,80 @@ function renderReposicion(){
   var tableWrap = document.getElementById('rs-table-wrap');
   if (!_rsItems.length) return;
 
-  // Aplicar sort
+  // ── Sort ──────────────────────────────────────────────────────────────────
   var col = _rsSort.col, dir = _rsSort.dir;
   var sorted = _rsItems.slice().sort(function(a, b) {
     var va = a[col], vb = b[col];
     if (va === null && vb === null) return 0;
-    if (va === null) return 1;   // nulls siempre al final
+    if (va === null) return 1;
     if (vb === null) return -1;
     if (typeof va === 'number') return (va - vb) * dir;
     return String(va).localeCompare(String(vb)) * dir;
   });
 
-  var html = sorted.map(function(item){
-    var imgHtml = item.image
-      ? '<img class="rs-img" src="data:image/png;base64,'+item.image+'" alt="">'
-      : '<div class="rs-no-img"><i data-lucide="image-off" style="width:16px;height:16px;stroke:var(--text-muted)"></i></div>';
+  // ── Agrupar por barcode SET (misma lógica que análisis de contenedor) ─────
+  var bcPartRx = /^(\d)(\d)(\d)\.(.+)$/;
+  var bcGroups  = {};
+  sorted.forEach(function(item) {
+    var m = bcPartRx.exec(item.barcode || '');
+    if (!m) return;
+    var total = parseInt(m[3]);
+    if (total < 2) return;
+    var key = 'bc_' + m[1] + m[3] + '.' + m[4];
+    if (!bcGroups[key]) bcGroups[key] = [];
+    bcGroups[key].push({ item: item, part: parseInt(m[2]) });
+  });
 
-    var diasHtml = item.diasSin === null
-      ? '<span class="rs-badge-nunca">Nunca</span>'
-      : item.diasSin >= 60
-        ? '<span class="rs-dias">'+item.diasSin+'d</span>'
-        : '<span class="rs-dias-warn">'+item.diasSin+'d</span>';
+  var setList = [];
+  var inSet   = new Set();
+  Object.keys(bcGroups).forEach(function(key) {
+    var group = bcGroups[key];
+    if (group.length < 2) return;
+    group.sort(function(a, b){ return a.part - b.part; });
+    var p1 = group.find(function(g){ return g.part === 1; }) || group[0];
+    setList.push({
+      idx:   setList.length,
+      image: p1.item.image  || '',
+      ref:   p1.item.barcode || key,
+      name:  p1.item.ref    || '',
+      items: group.map(function(g){ return g.item; })
+    });
+    group.forEach(function(g){ inSet.add(g.item.id); });
+  });
 
-    var ultimaVezHtml = item.ultimaVez
-      ? '<span style="font-size:11px;color:var(--text-secondary)">'+esc(item.ultimaVez)+'</span>'
-      : '<span class="rs-badge-nunca">Sin historial</span>';
+  var standalone = sorted.filter(function(item){ return !inSet.has(item.id); });
 
-    // Almacén — chips por cada almacén único
-    var almHtml = (item.almacen||'—').split(' · ').map(function(a){
-      return '<span style="display:inline-block;padding:1px 6px;border-radius:10px;'
-        +'background:var(--blue-bg);color:var(--blue-text);font-size:10px;font-weight:700;'
-        +'margin:1px 2px 1px 0;white-space:nowrap">'+esc(a)+'</span>';
-    }).join('');
+  // ── Render ────────────────────────────────────────────────────────────────
+  var COLS = 9;
+  var html = '';
 
-    // Ubicación — texto compacto, múltiples separadas con •
-    var ubHtml = '<span style="font-size:10px;color:var(--text-secondary);line-height:1.4">'
-      + esc((item.ubicacion||'—').replace(/ · /g, '\n')).replace(/\n/g,'<br>')
-      + '</span>';
+  // Filas individuales
+  standalone.forEach(function(item){
+    html += '<tr>' + _rsRowCells(item) + '</tr>';
+  });
 
-    return '<tr>'
-      +'<td>'+imgHtml+'</td>'
-      +'<td style="font-size:11px;font-weight:700;color:var(--text-primary);white-space:nowrap">'+(item.ref?esc(item.ref):'<span style="color:var(--text-muted)">—</span>')+'</td>'
-      +'<td style="font-size:12px;color:var(--text-primary);max-width:220px">'+esc(item.name||'—')+'</td>'
-      +'<td>'+almHtml+'</td>'
-      +'<td style="max-width:180px">'+ubHtml+'</td>'
-      +'<td style="text-align:right;font-size:12px;font-weight:600;color:var(--green-text)">'+(item.qtyAlm||0).toFixed(0)+'</td>'
-      +'<td style="text-align:center">'+ultimaVezHtml+'</td>'
-      +'<td style="text-align:right">'+diasHtml+'</td>'
-      +'</tr>';
-  }).join('');
+  // Grupos SET
+  setList.forEach(function(set) {
+    var idx = set.idx;
+    var imgH = set.image
+      ? '<img style="width:36px;height:36px;object-fit:contain;border-radius:4px;border:1px solid var(--border-light);flex-shrink:0" src="data:image/png;base64,'+set.image+'" alt="">'
+      : '<div style="width:36px;height:36px;background:var(--surface-3);border-radius:4px;flex-shrink:0"></div>';
+
+    html += '<tr class="rs-set-hdr cont-btc-hdr" onclick="rsToggleKit('+idx+')" style="cursor:pointer">'
+      +'<td colspan="'+COLS+'" style="padding:7px 12px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      + imgH
+      +'<span style="display:inline-flex;align-items:center;gap:3px;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.4px;flex-shrink:0">SET</span>'
+      +'<span style="font-size:11px;font-weight:700;color:var(--text-primary);flex-shrink:0">'+esc(set.ref)+'</span>'
+      +(set.name?'<span style="font-size:11px;color:var(--text-secondary)">'+esc(set.name)+'</span>':'')
+      +'<span style="font-size:10px;color:var(--text-muted);margin-left:2px">· '+set.items.length+' piezas</span>'
+      +'<span id="rs-chev-'+idx+'" style="margin-left:auto;font-size:10px;color:var(--text-muted);transition:transform .2s">▶</span>'
+      +'</div></td></tr>';
+
+    set.items.forEach(function(item){
+      html += '<tr class="rs-set-row-'+idx+'" style="display:none">' + _rsRowCells(item) + '</tr>';
+    });
+  });
 
   tbody.innerHTML = html;
   tableWrap.style.display = 'block';
