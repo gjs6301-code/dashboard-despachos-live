@@ -1412,22 +1412,19 @@ const server = http.createServer(async (req, res) => {
         } catch(_) { /* si mrp no está instalado o falla, continuar sin kits */ }
       }
 
-      // Adjuntar info del kit a cada componente (por product id)
-      // Clave de agrupación: bomId si viene de Odoo, kitBaseCode si es fallback
-      // — garantiza que piezas del mismo kit siempre queden en un solo grupo
+      // Adjuntar info del kit a cada componente confirmado por Odoo BOM
+      // Solo se asigna kitGroupKey si Odoo confirmó el BOM — sin fallback por código inferido,
+      // para que el Step 2b pueda agrupar por barcode cuando Odoo no tenga BOM registrado
       poProducts.forEach(p => {
         if (kitCompRegex.test(p.ref || '')) {
-          const base = (p.ref.match(kitCompRegex) || [])[1] || p.ref;
-          p.kitBaseCode = base;
+          p.kitBaseCode = (p.ref.match(kitCompRegex) || [])[1] || p.ref;
           if (kitInfoMap[p.id]) {
             // Kit confirmado por BOM de Odoo — usar bomId como clave de grupo
             p.kit = kitInfoMap[p.id];
             p.kitGroupKey = 'bom_' + kitInfoMap[p.id].bomId;
-          } else {
-            // Fallback — agrupar por código base inferido
-            p.kit = { ref: base, name: base, image: '' };
-            p.kitGroupKey = 'base_' + base;
           }
+          // Si no hay BOM en Odoo → no asignar kitGroupKey aquí;
+          // el Step 2b lo agrupará por barcode (o quedará como individual)
         }
       });
 
