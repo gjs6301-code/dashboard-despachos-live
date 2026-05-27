@@ -1457,10 +1457,12 @@ const server = http.createServer(async (req, res) => {
           const rep   = group.entries[0].p;               // parte más baja disponible
           const part1 = group.entries.find(e => e.part === 1) || group.entries[0];
           const kitImage   = part1.p.image   || '';
-          const kitBarcode = part1.p.barcode || group.rest; // barcode completo de la parte 1
+          const kitBarcode = part1.p.barcode || group.rest;
+          // Referencia sin sufijo .Cn (ej: GVF.ODEN.KING.BASE.FCOTEMEG005.BRW)
+          const kitRef = part1.p.kitBaseCode || part1.p.ref || group.rest;
           group.entries.forEach(({ p }) => {
             p.kitGroupKey = key;
-            p.kit = { ref: kitBarcode, name: kitBarcode, image: kitImage, isBarcodeSet: true };
+            p.kit = { ref: kitBarcode, name: kitRef, image: kitImage, isBarcodeSet: true };
           });
         });
       }
