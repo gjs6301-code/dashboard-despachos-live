@@ -1447,9 +1447,15 @@ const server = http.createServer(async (req, res) => {
 
         Object.entries(bcGroups).forEach(([key, group]) => {
           if (group.entries.length < 2) return; // solo 1 pieza en la orden → individual
+          // Usar la pieza con dígito de parte = 1 como representante del set (foto + barcode)
+          group.entries.sort((a, b) => a.part - b.part);
+          const rep   = group.entries[0].p;               // parte más baja disponible
+          const part1 = group.entries.find(e => e.part === 1) || group.entries[0];
+          const kitImage   = part1.p.image   || '';
+          const kitBarcode = part1.p.barcode || group.rest; // barcode completo de la parte 1
           group.entries.forEach(({ p }) => {
-            p.kitGroupKey  = key;
-            p.kit = { ref: group.rest, name: group.rest, image: '', isBarcodeSet: true };
+            p.kitGroupKey = key;
+            p.kit = { ref: kitBarcode, name: kitBarcode, image: kitImage, isBarcodeSet: true };
           });
         });
       }
