@@ -1095,7 +1095,9 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 [data-theme='dark'] .cont-table tr.cont-row-amber td,[data-theme='dark'] .cont-table tr.cont-row-amber:nth-child(even) td{background:#2a2008}
 [data-theme='dark'] .cont-table tr.cont-row-amber:hover td{background:#362a0a}
 /* ── Reposición Showroom ── */
-.rs-select{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);font-size:12px;cursor:pointer;outline:none;transition:border-color .15s}
+.rs-card-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:3px}
+.rs-card-controls{display:flex;align-items:center;gap:8px}
+.rs-select{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);font-size:12px;cursor:pointer;outline:none;transition:border-color .15s;max-width:220px}
 .rs-select:focus{border-color:var(--border-focus)}
 .rs-btn-refresh{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--text-secondary);cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s}
 .rs-btn-refresh:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
@@ -2414,6 +2416,8 @@ body{font-family:var(--font);min-height:100dvh}
   .app-body{padding:16px;max-width:100%}
   #wwp-drawer{width:min(540px,80vw)}
   .modal-card{max-width:500px}
+  /* — Reposición: tablet — ocultar Ubicación para ganar espacio */
+  .rs-table th:nth-child(6),.rs-table td:nth-child(6){display:none}
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2740,6 +2744,44 @@ body{font-family:var(--font);min-height:100dvh}
 
   /* — Scrollable form in modal — */
   .modal-body{padding:16px}
+
+  /* ── Reposición Showroom — mobile ──────────────────────────────────────── */
+
+  /* Header: apila título + controles */
+  .rs-card-hdr{flex-direction:column;align-items:stretch;gap:8px}
+  .rs-card-controls{width:100%}
+  .rs-select{flex:1;max-width:100%!important;width:100%;font-size:16px;min-height:44px;padding:10px 12px}
+  .rs-btn-refresh{width:44px;height:44px;flex-shrink:0}
+
+  /* KPI cards: 2 por fila, táctiles */
+  #rs-stats{gap:6px}
+  #rs-stats .cont-stat{flex:1 1 calc(50% - 3px);min-width:0;min-height:44px;padding:8px 10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #rs-stats .cont-stat-num{font-size:18px}
+
+  /* Tabla: scroll horizontal con momentum */
+  #rs-table-wrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+
+  /* Ocultar columnas de menor prioridad en móvil:
+     2=Referencia  3=Cód.Barras  6=Ubicación  8=Última vez */
+  .rs-table th:nth-child(2),.rs-table td:nth-child(2),
+  .rs-table th:nth-child(3),.rs-table td:nth-child(3),
+  .rs-table th:nth-child(6),.rs-table td:nth-child(6),
+  .rs-table th:nth-child(8),.rs-table td:nth-child(8){display:none}
+
+  /* Compactar celdas visibles */
+  .rs-table th{padding:6px 8px;font-size:9px;letter-spacing:.2px}
+  .rs-table td{padding:5px 8px;font-size:11px}
+  .rs-table .rs-img,.rs-table .rs-no-img{width:32px;height:32px}
+
+  /* Nombre: puede envolver */
+  .rs-table td:nth-child(4){max-width:140px;white-space:normal;word-break:break-word}
+
+  /* Chips de almacén más compactos */
+  .rs-table td:nth-child(5) span{font-size:9px;padding:1px 5px}
+
+  /* Fila SET: compactar */
+  .rs-set-hdr td{padding:6px 8px!important}
 }
 
 /* ── Photo source popover (siempre position:fixed, funciona en móvil y desktop) ── */
@@ -3236,10 +3278,10 @@ body{font-family:var(--font);min-height:100dvh}
     <div id="section-reposicion" class="page-section" style="display:none">
     <div id="sec-reposicion" class="divider"><div class="divider-line"></div><span class="divider-label">REPOSICIÓN SHOWROOM — COMPRAS</span><div class="divider-line"></div></div>
     <div class="cont-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:3px">
+      <div class="rs-card-hdr">
         <h3 style="margin:0">Reposición Showroom</h3>
-        <div style="display:flex;align-items:center;gap:8px">
-          <select id="rs-showroom-select" class="rs-select" style="max-width:220px" onchange="runReposicionAnalysis()">
+        <div class="rs-card-controls">
+          <select id="rs-showroom-select" class="rs-select" onchange="runReposicionAnalysis()">
             <option value="">— Showroom —</option>
           </select>
           <button class="rs-btn-refresh" id="rs-btn-analizar" onclick="runReposicionAnalysis()" title="Actualizar">
