@@ -1431,6 +1431,32 @@ const server = http.createServer(async (req, res) => {
         }
       });
 
+      // Step 2b: agrupar por lógica de barcode [cat][parte][total].[itemID].[empresa]
+      // Ejemplo: 114.0059.GVF (parte 1 de 4) y 124.0059.GVF (parte 2 de 4) → mismo set
+      {
+        const bcPartRegex = /^(\d)(\d)(\d)\.(.+)$/;
+        const bcGroups    = {}; // groupKey -> { total, rest, entries[] }
+
+        poProducts.forEach(p => {
+          if (p.kitGroupKey) return; // ya agrupado por BOM de Odoo
+          const m = bcPartRegex.exec(p.barcode || '');
+          if (!m) return;
+          const cat = m[1], total = parseInt(m[3]), rest = m[4];
+          if (total < 2) return; // pieza única, no aplica
+          const key = 'bc_' + cat + m[3] + '.' + rest;
+          if (!bcGroups[key]) bcGroups[key] = { total, rest, entries: [] };
+          bcGroups[key].entries.push({ p, part: parseInt(m[2]) });
+        });
+
+        Object.entries(bcGroups).forEach(([key, group]) => {
+          if (group.entries.length < 2) return; // solo 1 pieza en la orden → individual
+          group.entries.forEach(({ p }) => {
+            p.kitGroupKey  = key;
+            p.kit = { ref: group.rest, name: group.rest, image: '', isBarcodeSet: true };
+          });
+        });
+      }
+
       // Step 3: stock.move DONE hacia esa ubicación para esos productos
       const sentProductIds = new Set();
       if (poProducts.length) {
