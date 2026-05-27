@@ -8829,7 +8829,15 @@ function renderContenedores(){
           :c.diasRest<0    ?'<span style="color:var(--red-text);font-weight:700">'+Math.abs(c.diasRest)+'d venc.</span>'
           :'<span style="color:var(--green-text);font-weight:700">+'+c.diasRest+'d</span>';
     var diasTrTxt=(c.diasTr!=null&&c.diasTr!=='')?c.diasTr+'d':'—';
-    var diasAlm=c.recAlm&&c.fReal?daysBetween(c.fReal,new Date()):null;
+    var _refAlm=null;
+    if(c.recAlm){
+      if(c.fReal&&c.fReal.includes('/')) _refAlm=c.fReal;
+      else if(c.fEst&&c.fEst.includes('/')){
+        var _hoy=new Date(); _hoy.setHours(0,0,0,0);
+        if(parseDate(c.fEst)<=_hoy) _refAlm=c.fEst;
+      }
+    }
+    var diasAlm=_refAlm?daysBetween(_refAlm,new Date()):null;
     var diasAlmTxt=diasAlm!==null
       ?'<span style="font-weight:700;color:var(--red-text)">'+diasAlm+'d</span>'
       :'—';
