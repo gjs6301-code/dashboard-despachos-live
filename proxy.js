@@ -1320,6 +1320,15 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // Excluir productos que contengan "(copia)" en nombre o referencia
+      const copiasAntes = poProducts.length;
+      for (let i = poProducts.length - 1; i >= 0; i--) {
+        const p = poProducts[i];
+        if (/\(copia\)/i.test(p.name || '') || /\(copia\)/i.test(p.ref || '')) {
+          poProducts.splice(i, 1);
+        }
+      }
+
       // Step 2: identificar componentes de kits (.Cn) y consultar mrp.bom en Odoo
       const kitCompRegex = /^(.+)\.C\d+$/i;
       const componentIds = poProducts
