@@ -9312,7 +9312,8 @@ async function solModalConfirm() {
       method: 'POST',
       body: JSON.stringify({
         source:      data.source,
-        productId:   data.productId,
+        productId:   data.productId  || null,
+        contId:      data.contId     || null,
         name:        data.name,
         ref:         data.ref,
         barcode:     data.barcode,
