@@ -1263,22 +1263,34 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     try {
-      // 0. IDs de ubicaciones del showroom (para separar en JS, sin 'not in' en Odoo)
-      const srLocIds = await odooCall('stock.location', 'search',
-        [[['id', 'child_of', showroomId]]],
-        { limit: 500 }
+      // 0a. complete_name del showroom para identificar sus hijos en JS
+      const srLocInfo = await odooCall('stock.location', 'read',
+        [[showroomId]], { fields: ['id', 'complete_name'] }
       );
-      const srLocSet = new Set(srLocIds);
+      const srBase = (srLocInfo[0]?.complete_name || '').trim();
 
-      // 1. Un solo query: todo el stock interno (incluye showroom)
-      const allIntQuants = await odooCall('stock.quant', 'search_read',
-        [[['location_id.usage', '=', 'internal'], ['quantity', '>', 0]]],
-        { fields: ['product_id', 'location_id', 'quantity'], limit: 10000 }
+      // 0b. Todas las ubicaciones internas activas (operadores simples únicamente)
+      const allLocs = await odooCall('stock.location', 'search_read',
+        [[['usage', '=', 'internal'], ['active', '=', true]]],
+        { fields: ['id', 'complete_name'], limit: 1000 }
       );
 
-      // 2. Separar almacén vs showroom en JS usando el Set
-      const almQuants = allIntQuants.filter(q => !srLocSet.has(q.location_id[0]));
-      const srQuants  = allIntQuants.filter(q =>  srLocSet.has(q.location_id[0]));
+      // Separar en JS: pertenece al showroom si su complete_name empieza con srBase
+      const srLocSet  = new Set(allLocs.filter(l =>  l.complete_name.startsWith(srBase)).map(l => l.id));
+      const almLocIds = allLocs.filter(l => !l.complete_name.startsWith(srBase)).map(l => l.id);
+
+      // 1. Stock en almacén (usando 'in' con IDs — operador seguro)
+      const almQuants = almLocIds.length ? await odooCall('stock.quant', 'search_read',
+        [[['location_id', 'in', almLocIds], ['quantity', '>', 0]]],
+        { fields: ['product_id', 'quantity'], limit: 10000 }
+      ) : [];
+
+      // 2. Stock en showroom (usando 'in' con IDs del showroom)
+      const srLocIds = [...srLocSet];
+      const srQuants = srLocIds.length ? await odooCall('stock.quant', 'search_read',
+        [[['location_id', 'in', srLocIds]]],
+        { fields: ['product_id', 'quantity'], limit: 5000 }
+      ) : [];
 
       // Acumular por producto
       const almMap = {};
