@@ -1305,7 +1305,7 @@ const server = http.createServer(async (req, res) => {
         return parts[1] || parts[0] || '—';
       }
 
-      // Sets de ubicaciones excluidas del stock disponible
+      // Sets de ubicaciones excluidas por tipo/nombre de ruta
       const obsLocSet = new Set(
         allLocs.filter(l => /obsoleto/i.test(l.complete_name)).map(l => l.id)
       );
@@ -1313,12 +1313,19 @@ const server = http.createServer(async (req, res) => {
         allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id)
       );
 
-      // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN)
-      const almQuants = allQuants.filter(q =>
-        !srLocSet.has(q.location_id[0]) &&
-        !obsLocSet.has(q.location_id[0]) &&
-        !ptnLocSet.has(q.location_id[0])
-      );
+      // Etiquetas de almacén excluidas explícitamente
+      const EXCLUDED_ALM_LABELS = new Set([
+        'DIF.PTN', 'Existencias', 'MICHELL II',
+        'MONTIBELLO NACO', 'Stam House', 'Stock'
+      ]);
+
+      // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN, sin etiquetas excluidas)
+      const almQuants = allQuants.filter(q => {
+        const lid = q.location_id[0];
+        if (srLocSet.has(lid) || obsLocSet.has(lid) || ptnLocSet.has(lid)) return false;
+        const cn  = locNameMap[lid] || q.location_id[1] || '';
+        return !EXCLUDED_ALM_LABELS.has(almLabel(cn));
+      });
       const srQuants  = allQuants.filter(q =>  srLocSet.has(q.location_id[0]));
 
       // Acumular stock por producto + mapa de ubicaciones
