@@ -1305,13 +1305,20 @@ const server = http.createServer(async (req, res) => {
         return parts[1] || parts[0] || '—';
       }
 
-      // Set de ubicaciones "Obsoleto" — excluir del stock disponible
+      // Sets de ubicaciones excluidas del stock disponible
       const obsLocSet = new Set(
         allLocs.filter(l => /obsoleto/i.test(l.complete_name)).map(l => l.id)
       );
+      const ptnLocSet = new Set(
+        allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id)
+      );
 
-      // Separar en JS: showroom vs almacén (sin obsoletos)
-      const almQuants = allQuants.filter(q => !srLocSet.has(q.location_id[0]) && !obsLocSet.has(q.location_id[0]));
+      // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN)
+      const almQuants = allQuants.filter(q =>
+        !srLocSet.has(q.location_id[0]) &&
+        !obsLocSet.has(q.location_id[0]) &&
+        !ptnLocSet.has(q.location_id[0])
+      );
       const srQuants  = allQuants.filter(q =>  srLocSet.has(q.location_id[0]));
 
       // Acumular stock por producto + mapa de ubicaciones
