@@ -11776,14 +11776,15 @@ function caProductRow(p, rowClass) {
 function caTable(items, rowClass) {
   if (!items.length) return '';
 
-  // Separar: componentes de kit vs artículos independientes
-  var kits   = {}; // baseCode -> { kit, components[] }
+  // Agrupar por kit.ref REAL (del BOM de Odoo), no por kitBaseCode inferido
+  var kits       = {}; // kit.ref -> { kit, components[] }
   var standalone = [];
 
   items.forEach(function(p) {
-    if (p.kit && p.kitBaseCode) {
-      if (!kits[p.kitBaseCode]) kits[p.kitBaseCode] = { kit: p.kit, components: [] };
-      kits[p.kitBaseCode].components.push(p);
+    if (p.kit && p.kit.ref) {
+      var key = p.kit.ref;
+      if (!kits[key]) kits[key] = { kit: p.kit, components: [] };
+      kits[key].components.push(p);
     } else {
       standalone.push(p);
     }
@@ -11794,29 +11795,44 @@ function caTable(items, rowClass) {
 
   // ── Kits agrupados ───────────────────────────────────────────────────────
   Object.entries(kits).forEach(function(entry) {
-    var baseCode   = entry[0];
+    var kitRef     = entry[0];
     var group      = entry[1];
     var kit        = group.kit;
     var components = group.components;
-    var safeId     = baseCode.replace(/[^a-zA-Z0-9]/g,'_');
-    var isOpen     = _caKitOpen[baseCode] !== false; // abierto por defecto
-    _caKitOpen[baseCode] = isOpen;
-    var totalQty   = components.reduce(function(s,c){return s+(c.qty||0);},0);
+    var safeId     = kitRef.replace(/[^a-zA-Z0-9]/g,'_');
+    var isOpen     = _caKitOpen[kitRef] !== false; // abierto por defecto
+    _caKitOpen[kitRef] = isOpen;
+    var totalQty   = components.reduce(function(s,c){ return s+(c.qty||0); }, 0);
 
-    h += '<div style="margin-bottom:8px">';
+    h += '<div style="margin-bottom:10px">';
 
-    // Cabecera del kit
-    h += '<div class="ca-kit-hdr" onclick="caToggleKit(\''+baseCode.replace(/'/g,"\\'")+'\')">'
-      + '<span style="width:36px;height:36px;flex-shrink:0">'+caThumb({image:kit.image},36)+'</span>'
-      + '<div style="flex:1;min-width:0">'
-        + '<div class="ca-kit-name">'+esc(kit.name)+'</div>'
-        + '<div class="ca-kit-sub">'+esc(kit.ref)+' &nbsp;·&nbsp; '+components.length+' pieza'+(components.length!==1?'s':'')+' &nbsp;·&nbsp; '+totalQty+' uds.</div>'
+    // ── Cabecera del kit — foto grande + nombre + badge ──────────────────
+    h += '<div class="ca-kit-hdr" onclick="caToggleKit(\''+kitRef.replace(/'/g,"\\'")+'\')">';
+
+    // Foto del kit — prominente
+    if (kit.image) {
+      h += '<img src="data:image/png;base64,'+kit.image+'" alt="'+esc(kit.name)+'"'
+        + ' style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1.5px solid var(--border);flex-shrink:0"'
+        + ' onerror="this.style.display=\'none\'">';
+    } else {
+      h += '<div style="width:56px;height:56px;border-radius:8px;border:1.5px solid var(--border);'
+        + 'background:var(--surface-3);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        + '<i data-lucide="layers" style="width:24px;height:24px;stroke:var(--text-muted);opacity:.5"></i></div>';
+    }
+
+    h += '<div style="flex:1;min-width:0">'
+      + '<div class="ca-kit-name" style="font-size:13px">'+esc(kit.name)+'</div>'
+      + '<div class="ca-kit-sub" style="margin-top:2px">'+esc(kit.ref)+'</div>'
+      + '<div class="ca-kit-sub" style="margin-top:1px">'
+        + components.length+' pieza'+(components.length!==1?'s':'')+' en esta OC'
+        + ' &nbsp;·&nbsp; '+totalQty+' uds. total'
+      + '</div>'
       + '</div>'
       + '<span class="ca-kit-badge"><i data-lucide="layers" style="width:9px;height:9px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>KIT</span>'
       + '<span class="ca-kit-chevron'+(isOpen?' open':'')+'" id="ca-kit-chev-'+safeId+'">▶</span>'
       + '</div>';
 
-    // Cuerpo colapsable con tabla de piezas
+    // ── Piezas colapsables ───────────────────────────────────────────────
     h += '<div class="ca-kit-body'+(isOpen?'':' collapsed')+'" id="ca-kit-body-'+safeId+'">';
     h += '<table class="ca-tbl"><thead><tr>'
       + '<th style="width:52px"></th>'
@@ -11831,7 +11847,7 @@ function caTable(items, rowClass) {
   // ── Artículos independientes ─────────────────────────────────────────────
   if (standalone.length) {
     if (hasKits) {
-      h += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Artículos individuales</div>';
+      h += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border-light)">Artículos individuales</div>';
     }
     h += '<table class="ca-tbl"><thead><tr>'
       + '<th style="width:52px"></th>'
