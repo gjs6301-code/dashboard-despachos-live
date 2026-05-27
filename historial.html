@@ -11776,13 +11776,14 @@ function caProductRow(p, rowClass) {
 function caTable(items, rowClass) {
   if (!items.length) return '';
 
-  // Agrupar por kit.ref REAL (del BOM de Odoo), no por kitBaseCode inferido
-  var kits       = {}; // kit.ref -> { kit, components[] }
+  // Agrupar por kitGroupKey: 'bom_ID' si viene de Odoo, 'base_CODIGO' si es fallback
+  // — garantiza que todas las piezas del mismo kit queden en UN solo grupo
+  var kits       = {}; // groupKey -> { kit, components[] }
   var standalone = [];
 
   items.forEach(function(p) {
-    if (p.kit && p.kit.ref) {
-      var key = p.kit.ref;
+    if (p.kit && p.kitGroupKey) {
+      var key = p.kitGroupKey;
       if (!kits[key]) kits[key] = { kit: p.kit, components: [] };
       kits[key].components.push(p);
     } else {
@@ -11795,19 +11796,19 @@ function caTable(items, rowClass) {
 
   // ── Kits agrupados ───────────────────────────────────────────────────────
   Object.entries(kits).forEach(function(entry) {
-    var kitRef     = entry[0];
+    var groupKey   = entry[0];
     var group      = entry[1];
     var kit        = group.kit;
     var components = group.components;
-    var safeId     = kitRef.replace(/[^a-zA-Z0-9]/g,'_');
-    var isOpen     = _caKitOpen[kitRef] !== false; // abierto por defecto
-    _caKitOpen[kitRef] = isOpen;
+    var safeId     = groupKey.replace(/[^a-zA-Z0-9]/g,'_');
+    var isOpen     = _caKitOpen[groupKey] !== false; // abierto por defecto
+    _caKitOpen[groupKey] = isOpen;
     var totalQty   = components.reduce(function(s,c){ return s+(c.qty||0); }, 0);
 
     h += '<div style="margin-bottom:10px">';
 
     // ── Cabecera del kit — foto grande + nombre + badge ──────────────────
-    h += '<div class="ca-kit-hdr" onclick="caToggleKit(\''+kitRef.replace(/'/g,"\\'")+'\')">';
+    h += '<div class="ca-kit-hdr" onclick="caToggleKit(\''+groupKey.replace(/'/g,"\\'")+'\')">';
 
     // Foto del kit — prominente
     if (kit.image) {

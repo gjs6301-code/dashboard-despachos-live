@@ -1355,20 +1355,36 @@ const server = http.createServer(async (req, res) => {
               if (kitProdIds.length) {
                 kitProds = await odooCall('product.product', 'search_read',
                   [[['id', 'in', kitProdIds]]],
-                  { fields: ['id', 'default_code', 'name', 'image_128'], limit: 200 }
+                  { fields: ['id', 'default_code', 'name', 'image_512', 'image_128', 'product_tmpl_id'], limit: 200 }
                 );
               }
               // Fallback: buscar por template si no hay product_id directo
               if (!kitProds.length && kitTmplIds.length) {
                 kitProds = await odooCall('product.product', 'search_read',
                   [[['product_tmpl_id', 'in', kitTmplIds]]],
-                  { fields: ['id', 'default_code', 'name', 'image_128'], limit: 200 }
+                  { fields: ['id', 'default_code', 'name', 'image_512', 'image_128', 'product_tmpl_id'], limit: 200 }
                 );
               }
+              // Si aún no hay imagen, buscar en product.template
+              const tmplIds = kitProds.filter(k => !k.image_512 && !k.image_128).map(k => k.product_tmpl_id?.[0]).filter(Boolean);
+              const tmplImgMap = {};
+              if (tmplIds.length) {
+                try {
+                  const tmpls = await odooCall('product.template', 'read',
+                    [tmplIds], { fields: ['id', 'image_512', 'image_128'] }
+                  );
+                  tmpls.forEach(t => { tmplImgMap[t.id] = t.image_512 || t.image_128 || ''; });
+                } catch(_) {}
+              }
+
               const kitProdMap = {};
-              kitProds.forEach(k => { kitProdMap[k.id] = k; });
+              kitProds.forEach(k => {
+                const img = k.image_512 || k.image_128 || (k.product_tmpl_id ? tmplImgMap[k.product_tmpl_id[0]] : '') || '';
+                kitProdMap[k.id] = { ...k, _img: img };
+              });
 
               // Mapear componente -> info del kit via bomLine
+              // Usar bomId como clave de agrupación para que todas las piezas del mismo BOM se agrupen juntas
               bomLines.forEach(line => {
                 const bom = kitBoms.find(b => b.id === line.bom_id[0]);
                 if (!bom) return;
@@ -1378,8 +1394,8 @@ const server = http.createServer(async (req, res) => {
                 kitInfoMap[line.component_id[0]] = {
                   ref:   kp.default_code || '',
                   name:  kp.name         || '',
-                  image: kp.image_128    || '',
-                  bomId: bom.id
+                  image: kp._img         || '',
+                  bomId: bom.id          // clave única por kit
                 };
               });
             }
@@ -1388,14 +1404,20 @@ const server = http.createServer(async (req, res) => {
       }
 
       // Adjuntar info del kit a cada componente (por product id)
+      // Clave de agrupación: bomId si viene de Odoo, kitBaseCode si es fallback
+      // — garantiza que piezas del mismo kit siempre queden en un solo grupo
       poProducts.forEach(p => {
         if (kitCompRegex.test(p.ref || '')) {
-          p.kitBaseCode = (p.ref.match(kitCompRegex) || [])[1] || p.ref;
+          const base = (p.ref.match(kitCompRegex) || [])[1] || p.ref;
+          p.kitBaseCode = base;
           if (kitInfoMap[p.id]) {
+            // Kit confirmado por BOM de Odoo — usar bomId como clave de grupo
             p.kit = kitInfoMap[p.id];
+            p.kitGroupKey = 'bom_' + kitInfoMap[p.id].bomId;
           } else {
-            // Fallback: usar código base inferido si Odoo no devolvió BOM
-            p.kit = { ref: p.kitBaseCode, name: p.kitBaseCode, image: '' };
+            // Fallback — agrupar por código base inferido
+            p.kit = { ref: base, name: base, image: '' };
+            p.kitGroupKey = 'base_' + base;
           }
         }
       });
