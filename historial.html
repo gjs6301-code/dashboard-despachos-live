@@ -11810,7 +11810,7 @@ function caTable(items, rowClass) {
     var kit        = group.kit;
     var components = group.components;
     var safeId     = groupKey.replace(/[^a-zA-Z0-9]/g,'_');
-    var isOpen     = _caKitOpen[groupKey] !== false; // abierto por defecto
+    var isOpen     = _caKitOpen[groupKey] === true; // cerrado por defecto
     _caKitOpen[groupKey] = isOpen;
     var totalQty   = components.reduce(function(s,c){ return s+(c.qty||0); }, 0);
 
