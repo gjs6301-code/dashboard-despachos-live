@@ -1316,7 +1316,9 @@ const server = http.createServer(async (req, res) => {
       // Etiquetas de almacén excluidas explícitamente
       const EXCLUDED_ALM_LABELS = new Set([
         'DIF.PTN', 'Existencias', 'MICHELL II',
-        'MONTIBELLO NACO', 'Stam House', 'Stock'
+        'MONTIBELLO NACO', 'Stam House', 'Stock',
+        'MONTIBELLO PTN-LOB1', 'MONTIBELLO PTN-LOB2', 'MONTIBELLO PTN-LOB3',
+        'MONTIBELLO PTN-LOB4', 'MONTIBELLO PTN-LOB5'
       ]);
 
       // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN, sin etiquetas excluidas)
@@ -1324,7 +1326,9 @@ const server = http.createServer(async (req, res) => {
         const lid = q.location_id[0];
         if (srLocSet.has(lid) || obsLocSet.has(lid) || ptnLocSet.has(lid)) return false;
         const cn  = locNameMap[lid] || q.location_id[1] || '';
-        return !EXCLUDED_ALM_LABELS.has(almLabel(cn));
+        const lbl = almLabel(cn);
+        // Excluir etiquetas exactas + cualquier variante de MONTIBELLO PTN
+        return !EXCLUDED_ALM_LABELS.has(lbl) && !/^MONTIBELLO\s+PTN/i.test(lbl);
       });
       const srQuants  = allQuants.filter(q =>  srLocSet.has(q.location_id[0]));
 
