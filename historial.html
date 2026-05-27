@@ -9203,11 +9203,48 @@ var _solicitudes    = [];   // cache de solicitudes del servidor
 var _solFilter      = 'activo'; // 'activo' | 'cancelado' | 'all'
 var _solModalData   = null; // datos pendientes mientras el modal está abierto
 
-/** Busca solicitud activa para un item */
+/** Contexto del contenedor actualmente analizado */
+var _caCurrentContext = null; // { exp, pos, loc }
+
+/** Busca solicitud activa para un item de Reposición */
 function solForItem(productId, source) {
   return _solicitudes.find(function(s) {
     return s.status === 'activo' && s.source === source && s.productId === productId;
   }) || null;
+}
+
+/** Busca solicitud activa para un item de Contenedores (por contId = barcode/ref) */
+function solForContItem(contId) {
+  return _solicitudes.find(function(s) {
+    return s.status === 'activo' && s.source === 'contenedores' && s.contId === contId;
+  }) || null;
+}
+
+/** Toggle del checkbox en la vista de análisis de contenedor */
+function solToggleCA(chkEl, contId, name, ref, img64) {
+  var sol = solForContItem(contId);
+  if (sol) {
+    if (!confirm('¿Cancelar la solicitud de "'+name+'"?')) { chkEl.checked = true; return; }
+    solCancel(sol.id, chkEl);
+  } else {
+    chkEl.checked = false;
+    _solModalData = {
+      productId:   null,
+      contId:      contId,
+      name:        name,
+      ref:         ref || '',
+      barcode:     contId,
+      almacen:     _caCurrentContext ? _caCurrentContext.exp  : '',
+      ubicacion:   _caCurrentContext ? _caCurrentContext.loc  : '',
+      imageBase64: img64 || '',
+      source:      'contenedores',
+      chkEl:       chkEl
+    };
+    document.getElementById('sol-modal-name').textContent = name;
+    document.getElementById('sol-modal-nota').value = '';
+    document.getElementById('sol-modal-overlay').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('sol-modal-nota').focus(); }, 80);
+  }
 }
 
 /** Carga solicitudes desde el servidor */
@@ -12727,6 +12764,8 @@ async function runContAnalysis(){
     });
     var data=await res.json();
     if(!data.ok) throw new Error(data.error);
+    _caCurrentContext = { exp: _caTarget ? (_caTarget.exp||'') : '', pos: pos.join(', '), loc: locName };
+    await loadSolicitudes(false);
     renderContAnalysis(data);
   }catch(e){
     document.getElementById('ca-body').innerHTML='<div class="ca-empty" style="color:var(--amber-text)"><i data-lucide="x-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>'+e.message+'</div>';
@@ -12794,7 +12833,21 @@ function caThumb(p, size) {
 }
 
 function caProductRow(p, rowClass) {
+  var contId = p.barcode || p.ref || '';
+  var sol    = contId ? solForContItem(contId) : null;
+  var chkd   = sol && sol.status === 'activo';
+  var img64  = p.image || '';
+  var chkHtml = contId
+    ? '<input type="checkbox" class="sol-chk" '+(chkd?'checked':'')
+      +' onclick="event.stopPropagation()"'
+      +' onchange="solToggleCA(this,\''+contId.replace(/'/g,"\\'")+'\''+
+        ',\''+esc(p.name||'').replace(/'/g,"\\'")+'\''+
+        ',\''+esc(p.ref||'').replace(/'/g,"\\'")+'\''+
+        ',\''+img64.slice(0,0)+'\''+ // no pasamos imagen aquí por tamaño
+      ')" title="Solicitar para showroom">'
+    : '';
   return '<tr'+(rowClass?' class="'+rowClass+'"':'')+'>'
+    +'<td style="width:28px;text-align:center;padding:5px 4px">'+chkHtml+'</td>'
     +'<td style="padding:5px 6px;width:52px">'+caThumb(p)+'</td>'
     +'<td class="td-ref">'+(p.ref||'—')+'</td>'
     +'<td class="td-bar">'+(p.barcode||'—')+'</td>'
@@ -12846,8 +12899,22 @@ function caTable(items, rowClass) {
 
     h += '<div style="margin-bottom:10px">';
 
+    // ── Checkbox del kit (fuera de la cabecera para no conflictar con toggle) ─
+    var kitContId = kit.ref || groupKey;
+    var kitSol    = kitContId ? solForContItem(kitContId) : null;
+    var kitChkd   = kitSol && kitSol.status === 'activo';
+    h += '<div style="display:flex;align-items:stretch;gap:0">'
+      + '<div style="display:flex;align-items:center;padding:0 8px;background:var(--surface-2);border:1px solid var(--border);border-right:none;border-radius:var(--radius-sm) 0 0 var(--radius-sm)">'
+      + '<input type="checkbox" class="sol-chk" '+(kitChkd?'checked':'')
+      + ' onchange="solToggleCA(this,\''+kitContId.replace(/'/g,"\\'")+'\''+
+        ',\''+esc(kit.name||'').replace(/'/g,"\\'")+'\''+
+        ',\''+esc(kit.ref||'').replace(/'/g,"\\'")+'\''+
+        ',\'\''+ // sin imagen para evitar strings enormes
+      ')" title="Solicitar SET para showroom"></div>'
+      + '<div style="flex:1">';
+
     // ── Cabecera del kit — foto grande + nombre + badge ──────────────────
-    h += '<div class="ca-kit-hdr" onclick="caToggleKit(\''+groupKey.replace(/'/g,"\\'")+'\')">';
+    h += '<div class="ca-kit-hdr" style="border-radius:0 var(--radius-sm) var(--radius-sm) 0;border-left:none" onclick="caToggleKit(\''+groupKey.replace(/'/g,"\\'")+'\')">';
 
     // Foto del kit — prominente
     if (kit.image) {
@@ -12877,13 +12944,15 @@ function caTable(items, rowClass) {
     // ── Piezas colapsables ───────────────────────────────────────────────
     h += '<div class="ca-kit-body'+(isOpen?'':' collapsed')+'" id="ca-kit-body-'+safeId+'">';
     h += '<table class="ca-tbl"><thead><tr>'
+      + '<th style="width:28px"></th>'
       + '<th style="width:52px"></th>'
       + '<th>Referencia</th><th>Código de Barras</th><th>Pieza</th><th>Cant.</th><th>OC</th>'
       + '</tr></thead><tbody>';
     components.forEach(function(p) { h += caProductRow(p, 'ca-comp-row'); });
     h += '</tbody></table></div>';
 
-    h += '</div>';
+    h += '</div></div>'; // cierra flex div del kit + wrapper checkbox
+    h += '</div>';       // cierra margin-bottom div
   });
 
   // ── Artículos independientes ─────────────────────────────────────────────
@@ -12892,6 +12961,7 @@ function caTable(items, rowClass) {
       h += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border-light)">Artículos individuales</div>';
     }
     h += '<table class="ca-tbl"><thead><tr>'
+      + '<th style="width:28px"></th>'
       + '<th style="width:52px"></th>'
       + '<th>Referencia</th><th>Código de Barras</th><th>Artículo</th><th>Cant.</th><th>OC</th>'
       + '</tr></thead><tbody>';
