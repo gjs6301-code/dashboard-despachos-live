@@ -7860,7 +7860,9 @@ async function fetchOdooOrder(num){
   };
 }
 
-async function checkOdooConnection(){
+async function checkOdooConnection(retries, delay){
+  retries = retries !== undefined ? retries : 4;
+  delay   = delay   !== undefined ? delay   : 4000; // 4 s entre reintentos
   var el=document.getElementById('odoo-status');
   try{
     var _authStore=JSON.parse(localStorage.getItem('wwp_auth')||'{}');
@@ -7872,9 +7874,19 @@ async function checkOdooConnection(){
     if(el) el.innerHTML=data.ok
       ?'<span class="sim-dot" style="background:var(--green-dot)"></span><span style="color:var(--green-text)">Odoo conectado</span>'
       :'<span class="sim-dot"></span><span style="color:var(--amber-text)">Odoo sin conexión</span>';
+    // Si falló pero quedan reintentos, volver a intentar
+    if(!data.ok && retries > 0){
+      if(el) el.innerHTML='<span class="sim-dot" style="background:var(--amber-dot,#f59e0b)"></span><span style="color:var(--text-muted)">Conectando… ('+retries+')</span>';
+      setTimeout(function(){ checkOdooConnection(retries-1, delay); }, delay);
+    }
   }catch(e){
     ODOO_LIVE=false;
-    if(el) el.innerHTML='<span class="sim-dot"></span><span style="color:var(--amber-text)">Odoo sin conexión</span>';
+    if(retries > 0){
+      if(el) el.innerHTML='<span class="sim-dot" style="background:var(--amber-dot,#f59e0b)"></span><span style="color:var(--text-muted)">Conectando… ('+retries+')</span>';
+      setTimeout(function(){ checkOdooConnection(retries-1, delay); }, delay);
+    } else {
+      if(el) el.innerHTML='<span class="sim-dot"></span><span style="color:var(--amber-text)">Odoo sin conexión</span>';
+    }
   }
 }
 
