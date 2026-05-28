@@ -359,13 +359,18 @@ const COMPANY_NAME = process.env.COMPANY_NAME || ENV.COMPANY_NAME || 'Altri Temp
 // ── Notificaciones vía Odoo Discuss (sin SMTP) ───────────────────────────────
 // Construye el HTML que aparecerá en el inbox de Discuss del usuario
 function buildSinAdjOdooMsg(userName, pickings, period, supervisorName) {
+  const inboxUrl    = `${ODOO_URL}/odoo/discuss/inbox`;
   const rows = pickings.map(p => {
-    const fecha = (p.date_done || '').slice(0, 10);
-    const ref   = p.name   || '—';
-    const ov    = (p.sale_id && p.sale_id[1]) || p.origin || '—';
-    const cli   = p.partner_id ? p.partner_id[1] : '—';
+    const fecha      = (p.date_done || '').slice(0, 10);
+    const ref        = p.name   || '—';
+    const pickingUrl = p.id ? `${ODOO_URL}/odoo/inventory/${p.id}` : null;
+    const refHtml    = pickingUrl
+      ? `<a href="${pickingUrl}" style="color:#1b3b6f;font-weight:700;text-decoration:none">${ref}</a>`
+      : `<b>${ref}</b>`;
+    const ov  = (p.sale_id && p.sale_id[1]) || p.origin || '—';
+    const cli = p.partner_id ? p.partner_id[1] : '—';
     return `<tr>
-      <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb"><b>${ref}</b></td>
+      <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb">${refHtml}</td>
       <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap">${fecha}</td>
       <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb">${ov}</td>
       <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb">${cli}</td>
@@ -385,7 +390,10 @@ function buildSinAdjOdooMsg(userName, pickings, period, supervisorName) {
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
-${supNote}`;
+${supNote}
+<p style="margin:16px 0 0;padding:10px 14px;background:#f0f4ff;border-radius:6px;font-size:12px">
+  📬 Para ver este mensaje: abre <a href="${inboxUrl}" style="color:#1b3b6f;font-weight:600">Odoo → Discuss → Bandeja de entrada</a>
+</p>`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4124,142 +4132,6 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(302, { 'Location': '/historial.html' });
     res.end();
     return;
-  }
-
-  // ── POST /api/sin-adjuntos/clear-test-notifs — limpiar notificaciones de prueba ─
-  if (reqPath === '/api/sin-adjuntos/clear-test-notifs' && req.method === 'POST') {
-    const jp = requireJwt(req, res); if (!jp) return;
-    if (!requireRole(jp, res, ['admin'])) return;
-    try {
-      if (!odooUid) await authenticate();
-      // Buscar partner_id del usuario autenticado
-      const readResult = await odooCall('res.users', 'read', [[odooUid], ['id', 'partner_id']]);
-      const partnerId  = readResult && readResult[0] && readResult[0].partner_id && readResult[0].partner_id[0];
-      if (!partnerId) return sendJson(res, 404, { ok: false, error: 'No se encontró partner_id' });
-
-      // Buscar todas las notificaciones inbox no leídas del usuario
-      const notifIds = await odooCall('mail.notification', 'search',
-        [[['res_partner_id', '=', partnerId], ['notification_type', '=', 'inbox'], ['is_read', '=', false]]]
-      );
-      if (!notifIds || !notifIds.length) return sendJson(res, 200, { ok: true, cleared: 0, msg: 'No había notificaciones pendientes' });
-
-      // Marcarlas como leídas
-      await odooCall('mail.notification', 'write', [notifIds, { is_read: true }]);
-
-      return sendJson(res, 200, { ok: true, cleared: notifIds.length, notifIds });
-    } catch(e) {
-      return sendJson(res, 500, { ok: false, error: e.message });
-    }
-  }
-
-  // ── POST /api/sin-adjuntos/test-notify — prueba directa de notificación Odoo ─
-  if (reqPath === '/api/sin-adjuntos/test-notify' && req.method === 'POST') {
-    const jp = requireJwt(req, res); if (!jp) return;
-    if (!requireRole(jp, res, ['admin'])) return;
-    try {
-      const odooId = jp.odooId;
-      if (!odooId) return sendJson(res, 400, { ok: false, error: 'Tu usuario no tiene odooId configurado' });
-
-      // Asegurar que odooUid está resuelto (el UID real que devolvió Odoo al autenticar)
-      if (!odooUid) await authenticate();
-
-      let partnerId = null;
-      let userName  = jp.name || 'Usuario';
-      const diag    = { odooIdJwt: odooId, odooUidReal: odooUid, steps: [] };
-
-      // Función helper para registrar cada intento en el diag
-      const tryStep = async (label, fn) => {
-        try {
-          const result = await fn();
-          diag.steps.push({ label, result });
-          return result;
-        } catch(e) {
-          diag.steps.push({ label, error: e.message });
-          return null;
-        }
-      };
-
-      // Intento 1: read() usando el odooUid REAL (no el del JWT)
-      const r1 = await tryStep('read(odooUidReal)', () =>
-        odooCall('res.users', 'read', [[odooUid], ['id', 'name', 'partner_id']])
-      );
-      if (r1 && r1.length && r1[0].partner_id) {
-        partnerId = r1[0].partner_id[0];
-        userName  = r1[0].name || userName;
-      }
-
-      // Intento 2: read() usando odooId del JWT (puede diferir del real)
-      if (!partnerId && odooId !== odooUid) {
-        const r2 = await tryStep('read(odooIdJwt)', () =>
-          odooCall('res.users', 'read', [[odooId], ['id', 'name', 'partner_id']])
-        );
-        if (r2 && r2.length && r2[0].partner_id) {
-          partnerId = r2[0].partner_id[0];
-          userName  = r2[0].name || userName;
-        }
-      }
-
-      // Intento 3: res.partner search por email del JWT
-      if (!partnerId && jp.email) {
-        const r3 = await tryStep('partner_by_email', () =>
-          odooCall('res.partner', 'search_read',
-            [[['email', '=', jp.email]]],
-            { fields: ['id', 'name'], limit: 1 }
-          )
-        );
-        if (r3 && r3.length) {
-          partnerId = r3[0].id;
-          userName  = r3[0].name || userName;
-        }
-      }
-
-      if (!partnerId) {
-        return sendJson(res, 404, { ok: false, error: `No se encontró partner_id`, diag });
-      }
-
-      const body = `<p>Hola <b>${userName}</b>,</p>
-<p>Esta es una <b>notificación de prueba</b> del sistema de alertas de <b>Sin Comprobantes</b>.</p>
-<p>Si ves este mensaje en tu bandeja de Odoo Discuss significa que la integración funciona correctamente ✅</p>
-<p style="color:#6b7280;font-size:12px">Enviado desde el Dashboard de Despachos — ${new Date().toLocaleString('es-DO')}</p>`;
-
-      // Crear mensaje y forzar notificación de inbox directamente
-      const subject = 'Prueba de notificación — Dashboard Despachos';
-      let msgId = null, notifId = null, errors = [];
-
-      // Paso 1: crear mail.message vinculado al res.partner del destinatario
-      // (model+res_id permiten que Odoo lo muestre correctamente en Discuss)
-      try {
-        msgId = await odooCall('mail.message', 'create', [{
-          message_type: 'user_notification',
-          model: 'res.partner',
-          res_id: partnerId,
-          body,
-          subject,
-        }]);
-      } catch(e1) { errors.push('msg:' + e1.message); }
-
-      // Paso 2: crear mail.notification directamente → fuerza inbox sin importar preferencias
-      if (msgId) {
-        try {
-          notifId = await odooCall('mail.notification', 'create', [{
-            mail_message_id: msgId,
-            res_partner_id: partnerId,
-            notification_type: 'inbox',
-            is_read: false,
-            notification_status: 'sent',
-          }]);
-        } catch(e2) { errors.push('notif:' + e2.message); }
-      }
-
-      return sendJson(res, 200, {
-        ok: true, msgId, notifId, partnerId, userName,
-        note: notifId ? 'Notificación forzada en inbox' : 'Mensaje creado sin notificación (ver errors)',
-        errors,
-      });
-    } catch (e) {
-      console.error('[test-notify] error:', e);
-      return sendJson(res, 500, { ok: false, error: e.message });
-    }
   }
 
   // ── POST /api/sin-adjuntos/enviar-correos — notificar usuarios con pendientes ─
