@@ -8,6 +8,8 @@ const fs     = require('fs');
 const path   = require('path');
 const url    = require('url');
 const crypto = require('crypto');
+// nodemailer — instalado vía npm. Si no está disponible, el endpoint de email devuelve error claro.
+let nodemailer; try { nodemailer = require('nodemailer'); } catch { nodemailer = null; }
 
 // ── Helpers de persistencia JSON ─────────────────────────────────────────────
 function loadJson(file, fallback) {
@@ -354,6 +356,77 @@ const ODOO_USER  = process.env.ODOO_USER  || ENV.ODOO_USER  || '';
 const ODOO_KEY   = process.env.ODOO_API_KEY || ENV.ODOO_API_KEY || '';
 const PORT       = parseInt(process.env.PORT || '3000', 10);
 const odooOrigin = ODOO_URL ? new url.URL(ODOO_URL).origin : ''; // vacío si no está configurado
+const COMPANY_NAME = process.env.COMPANY_NAME || ENV.COMPANY_NAME || 'Altri Tempi';
+
+// ── SMTP (para envío de correos) ─────────────────────────────────────────────
+const SMTP_HOST = process.env.SMTP_HOST || ENV.SMTP_HOST || '';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || ENV.SMTP_PORT || '587', 10);
+const SMTP_USER = process.env.SMTP_USER || ENV.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || ENV.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || ENV.SMTP_FROM || `"${COMPANY_NAME}" <${SMTP_USER}>`;
+function createMailTransporter() {
+  if (!nodemailer) throw new Error('nodemailer no instalado. Ejecuta: npm install en el servidor.');
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) throw new Error('SMTP no configurado. Agrega SMTP_HOST, SMTP_USER y SMTP_PASS al entorno o .env.txt.');
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    tls: { rejectUnauthorized: false }
+  });
+}
+function buildSinAdjEmail(userName, pickings, period) {
+  const rows = pickings.map(p => {
+    const fecha = (p.date_done || '').slice(0, 10);
+    const ref   = p.name || '—';
+    const ov    = (p.sale_id && p.sale_id[1]) || p.origin || '—';
+    const cli   = p.partner_id ? p.partner_id[1] : '—';
+    return `<tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:13px">${ref}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;font-size:13px">${fecha}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:13px">${ov}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:13px">${cli}</td>
+    </tr>`;
+  }).join('');
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:20px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif">
+  <div style="max-width:620px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+    <div style="background:#1e293b;padding:22px 28px">
+      <p style="margin:0;color:#fff;font-size:17px;font-weight:700">${COMPANY_NAME}</p>
+      <p style="margin:4px 0 0;color:#94a3b8;font-size:12px">Sistema de Despachos — Comprobantes</p>
+    </div>
+    <div style="padding:26px 28px">
+      <p style="margin:0 0 6px;font-size:15px;color:#1e293b">Hola <strong>${userName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6">
+        Se han detectado despachos validados por ti que están
+        <strong style="color:#dc2626">pendientes de comprobante adjunto</strong>
+        en el período <strong>${period}</strong>.<br>
+        Por favor adjunta los comprobantes correspondientes en Odoo a la brevedad posible.
+      </p>
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#f1f5f9">
+            <th style="padding:8px 10px;text-align:left;font-size:12px;font-weight:700;color:#374151">Transferencia</th>
+            <th style="padding:8px 10px;text-align:left;font-size:12px;font-weight:700;color:#374151">Fecha</th>
+            <th style="padding:8px 10px;text-align:left;font-size:12px;font-weight:700;color:#374151">Orden de Venta</th>
+            <th style="padding:8px 10px;text-align:left;font-size:12px;font-weight:700;color:#374151">Cliente</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="margin:18px 0 0;font-size:13px;color:#475569">
+        Total pendiente: <strong style="color:#dc2626">${pickings.length}</strong> despacho${pickings.length !== 1 ? 's' : ''} sin comprobante.
+      </p>
+    </div>
+    <div style="background:#f8fafc;padding:14px 28px;border-top:1px solid #e2e8f0">
+      <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5">
+        Mensaje generado automáticamente por el sistema de despachos de ${COMPANY_NAME}. No responder a este correo.
+      </p>
+    </div>
+  </div>
+</body></html>`;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // ── NOTIFICACIONES ───────────────────────────────────────────────────────
@@ -4090,6 +4163,105 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/wwp.html' || reqPath === '/wwp') {
     res.writeHead(302, { 'Location': '/historial.html' });
     res.end();
+    return;
+  }
+
+  // ── POST /api/sin-adjuntos/enviar-correos — notificar usuarios con pendientes ─
+  if (reqPath === '/api/sin-adjuntos/enviar-correos' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireRole(jp, res, ['admin', 'manager'])) return;
+    try {
+      const { pickings, dateFrom, dateTo } = await readBody(req);
+      if (!Array.isArray(pickings) || pickings.length === 0) {
+        return sendJson(res, 400, { ok: false, error: 'No hay transferencias para notificar' });
+      }
+
+      // Agrupar por usuario Odoo (preferir write_uid, ignorar OdooBot)
+      const byUser = new Map(); // odooId → { odooId, odooName, pickings[] }
+      pickings.forEach(p => {
+        const wU = p.write_uid, uU = p.user_id;
+        let odooId, odooName;
+        if (wU && wU[0] && wU[1] && wU[1].toLowerCase() !== 'odoobot') {
+          odooId = wU[0]; odooName = wU[1];
+        } else if (uU && uU[0] && uU[1] && uU[1].toLowerCase() !== 'odoobot') {
+          odooId = uU[0]; odooName = uU[1];
+        }
+        if (!odooId) return;
+        if (!byUser.has(odooId)) byUser.set(odooId, { odooId, odooName, pickings: [] });
+        byUser.get(odooId).pickings.push(p);
+      });
+
+      if (byUser.size === 0) {
+        return sendJson(res, 400, { ok: false, error: 'No se pudieron identificar usuarios en los despachos' });
+      }
+
+      // Buscar emails en wwp-users-auth.json por odooId
+      const authUsers = loadAuthUsers();
+      const authByOdooId = new Map();
+      authUsers.forEach(u => { if (u.odooId) authByOdooId.set(Number(u.odooId), u); });
+
+      const missingOdooIds = [];
+      byUser.forEach((group, odooId) => {
+        const au = authByOdooId.get(Number(odooId));
+        if (au && au.email && au.active) group.email = au.email;
+        else missingOdooIds.push(odooId);
+      });
+
+      // Fallback: buscar en Odoo res.users para IDs no encontrados localmente
+      if (missingOdooIds.length) {
+        try {
+          const odooUsers = await odooCall('res.users', 'search_read',
+            [[['id', 'in', missingOdooIds]]],
+            { fields: ['id', 'name', 'login', 'email'], limit: 50 }
+          );
+          odooUsers.forEach(ou => {
+            const group = byUser.get(ou.id);
+            if (group && !group.email) {
+              group.email = ou.email || ou.login || null;
+            }
+          });
+        } catch(e) { console.warn('[sinAdj email] Odoo res.users lookup failed:', e.message); }
+      }
+
+      // Enviar emails
+      let transport;
+      try { transport = createMailTransporter(); }
+      catch(e) { return sendJson(res, 503, { ok: false, error: e.message }); }
+
+      const periodStr = (dateFrom && dateTo)
+        ? `${dateFrom} al ${dateTo}`
+        : (dateFrom ? `desde ${dateFrom}` : dateTo ? `hasta ${dateTo}` : 'período consultado');
+
+      const results = { sent: [], noEmail: [], errors: [] };
+
+      for (const [, group] of byUser) {
+        if (!group.email) {
+          results.noEmail.push({ name: group.odooName, odooId: group.odooId });
+          continue;
+        }
+        const html = buildSinAdjEmail(group.odooName, group.pickings, periodStr);
+        try {
+          await transport.sendMail({
+            from: SMTP_FROM,
+            to: group.email,
+            subject: `[${COMPANY_NAME}] ${group.pickings.length} despacho${group.pickings.length !== 1 ? 's' : ''} pendiente${group.pickings.length !== 1 ? 's' : ''} de comprobante`,
+            html
+          });
+          results.sent.push({ name: group.odooName, email: group.email, count: group.pickings.length });
+        } catch(e) {
+          results.errors.push({ name: group.odooName, email: group.email, error: e.message });
+        }
+      }
+
+      appendAuditLog('sinAdj_emails_sent', {
+        by: jp.name, role: jp.role,
+        sent: results.sent.length, noEmail: results.noEmail.length, errors: results.errors.length,
+        dateFrom, dateTo
+      });
+      sendJson(res, 200, { ok: true, ...results });
+    } catch(e) {
+      sendJson(res, 500, { ok: false, error: safeError(e) });
+    }
     return;
   }
 

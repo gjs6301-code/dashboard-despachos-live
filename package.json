@@ -13,8 +13,9 @@
   "author": "Gabriel Ramirez / Altri Tempi",
   "license": "UNLICENSED",
   "private": true,
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "nodemailer": "^6.10.1"
+  },
   "notes": {
     "setup": "1. Copia .env.txt con las credenciales de Odoo. 2. Ejecuta: node proxy.js. 3. Abre http://localhost:3000",
     "dataFiles": [

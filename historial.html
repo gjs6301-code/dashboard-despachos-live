@@ -3546,6 +3546,7 @@ body{font-family:var(--font);min-height:100dvh}
         <label>Hasta</label>
         <input type="date" id="desp-to" autocomplete="off">
         <button class="btn-consultar" onclick="cargarSinAdjuntos()">Consultar</button>
+        <button class="btn-consultar" id="sin-adj-email-btn" onclick="enviarCorreosSinAdjuntos()" style="display:none;background:var(--accent);gap:5px"><i data-lucide="mail" style="width:12px;height:12px;stroke:currentColor;flex-shrink:0"></i>Enviar correos</button>
         <span id="sin-adj-status" style="font-size:11px;color:var(--text-muted)"></span>
       </div>
       <div class="rpt-stat-bar" id="sin-adj-stats" style="display:none"></div>
@@ -4649,6 +4650,7 @@ const WWP_SERVER_ORIGIN = location.protocol === 'file:' ? 'http://localhost:3000
 // ════════════════════════════════════════════════════
 var ODOO_LIVE=false;
 var SHEETS_LIVE=false;
+var _sinAdjNoAtt=null; // lista actual de pickings sin adjunto (para envío de correos)
 var GS_CACHE={}; // datos vivos de Google Sheets
 var SEARCH_MODE='orden'; // 'orden' | 'transferencia' | 'articulo'
 
@@ -11411,6 +11413,9 @@ function initDespFiltro(){
 }
 
 async function cargarSinAdjuntos(){
+  _sinAdjNoAtt=null;
+  var emailBtn=document.getElementById('sin-adj-email-btn');
+  if(emailBtn) emailBtn.style.display='none';
   var statusEl=document.getElementById('sin-adj-status');
   var emptyEl =document.getElementById('sin-adj-empty');
   var statsEl =document.getElementById('sin-adj-stats');
@@ -11505,10 +11510,79 @@ async function cargarSinAdjuntos(){
     wrapEl.style.display='';
     emptyEl.style.display='none';
 
+    // Guardar lista y mostrar botón de correos (solo admin/manager)
+    _sinAdjNoAtt=noAtt;
+    if(emailBtn && _user && ['admin','manager'].includes(_user.role)){
+      emailBtn.style.display='';
+      if(window.lucide) window.lucide.createIcons({nodes:[emailBtn]});
+    }
+
   }catch(e){
     statusEl.textContent='';
     emptyEl.textContent='Error al consultar Odoo: '+e.message;
     emptyEl.style.display='';
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  SIN ADJUNTOS — ENVIAR CORREOS
+// ════════════════════════════════════════════════════
+async function enviarCorreosSinAdjuntos(){
+  if(!_sinAdjNoAtt||!_sinAdjNoAtt.length){
+    alert('No hay transferencias pendientes cargadas. Consulta primero el período.');
+    return;
+  }
+  var n=_sinAdjNoAtt.length;
+  // Agrupar por usuario para mostrar el resumen en la confirmación
+  var byName={};
+  _sinAdjNoAtt.forEach(function(p){
+    var wU=p.write_uid, uU=p.user_id;
+    var name='Desconocido';
+    if(wU&&wU[1]&&wU[1].toLowerCase()!=='odoobot') name=wU[1];
+    else if(uU&&uU[1]&&uU[1].toLowerCase()!=='odoobot') name=uU[1];
+    byName[name]=(byName[name]||0)+1;
+  });
+  var lines=Object.entries(byName).map(function(e){return '• '+e[0]+': '+e[1]+' despacho'+(e[1]!==1?'s':'');}).join('\n');
+  var ok=confirm('Se enviará un correo a cada usuario con sus despachos pendientes:\n\n'+lines+'\n\nTotal: '+n+' transferencias.\n\n¿Continuar?');
+  if(!ok) return;
+
+  var emailBtn=document.getElementById('sin-adj-email-btn');
+  var statusEl=document.getElementById('sin-adj-status');
+  if(emailBtn){ emailBtn.disabled=true; emailBtn.textContent='Enviando…'; }
+  if(statusEl) statusEl.textContent='Enviando correos…';
+
+  var from=document.getElementById('desp-from').value;
+  var to  =document.getElementById('desp-to').value;
+
+  try{
+    var resp=await authFetch('/api/sin-adjuntos/enviar-correos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pickings:_sinAdjNoAtt, dateFrom:from, dateTo:to})
+    });
+    var data=await resp.json();
+    if(statusEl) statusEl.textContent='';
+    if(emailBtn){ emailBtn.disabled=false; emailBtn.innerHTML='<i data-lucide="mail" style="width:12px;height:12px;stroke:currentColor;flex-shrink:0"></i>Enviar correos'; if(window.lucide) window.lucide.createIcons({nodes:[emailBtn]}); }
+    if(!data.ok){
+      alert('Error al enviar correos: '+(data.error||'Error desconocido'));
+      return;
+    }
+    var msg='';
+    if(data.sent&&data.sent.length){
+      msg+='✅ Correos enviados ('+data.sent.length+'):\n'+data.sent.map(function(s){return '  • '+s.name+' <'+s.email+'> — '+s.count+' despacho'+(s.count!==1?'s':'');}).join('\n')+'\n\n';
+    }
+    if(data.noEmail&&data.noEmail.length){
+      msg+='⚠️ Sin correo registrado ('+data.noEmail.length+'):\n'+data.noEmail.map(function(s){return '  • '+s.name+' (Odoo ID '+s.odooId+')';}).join('\n')+'\n\n';
+    }
+    if(data.errors&&data.errors.length){
+      msg+='❌ Fallos de envío ('+data.errors.length+'):\n'+data.errors.map(function(s){return '  • '+s.name+' <'+s.email+'> — '+s.error;}).join('\n');
+    }
+    if(!msg) msg='No se procesaron correos.';
+    alert(msg.trim());
+  }catch(e){
+    if(statusEl) statusEl.textContent='';
+    if(emailBtn){ emailBtn.disabled=false; emailBtn.innerHTML='<i data-lucide="mail" style="width:12px;height:12px;stroke:currentColor;flex-shrink:0"></i>Enviar correos'; if(window.lucide) window.lucide.createIcons({nodes:[emailBtn]}); }
+    alert('Error de conexión: '+e.message);
   }
 }
 
