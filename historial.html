@@ -1112,6 +1112,15 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .rs-btn-refresh{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--text-secondary);cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s}
 .rs-btn-refresh:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
 .rs-btn-refresh:disabled{opacity:.4;cursor:not-allowed}
+/* Buscador Reposición */
+.rs-search-wrap{position:relative;display:inline-flex;align-items:center;flex:1;min-width:140px;max-width:220px}
+.rs-search-icon{position:absolute;left:8px;width:13px;height:13px;color:var(--text-muted);pointer-events:none;flex-shrink:0}
+.rs-search-input{width:100%;padding:5px 28px 5px 26px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);font-size:12px;outline:none;transition:border-color .15s}
+.rs-search-input:focus{border-color:var(--border-focus)}
+.rs-search-input::placeholder{color:var(--text-muted)}
+.rs-search-clear{position:absolute;right:4px;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;padding:0;border-radius:50%;transition:background .12s,color .12s}
+.rs-search-clear:hover{background:var(--surface-3);color:var(--text-primary)}
+.rs-search-clear svg{width:12px;height:12px}
 .rs-table{table-layout:auto}
 /* Columnas compactas — shrink a su contenido */
 /* Col 1=☐ 2=Foto 3=Ref 4=Barcode 5=Nombre 6=Almacén 7=Ubicación 8=Stock 9=Última 10=Días */
@@ -2887,6 +2896,8 @@ body{font-family:var(--font);min-height:100dvh}
   #rs-showroom-select{flex:1 1 calc(100% - 52px);max-width:calc(100% - 52px)!important}
   #rs-alm-filter{flex:1 1 100%;max-width:100%!important;order:3}
   #rs-btn-analizar{order:2;width:44px;height:44px;flex-shrink:0}
+  #rs-search-wrap{flex:1 1 100%;max-width:100%!important;order:4}
+  .rs-search-input{font-size:16px;min-height:44px;padding:10px 32px 10px 30px}
   /* KPIs reposición: 2 por fila con mínimos táctiles */
   #rs-stats .cont-stat{flex:1 1 calc(50% - 5px);min-width:0;min-height:48px}
 
@@ -3438,6 +3449,13 @@ body{font-family:var(--font);min-height:100dvh}
           <select id="rs-alm-filter" class="rs-select" style="max-width:160px" onchange="setRsAlmFilter(this.value)" disabled>
             <option value="all">Todos los almacenes</option>
           </select>
+          <div class="rs-search-wrap" id="rs-search-wrap">
+            <i data-lucide="search" class="rs-search-icon"></i>
+            <input id="rs-search-input" class="rs-search-input" type="search" placeholder="Buscar…" autocomplete="off" oninput="setRsSearch(this.value)">
+            <button id="rs-search-clear" class="rs-search-clear" onclick="clearRsSearch()" title="Limpiar búsqueda" style="display:none">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
           <button class="rs-btn-refresh" id="rs-btn-analizar" onclick="runReposicionAnalysis()" title="Actualizar">
             <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
           </button>
@@ -9749,6 +9767,7 @@ var _rsKitOpen  = {}; // setIdx → bool
 var _rsAlmOpen  = {}; // almKey → bool
 var _rsFilter   = 'all';    // KPI filter
 var _rsAlmFilter = 'all';   // almacén filter
+var _rsSearch    = '';      // búsqueda libre
 
 function sortRs(col) {
   if (_rsSort.col === col) {
@@ -9780,6 +9799,20 @@ function setRsFilter(f) {
 function setRsAlmFilter(val) {
   _rsAlmFilter = val;
   renderReposicion();
+}
+
+function setRsSearch(val) {
+  _rsSearch = (val || '').trim();
+  // Mostrar/ocultar botón borrar
+  var clrBtn = document.getElementById('rs-search-clear');
+  if (clrBtn) clrBtn.style.display = _rsSearch ? 'flex' : 'none';
+  renderReposicion();
+}
+
+function clearRsSearch() {
+  var inp = document.getElementById('rs-search-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+  setRsSearch('');
 }
 
 function rsOpenLb(src, caption) {
@@ -9819,6 +9852,7 @@ function rsToggleAlm(almKey) {
 }
 
 async function initReposicion(){
+  if (window.lucide) lucide.createIcons();
   if (!_rsLocsDone) {
     await loadRsLocalities();
     // auto-ejecutar tras cargar si hay showroom pre-seleccionado
@@ -9887,6 +9921,11 @@ async function runReposicionAnalysis(){
     _rsItems    = d.items || [];
     _rsAlmOpen  = {};       // reset estado abierto/cerrado al cargar nuevos datos
     _rsAlmFilter = 'all';   // reset filtro almacén
+    _rsSearch   = '';       // reset búsqueda
+    var srchInp = document.getElementById('rs-search-input');
+    if (srchInp) srchInp.value = '';
+    var srchClr = document.getElementById('rs-search-clear');
+    if (srchClr) srchClr.style.display = 'none';
 
     // Poblar dropdown de almacén con los que realmente aparecen
     var almSel = document.getElementById('rs-alm-filter');
@@ -10001,6 +10040,18 @@ function renderReposicion(){
   if (_rsFilter === 'con-historial') filtered = _rsItems.filter(function(i){ return i.ultimaVez !== null; });
   else if (_rsFilter === 'nunca')    filtered = _rsItems.filter(function(i){ return i.ultimaVez === null; });
   else if (_rsFilter === 'antiguos') filtered = _rsItems.filter(function(i){ return i.diasSin !== null && i.diasSin >= 365; });
+
+  // ── 1b. Búsqueda libre ────────────────────────────────────────────────────
+  if (_rsSearch) {
+    var q = _rsSearch.toLowerCase();
+    filtered = filtered.filter(function(i){
+      return (i.ref      || '').toLowerCase().indexOf(q) !== -1
+          || (i.name     || '').toLowerCase().indexOf(q) !== -1
+          || (i.barcode  || '').toLowerCase().indexOf(q) !== -1
+          || (i.almacen  || '').toLowerCase().indexOf(q) !== -1
+          || (i.ubicacion|| '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
 
   // ── 2. Sort ───────────────────────────────────────────────────────────────
   var col = _rsSort.col, dir = _rsSort.dir;
@@ -10127,7 +10178,10 @@ function renderReposicion(){
   });
 
   if (!html) {
-    html = '<tr><td colspan="'+COLS+'" style="text-align:center;padding:40px;color:var(--text-muted)">Sin resultados para este filtro.</td></tr>';
+    var emptyMsg2 = _rsSearch
+      ? 'Sin resultados para "<b>'+esc(_rsSearch)+'</b>". Intenta con otro término.'
+      : 'Sin resultados para este filtro.';
+    html = '<tr><td colspan="'+COLS+'" style="text-align:center;padding:40px;color:var(--text-muted)">'+emptyMsg2+'</td></tr>';
   }
 
   tbody.innerHTML = html;
