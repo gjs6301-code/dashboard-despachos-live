@@ -3488,6 +3488,29 @@ body{font-family:var(--font);min-height:100dvh}
         <i data-lucide="check-circle" style="width:32px;height:32px;stroke:var(--green);display:block;margin:0 auto 8px"></i>
         Todos los artículos tienen existencia en showroom.
       </div>
+
+      <!-- Resultados de búsqueda global en Odoo (fuera de la lógica del reporte) -->
+      <div id="rs-global-wrap" style="display:none;margin-top:12px;border-top:2px dashed var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-size:12px;font-weight:700;color:var(--text-secondary)">
+          <i data-lucide="database" style="width:13px;height:13px;flex-shrink:0"></i>
+          <span>Resultados en inventario Odoo</span>
+          <span id="rs-global-count" style="background:var(--surface-3);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600"></span>
+          <span style="flex:1"></span>
+          <span style="font-size:11px;color:var(--text-muted);font-weight:400">Artículos fuera del análisis de reposición</span>
+        </div>
+        <div class="mv-wrap">
+          <table class="cont-table rs-table">
+            <thead><tr>
+              <th title="Solicitar para showroom">☐</th>
+              <th>Ref.</th>
+              <th>Cód. Barras</th>
+              <th>Nombre</th>
+              <th style="text-align:right">Stock</th>
+            </tr></thead>
+            <tbody id="rs-global-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
     </div><!-- /section-reposicion -->
 
@@ -9349,8 +9372,10 @@ async function loadSolicitudes(showSection) {
 /** Toggle del checkbox en Reposición */
 function solToggleRS(chkEl, productId) {
   var sol = solForItem(productId, 'reposicion');
-  // Buscar datos del ítem en cache
-  var item = _rsItems.find(function(i){ return i.id === productId; }) || {};
+  // Buscar datos del ítem — primero en reporte, luego en resultados globales
+  var item = _rsItems.find(function(i){ return i.id === productId; })
+          || _rsGlobalItems.find(function(i){ return i.id === productId; })
+          || {};
   var name = item.name || item.ref || ('ID ' + productId);
   if (sol) {
     if (sol.status === 'completado') {
@@ -9767,7 +9792,9 @@ var _rsKitOpen  = {}; // setIdx → bool
 var _rsAlmOpen  = {}; // almKey → bool
 var _rsFilter   = 'all';    // KPI filter
 var _rsAlmFilter = 'all';   // almacén filter
-var _rsSearch    = '';      // búsqueda libre
+var _rsSearch        = '';      // búsqueda libre
+var _rsGlobalItems   = [];      // resultados de búsqueda global en Odoo
+var _rsGlobalTimer   = null;    // debounce timer para búsqueda global
 
 function sortRs(col) {
   if (_rsSort.col === col) {
@@ -9803,16 +9830,77 @@ function setRsAlmFilter(val) {
 
 function setRsSearch(val) {
   _rsSearch = (val || '').trim();
-  // Mostrar/ocultar botón borrar
   var clrBtn = document.getElementById('rs-search-clear');
   if (clrBtn) clrBtn.style.display = _rsSearch ? 'flex' : 'none';
   renderReposicion();
+
+  // Búsqueda global en Odoo con debounce de 400ms
+  if (_rsGlobalTimer) clearTimeout(_rsGlobalTimer);
+  if (_rsSearch.length >= 2) {
+    _rsGlobalTimer = setTimeout(function(){ _rsGlobalSearch(_rsSearch); }, 400);
+  } else {
+    _rsGlobalItems = [];
+    _rsRenderGlobal();
+  }
 }
 
 function clearRsSearch() {
   var inp = document.getElementById('rs-search-input');
   if (inp) { inp.value = ''; inp.focus(); }
+  _rsGlobalItems = [];
+  _rsRenderGlobal();
   setRsSearch('');
+}
+
+async function _rsGlobalSearch(q) {
+  var wrap = document.getElementById('rs-global-wrap');
+  var tbody = document.getElementById('rs-global-tbody');
+  if (!wrap || !tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 6px;width:18px;height:18px"></div>Buscando en Odoo…</td></tr>';
+  wrap.style.display = 'block';
+  try {
+    var resp = await authFetch('/api/products/search?q=' + encodeURIComponent(q) + '&limit=40', { method: 'GET' });
+    var data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Error');
+    // Filtrar los que ya están en _rsItems para no duplicar
+    var rsIds = new Set(_rsItems.map(function(i){ return i.id; }));
+    _rsGlobalItems = (data.items || []).filter(function(i){ return !rsIds.has(i.id); });
+    _rsRenderGlobal();
+  } catch(e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--red-text)">Error: ' + esc(e.message) + '</td></tr>';
+  }
+}
+
+function _rsRenderGlobal() {
+  var wrap  = document.getElementById('rs-global-wrap');
+  var tbody = document.getElementById('rs-global-tbody');
+  var count = document.getElementById('rs-global-count');
+  if (!wrap || !tbody) return;
+  if (!_rsGlobalItems.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if (count) count.textContent = _rsGlobalItems.length + ' artículo' + (_rsGlobalItems.length !== 1 ? 's' : '');
+  var today = new Date();
+  tbody.innerHTML = _rsGlobalItems.map(function(item) {
+    var sol      = solForItem(item.id, 'reposicion');
+    var chkd     = sol && (sol.status === 'activo' || sol.status === 'completado');
+    var isComp   = sol && sol.status === 'completado';
+    var chkClass = isComp ? 'sol-chk sol-chk-done' : 'sol-chk';
+    var qtyStr   = (item.qty !== undefined ? item.qty.toFixed(2) : '—') + (item.uom ? ' ' + item.uom : '');
+    return '<tr class="rs-global-row">'
+      + '<td style="text-align:center;width:32px"><input type="checkbox" class="' + chkClass + '"'
+      + (chkd ? ' checked' : '') + (isComp ? ' disabled' : '')
+      + ' onchange="solToggleRsGlobal(this,' + item.id + ')" title="Solicitar para showroom"></td>'
+      + '<td style="font-size:11px;color:var(--text-muted)">' + esc(item.ref || '—') + '</td>'
+      + '<td style="font-size:11px;font-family:monospace">' + esc(item.barcode || '—') + '</td>'
+      + '<td style="font-weight:600">' + esc(item.name) + '</td>'
+      + '<td style="text-align:right;font-size:12px">' + qtyStr + '</td>'
+      + '</tr>';
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+function solToggleRsGlobal(chkEl, productId) {
+  solToggleRS(chkEl, productId);
 }
 
 function rsOpenLb(src, caption) {
@@ -9921,11 +10009,14 @@ async function runReposicionAnalysis(){
     _rsItems    = d.items || [];
     _rsAlmOpen  = {};       // reset estado abierto/cerrado al cargar nuevos datos
     _rsAlmFilter = 'all';   // reset filtro almacén
-    _rsSearch   = '';       // reset búsqueda
+    _rsSearch      = '';    // reset búsqueda
+    _rsGlobalItems = [];    // reset resultados globales
     var srchInp = document.getElementById('rs-search-input');
     if (srchInp) srchInp.value = '';
     var srchClr = document.getElementById('rs-search-clear');
     if (srchClr) srchClr.style.display = 'none';
+    var globalWrap = document.getElementById('rs-global-wrap');
+    if (globalWrap) globalWrap.style.display = 'none';
 
     // Poblar dropdown de almacén con los que realmente aparecen
     var almSel = document.getElementById('rs-alm-filter');

@@ -2,12 +2,13 @@
  * proxy.js — Servidor local para Dashboard Despachos
  * Sirve archivos estáticos + hace de proxy a Odoo JSON-RPC (resuelve CORS)
  */
-const http   = require('http');
-const https  = require('https');
-const fs     = require('fs');
-const path   = require('path');
-const url    = require('url');
-const crypto = require('crypto');
+const http       = require('http');
+const https      = require('https');
+const fs         = require('fs');
+const path       = require('path');
+const url        = require('url');
+const crypto     = require('crypto');
+const nodemailer = require('nodemailer');
 
 // ── Helpers de persistencia JSON ─────────────────────────────────────────────
 function loadJson(file, fallback) {
@@ -1280,6 +1281,41 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: false, error: e.message }));
     }
     return;
+  }
+
+  // ── GET /api/products/search?q= — búsqueda global de productos en Odoo ──
+  if (reqPath.startsWith('/api/products/search') && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const qs    = url.parse(req.url, true).query;
+      const q     = (qs.q || '').trim();
+      const limit = Math.min(parseInt(qs.limit || '30', 10), 100);
+      if (!q) return sendJson(res, 200, { ok: true, items: [] });
+
+      // Buscar en product.product por nombre, barcode y referencia interna
+      const domain = ['|', '|',
+        ['name', 'ilike', q],
+        ['barcode', 'ilike', q],
+        ['default_code', 'ilike', q],
+      ];
+      const products = await odooCall('product.product', 'search_read',
+        [domain],
+        { fields: ['id', 'name', 'barcode', 'default_code', 'qty_available', 'uom_id'], limit }
+      );
+
+      const items = products.map(p => ({
+        id:       p.id,
+        name:     p.name     || '',
+        barcode:  p.barcode  || '',
+        ref:      p.default_code || '',
+        qty:      p.qty_available || 0,
+        uom:      p.uom_id ? p.uom_id[1] : '',
+      }));
+
+      return sendJson(res, 200, { ok: true, items, total: items.length });
+    } catch(e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
   }
 
   // ── /api/analysis/localities — ubicaciones internas de Odoo ─────────────
