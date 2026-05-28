@@ -8,7 +8,9 @@ const fs         = require('fs');
 const path       = require('path');
 const url        = require('url');
 const crypto     = require('crypto');
-const nodemailer = require('nodemailer');
+// nodemailer se carga de forma lazy (solo si está instalado y se usa SMTP)
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch { /* no disponible en este entorno */ }
 
 // ── Helpers de persistencia JSON ─────────────────────────────────────────────
 function loadJson(file, fallback) {
