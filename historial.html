@@ -9738,60 +9738,73 @@ function exportSolicitudesExcel() {
   }
   _loadXlsx(function() {
     var today = new Date();
-    var headers = [
-      'Producto', 'Código / Barcode', 'Almacén', 'Ubicación',
-      'Nota', 'Solicitado por', 'Fecha Solicitud',
-      'Estado', 'Días', 'Fecha Completado / Cancelado', 'Origen'
-    ];
-    var rows = list.map(function(sol) {
-      var m = _solMeta(sol, today);
-      var fechaRef = sol.status === 'completado' && sol.fechaCompletado
-        ? new Date(sol.fechaCompletado).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'})
-        : sol.status === 'cancelado' && sol.fechaCancelacion
-        ? new Date(sol.fechaCancelacion).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'})
-        : '—';
-      var estadoLabel = sol.status === 'activo' ? 'Activa'
-        : sol.status === 'completado' ? 'Completada' : 'Cancelada';
+    var sheetLabel = _solFilter === 'all' ? 'Todas'
+      : _solFilter === 'activo' ? 'Activas'
+      : _solFilter === 'completado' ? 'Completadas' : 'Canceladas';
+    var fechaHoy = today.toLocaleDateString('es-DO', {day:'2-digit', month:'long', year:'numeric'});
+
+    // Fila 1: título · Fila 2: vacía · Fila 3: encabezados · Fila 4+: datos
+    var titleRow   = ['Solicitudes Showroom — ' + sheetLabel + '   |   ' + fechaHoy, '', '', '', '', '', ''];
+    var blankRow   = ['', '', '', '', '', '', ''];
+    var headerRow  = ['Producto', 'Código / Barras', 'Almacén', 'Ubicación', 'Nota', 'Solicitado por', 'Fecha Solicitud'];
+
+    var dataRows = list.map(function(sol) {
       return [
         sol.name    || '—',
-        sol.barcode || '—',
+        sol.barcode || sol.ref || '—',
         (sol.almacen  || '—').replace(/ · /g, ', '),
         (sol.ubicacion|| '—').replace(/ · /g, ' › '),
         sol.nota || '',
         sol.solicitadoPor ? sol.solicitadoPor.name : '—',
-        new Date(sol.fechaSolicitud).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}),
-        estadoLabel,
-        m.diasStr,
-        fechaRef,
-        sol.source === 'contenedores' ? 'Contenedor' : 'Manual'
+        new Date(sol.fechaSolicitud).toLocaleDateString('es-DO', {day:'2-digit', month:'short', year:'numeric'})
       ];
     });
 
-    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+    var aoa = [titleRow, blankRow, headerRow].concat(dataRows);
+    var ws  = XLSX.utils.aoa_to_sheet(aoa);
 
-    // Ancho de columnas
+    // Combinar celda del título (A1:G1)
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
+
+    // Anchos de columna
     ws['!cols'] = [
-      {wch:32},{wch:18},{wch:16},{wch:28},
-      {wch:22},{wch:22},{wch:15},
-      {wch:13},{wch:10},{wch:17},{wch:12}
+      {wch:36}, {wch:18}, {wch:16}, {wch:32},
+      {wch:24}, {wch:26}, {wch:16}
     ];
 
-    // Estilo negrita en encabezados (solo en celdas A1:K1)
-    var range = XLSX.utils.decode_range(ws['!ref']);
-    for (var C = range.s.c; C <= range.e.c; C++) {
-      var cellAddr = XLSX.utils.encode_cell({r:0, c:C});
-      if (!ws[cellAddr]) continue;
-      ws[cellAddr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } };
+    // Estilos: título (fila 1), encabezados (fila 3)
+    var BLUE_HDR = '1B3B6F';
+    var BLUE_TTL = '0F2548';
+    var styleTitle = { font:{ bold:true, sz:13, color:{rgb:'FFFFFF'} }, fill:{ fgColor:{rgb:BLUE_TTL} }, alignment:{ horizontal:'left', vertical:'center' } };
+    var styleHdr   = { font:{ bold:true, sz:11, color:{rgb:'FFFFFF'} }, fill:{ fgColor:{rgb:BLUE_HDR} }, alignment:{ horizontal:'center', vertical:'center' } };
+    var styleData  = { alignment:{ vertical:'center', wrapText:true } };
+    var styleDataAlt = { alignment:{ vertical:'center', wrapText:true }, fill:{ fgColor:{rgb:'F0F4F8'} } };
+
+    // Aplicar título
+    var a1 = ws['A1'];
+    if (a1) a1.s = styleTitle;
+
+    // Aplicar encabezados (fila 3 = índice r:2)
+    var cols = ['A','B','C','D','E','F','G'];
+    cols.forEach(function(c) {
+      var cell = ws[c + '3'];
+      if (cell) cell.s = styleHdr;
+    });
+
+    // Aplicar estilos a filas de datos (fila 4 en adelante)
+    for (var r = 0; r < dataRows.length; r++) {
+      var rowIdx = r + 4; // Excel row (1-based), datos empiezan en fila 4
+      var isAlt  = r % 2 === 1;
+      cols.forEach(function(c) {
+        var addr = c + rowIdx;
+        if (ws[addr]) ws[addr].s = isAlt ? styleDataAlt : styleData;
+      });
     }
 
     var wb = XLSX.utils.book_new();
-    var sheetName = _solFilter === 'all' ? 'Todas'
-      : _solFilter === 'activo' ? 'Activas'
-      : _solFilter === 'completado' ? 'Completadas' : 'Canceladas';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-    var fechaHoy = today.toISOString().slice(0,10);
-    XLSX.writeFile(wb, 'Solicitudes_Showroom_' + sheetName + '_' + fechaHoy + '.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, sheetLabel);
+    var fechaFile = today.toISOString().slice(0,10);
+    XLSX.writeFile(wb, 'Solicitudes_Showroom_' + sheetLabel + '_' + fechaFile + '.xlsx');
   });
 }
 
