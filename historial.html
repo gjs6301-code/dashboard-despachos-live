@@ -11737,10 +11737,8 @@ async function testSinAdjNotif(){
   var btn = document.getElementById('sin-adj-test-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
-    var resp = await fetch('/api/sin-adjuntos/test-notify', {
+    var resp = await authFetch('/api/sin-adjuntos/test-notify', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({})
     });
     var data = await resp.json();
