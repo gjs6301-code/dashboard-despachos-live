@@ -4196,54 +4196,40 @@ const server = http.createServer(async (req, res) => {
 <p>Si ves este mensaje en tu bandeja de Odoo Discuss significa que la integración funciona correctamente ✅</p>
 <p style="color:#6b7280;font-size:12px">Enviado desde el Dashboard de Despachos — ${new Date().toLocaleString('es-DO')}</p>`;
 
-      // Intentar 3 métodos distintos — devolver cuál funcionó
-      let msgId = null, method = null, err = null;
+      // Crear mensaje y forzar notificación de inbox directamente
+      const subject = 'Prueba de notificación — Dashboard Despachos';
+      let msgId = null, notifId = null, errors = [];
 
-      // Método A: message_post en res.partner del destinatario (el más confiable)
+      // Paso 1: crear mail.message
       try {
-        msgId = await odooCall('res.partner', 'message_post', [[partnerId]], {
+        msgId = await odooCall('mail.message', 'create', [{
+          message_type: 'user_notification',
+          model: false,
+          res_id: false,
           body,
-          subject: 'Prueba de notificación — Dashboard Despachos',
-          message_type: 'comment',
-          subtype_xmlid: 'mail.mt_note',
-          partner_ids: [partnerId],
-        });
-        method = 'res.partner.message_post';
-      } catch(eA) { err = 'A:' + eA.message; }
+          subject,
+          author_id: partnerId,
+        }]);
+      } catch(e1) { errors.push('msg:' + e1.message); }
 
-      // Método B: mail.message + notification_ids (inbox directo)
-      if (!msgId) {
+      // Paso 2: crear mail.notification directamente → fuerza inbox sin importar preferencias
+      if (msgId) {
         try {
-          msgId = await odooCall('mail.message', 'create', [{
-            message_type: 'user_notification',
-            model: 'res.partner',
-            res_id: partnerId,
-            body,
-            partner_ids: [[6, 0, [partnerId]]],
-            subject: 'Prueba de notificación — Dashboard Despachos',
-            notification_ids: [[0, 0, { notification_type: 'inbox', res_partner_id: partnerId, is_read: false }]],
+          notifId = await odooCall('mail.notification', 'create', [{
+            mail_message_id: msgId,
+            res_partner_id: partnerId,
+            notification_type: 'inbox',
+            is_read: false,
+            notification_status: 'sent',
           }]);
-          method = 'mail.message.create+notification';
-        } catch(eB) { err = (err||'') + ' B:' + eB.message; }
+        } catch(e2) { errors.push('notif:' + e2.message); }
       }
 
-      // Método C: mail.message simple (fallback)
-      if (!msgId) {
-        try {
-          msgId = await odooCall('mail.message', 'create', [{
-            message_type: 'user_notification',
-            model: false, res_id: false,
-            body,
-            partner_ids: [[4, partnerId]],
-            subject: 'Prueba de notificación — Dashboard Despachos',
-          }]);
-          method = 'mail.message.create.simple';
-        } catch(eC) { err = (err||'') + ' C:' + eC.message; }
-      }
-
-      if (!msgId) return sendJson(res, 500, { ok: false, error: 'Todos los métodos fallaron: ' + err });
-
-      return sendJson(res, 200, { ok: true, msgId, partnerId, userName, method });
+      return sendJson(res, 200, {
+        ok: true, msgId, notifId, partnerId, userName,
+        note: notifId ? 'Notificación forzada en inbox' : 'Mensaje creado sin notificación (ver errors)',
+        errors,
+      });
     } catch (e) {
       console.error('[test-notify] error:', e);
       return sendJson(res, 500, { ok: false, error: e.message });

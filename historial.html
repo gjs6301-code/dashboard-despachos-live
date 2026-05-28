@@ -11743,7 +11743,9 @@ async function testSinAdjNotif(){
     });
     var data = await resp.json();
     if (data.ok) {
-      alert('✅ Notificación de prueba enviada.\nMétodo: ' + data.method + '\nUsuario: ' + data.userName + '\nPartner ID: ' + data.partnerId + '\nMessage ID: ' + data.msgId + '\n\nRevisa:\n• Discuss → Bandeja de entrada\n• Discuss → Charla (si es mensaje directo)\n• Contactos → tu ficha → pestaña Mensajes');
+      var notifInfo = data.notifId ? '✅ Notif ID: ' + data.notifId + ' (forzado en inbox)' : '⚠️ Sin notif ID';
+      var errInfo   = data.errors && data.errors.length ? '\nErrores: ' + data.errors.join(', ') : '';
+      alert('✅ Prueba enviada.\nMsg ID: ' + data.msgId + '\n' + notifInfo + '\nPartner ID: ' + data.partnerId + errInfo + '\n\nRevisa en Odoo:\nDiscuss → Bandeja de entrada (ícono 💬 arriba)\nO dentro de la app Discuss → sidebar izquierdo');
     } else {
       var diagStr = data.diag ? '\n\nDiagnóstico:\n' + JSON.stringify(data.diag, null, 2) : '';
       alert('❌ Error al enviar prueba:\n' + (data.error || 'Error desconocido') + diagStr);
