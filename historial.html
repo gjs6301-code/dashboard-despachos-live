@@ -1228,10 +1228,13 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
   .rs-btn-refresh, .sol-tab-btn, #sol-stats,
   .page-section:not(#section-solicitudes), .sol-no-print { display: none !important; }
   #section-solicitudes { display: block !important; }
+  /* Forzar tabla visible aunque el viewport sea móvil */
+  #sol-table-wrap { display: block !important; overflow: visible !important; }
+  #sol-cards-wrap { display: none !important; }
   .app-body { padding: 0 !important; }
   .cont-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
   .sol-table th, .sol-table td { font-size: 10px; padding: 5px 6px; border: 1px solid #ccc !important; }
-  .sol-table { border-collapse: collapse !important; }
+  .sol-table { border-collapse: collapse !important; width: 100% !important; }
   .sol-table tr.sol-row-cancelado { display: none !important; }
   .sol-table tr.sol-row-completado { display: none !important; }
   #sol-print-header { display: block !important; }
@@ -9619,17 +9622,29 @@ async function solCancelFromList(solId) {
 /** Imprime las solicitudes activas en PDF */
 function printSolicitudes() {
   var prev = _solFilter;
-  // Asegurar que mostramos las activas para imprimir
   if (_solFilter !== 'activo') setSolFilter('activo');
+
   // Rellenar fecha de impresión
   var ph = document.getElementById('sol-print-date');
   if (ph) ph.textContent = 'Impreso el ' + new Date().toLocaleDateString('es-DO', {
     weekday:'long', year:'numeric', month:'long', day:'numeric'
   }) + ' · Solo se imprimen solicitudes activas';
+
+  // Asegurar que el tbody tiene filas aunque estemos en vista móvil (cards)
+  // El @media print fuerza la tabla visible; nos aseguramos que tenga datos
+  var tbody = document.getElementById('sol-tbody');
+  var wrap  = document.getElementById('sol-table-wrap');
+  var today = new Date();
+  if (tbody && (!tbody.innerHTML.trim() || tbody.innerHTML.trim() === '')) {
+    var list = _solicitudes.filter(function(s){ return s.status === 'activo'; });
+    tbody.innerHTML = list.map(function(s){ return _solRowHtml(s, today); }).join('');
+  }
+  if (wrap) wrap.style.display = '';
+
   setTimeout(function(){
     window.print();
     if (prev !== 'activo') setSolFilter(prev);
-  }, 150);
+  }, 200);
 }
 
 // ── Exportar solicitudes a Excel (.xlsx) ─────────────────────────────────────
