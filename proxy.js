@@ -4126,6 +4126,46 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── POST /api/sin-adjuntos/test-notify — prueba directa de notificación Odoo ─
+  if (reqPath === '/api/sin-adjuntos/test-notify' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireRole(jp, res, ['admin'])) return;
+    try {
+      // Buscar el partner_id del usuario autenticado
+      const odooId = jp.odooId;
+      if (!odooId) return sendJson(res, 400, { ok: false, error: 'Tu usuario no tiene odooId configurado' });
+
+      const usersInfo = await odooCall('res.users', 'search_read',
+        [[['id', '=', odooId]]],
+        { fields: ['id', 'name', 'partner_id'], limit: 1 }
+      );
+      if (!usersInfo || !usersInfo.length || !usersInfo[0].partner_id) {
+        return sendJson(res, 404, { ok: false, error: `No se encontró partner_id para odooId=${odooId}` });
+      }
+      const partnerId = usersInfo[0].partner_id[0];
+      const userName  = usersInfo[0].name || jp.name || 'Usuario';
+
+      const body = `<p>Hola <b>${userName}</b>,</p>
+<p>Esta es una <b>notificación de prueba</b> del sistema de alertas de <b>Sin Comprobantes</b>.</p>
+<p>Si ves este mensaje en tu bandeja de Odoo Discuss significa que la integración funciona correctamente ✅</p>
+<p style="color:#6b7280;font-size:12px">Enviado desde el Dashboard de Despachos — ${new Date().toLocaleString('es-DO')}</p>`;
+
+      const msgId = await odooCall('mail.message', 'create', [{
+        message_type: 'notification',
+        model: false,
+        res_id: false,
+        body,
+        partner_ids: [[6, 0, [partnerId]]],
+        subject: 'Prueba de notificación — Dashboard Despachos',
+      }]);
+
+      return sendJson(res, 200, { ok: true, msgId, partnerId, userName });
+    } catch (e) {
+      console.error('[test-notify] error:', e);
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
+  }
+
   // ── POST /api/sin-adjuntos/enviar-correos — notificar usuarios con pendientes ─
   if (reqPath === '/api/sin-adjuntos/enviar-correos' && req.method === 'POST') {
     const jp = requireJwt(req, res); if (!jp) return;

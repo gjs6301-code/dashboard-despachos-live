@@ -3592,6 +3592,9 @@ body{font-family:var(--font);min-height:100dvh}
           <div style="flex:1"></div>
           <button class="btn-sm-ghost" onclick="sinAdjToggleAll(true)" style="font-size:11px;padding:3px 8px">Todos</button>
           <button class="btn-sm-ghost" onclick="sinAdjToggleAll(false)" style="font-size:11px;padding:3px 8px">Ninguno</button>
+          <button id="sin-adj-test-btn" onclick="testSinAdjNotif()" title="Enviar una notificación de prueba a tu propio inbox de Odoo" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-secondary);cursor:pointer;font-weight:600">
+            <i data-lucide="flask-conical" style="width:12px;height:12px;flex-shrink:0"></i>Probar
+          </button>
           <button id="sin-adj-notif-btn" onclick="enviarCorreosSinAdjuntos(null)" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer;font-weight:600">
             <i data-lucide="send" style="width:12px;height:12px;stroke:currentColor;flex-shrink:0"></i>Enviar notificación
           </button>
@@ -11728,6 +11731,35 @@ function sinAdjToggleAll(checked){
 }
 
 // ════════════════════════════════════════════════════
+//  SIN ADJUNTOS — PRUEBA DE NOTIFICACIÓN ODOO
+// ════════════════════════════════════════════════════
+async function testSinAdjNotif(){
+  var btn = document.getElementById('sin-adj-test-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    var resp = await fetch('/api/sin-adjuntos/test-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({})
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      alert('✅ Notificación de prueba enviada a tu inbox de Odoo Discuss.\n\nUsuario: ' + data.userName + '\nPartner ID: ' + data.partnerId + '\nMessage ID: ' + data.msgId + '\n\nRevisa tu Discuss en Odoo.');
+    } else {
+      alert('❌ Error al enviar prueba:\n' + (data.error || 'Error desconocido'));
+    }
+  } catch(e) {
+    alert('❌ Error de conexión: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="flask-conical" style="width:12px;height:12px;flex-shrink:0"></i>Probar';
+      if (window.lucide) lucide.createIcons({ el: btn });
+    }
+  }
+}
+
 //  SIN ADJUNTOS — ENVIAR NOTIFICACIÓN ODOO
 // ════════════════════════════════════════════════════
 // singleKey: clave de _sinAdjByUser para notificar solo ese usuario
