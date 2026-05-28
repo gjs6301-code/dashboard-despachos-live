@@ -3161,20 +3161,9 @@ body{font-family:var(--font);min-height:100dvh}
       <span class="nav-icon"><i data-lucide="clipboard-check"></i></span>Solicitudes Showroom
     </a>
 
-    <div class="sidebar-group" id="navg-tiemporeal">Tiempo Real</div>
-    <a class="nav-item" id="nav-pendientes" href="#sec-pendientes" onclick="navTo('pendientes');return false;">
-      <span class="nav-icon"><i data-lucide="clock"></i></span>Pendientes
-    </a>
-    <a class="nav-item" id="nav-ordenes" href="#sec-ordenes" onclick="navTo('ordenes');return false;">
-      <span class="nav-icon"><i data-lucide="clipboard-list"></i></span>Órdenes Activas
-    </a>
-
     <div class="sidebar-group" id="navg-despachos">Despachos</div>
     <a class="nav-item" id="nav-sin-adjuntos" href="#sec-sin-adjuntos" onclick="navTo('sin-adjuntos');return false;">
       <span class="nav-icon"><i data-lucide="paperclip"></i></span>Sin Comprobante
-    </a>
-    <a class="nav-item" id="nav-pendientes-out" href="#sec-pendientes-out" onclick="navTo('pendientes-out');return false;">
-      <span class="nav-icon"><i data-lucide="truck"></i></span>Pendientes Out
     </a>
     <a class="nav-item" id="nav-dev-cdp" href="#sec-dev-cdp" onclick="navTo('dev-cdp');return false;">
       <span class="nav-icon"><i data-lucide="arrow-left-right"></i></span>Dev→CDP
@@ -3202,10 +3191,7 @@ body{font-family:var(--font);min-height:100dvh}
     <button class="mob-nav-btn"        id="mob-nav-contenedores"  onclick="navTo('contenedores')"><i data-lucide="ship"></i>Contenedores</button>
     <button class="mob-nav-btn"        id="mob-nav-reposicion"    onclick="navTo('reposicion')"><i data-lucide="store"></i>Reposición</button>
     <button class="mob-nav-btn"        id="mob-nav-solicitudes"   onclick="navTo('solicitudes')"><i data-lucide="clipboard-check"></i>Solicitudes</button>
-    <button class="mob-nav-btn"        id="mob-nav-pendientes"    onclick="navTo('pendientes')"><i data-lucide="clock"></i>Pendientes</button>
-    <button class="mob-nav-btn"        id="mob-nav-ordenes"       onclick="navTo('ordenes')"><i data-lucide="clipboard-list"></i>Órdenes</button>
     <button class="mob-nav-btn"        id="mob-nav-sin-adjuntos"  onclick="navTo('sin-adjuntos')"><i data-lucide="paperclip"></i>Sin Comprobante</button>
-    <button class="mob-nav-btn"        id="mob-nav-pendientes-out" onclick="navTo('pendientes-out')"><i data-lucide="truck"></i>Pend. Out</button>
     <button class="mob-nav-btn"        id="mob-nav-dev-cdp"        onclick="navTo('dev-cdp')"><i data-lucide="arrow-left-right"></i>Dev→CDP</button>
   </div>
 
@@ -3547,23 +3533,6 @@ body{font-family:var(--font);min-height:100dvh}
     </div>
     </div><!-- /section-solicitudes -->
 
-    <!-- ── TIEMPO REAL ──────────────────────────────────── -->
-    <div id="section-pendientes" class="page-section" style="display:none">
-    <div id="sec-pendientes" class="divider"><div class="divider-line"></div><span class="divider-label">PENDIENTES Y ESTADO EN TIEMPO REAL</span><div class="divider-line"></div></div>
-
-    <div id="dept-cards" class="dept-grid"></div>
-
-    <div id="sec-ordenes" class="active-card">
-      <h3>Órdenes activas — próxima acción requerida</h3>
-      <div class="mv-wrap">
-        <table class="mv-table">
-          <thead><tr><th>Orden Odoo</th><th>Tarea</th><th>Encargado</th><th>Estado</th><th>Tipo</th><th>Localidad</th><th>Fecha límite</th></tr></thead>
-          <tbody id="active-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-    </div><!-- /section-pendientes -->
-
     <!-- ── DESPACHOS SIN COMPROBANTE ────────────────────────── -->
     <div id="section-sin-adjuntos" class="page-section" style="display:none">
     <div id="sec-sin-adjuntos" class="divider"><div class="divider-line"></div><span class="divider-label">DESPACHOS — COMPROBANTES</span><div class="divider-line"></div></div>
@@ -3592,33 +3561,6 @@ body{font-family:var(--font);min-height:100dvh}
       <div id="sin-adj-empty" class="desp-empty">Selecciona un rango de fechas y presiona <strong>Consultar</strong></div>
     </div>
     </div><!-- /section-sin-adjuntos -->
-
-    <!-- ── PENDIENTES DE DESPACHO ─────────────────────────── -->
-    <div id="section-pendientes-out" class="page-section" style="display:none">
-    <div id="sec-pendientes-out" class="divider"><div class="divider-line"></div><span class="divider-label">PENDIENTES DE DESPACHO</span><div class="divider-line"></div></div>
-
-    <div class="card" style="margin-bottom:24px;padding:0;overflow:hidden">
-      <div style="padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span style="font-size:12px;font-weight:700;color:var(--text-primary);display:inline-flex;align-items:center;gap:5px"><i data-lucide="truck" style="width:13px;height:13px;stroke:currentColor"></i>Órdenes OUT en proceso de despacho</span>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="pend-out-count" style="font-size:11px;color:var(--text-muted)"></span>
-          <button class="btn-consultar" onclick="cargarPendientesOut()" style="padding:4px 12px;font-size:10px">↻ Actualizar</button>
-        </div>
-      </div>
-      <div class="mv-wrap">
-        <table class="desp-table">
-          <thead><tr>
-            <th>Transferencia</th><th>Fecha Programada</th>
-            <th>Orden de Venta</th><th>Cliente</th>
-            <th>Estado</th><th>Responsable</th>
-          </tr></thead>
-          <tbody id="pend-out-tbody">
-            <tr><td colspan="6" class="desp-empty">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    </div><!-- /section-pendientes-out -->
 
     <!-- ══════════════════════════════════════════════════
          DEV → CDP  (Devoluciones de tiendas en almacén)
@@ -4541,9 +4483,7 @@ body{font-family:var(--font);min-height:100dvh}
           <label class="perm-check"><input type="checkbox" data-perm="contenedores"> Contenedores</label>
           <label class="perm-check"><input type="checkbox" data-perm="reposicion"> Reposición Showroom</label>
           <label class="perm-check"><input type="checkbox" data-perm="solicitudes"> Solicitudes Showroom</label>
-          <label class="perm-check"><input type="checkbox" data-perm="pendientes"> Pendientes</label>
           <label class="perm-check"><input type="checkbox" data-perm="sin-adjuntos"> Sin adjuntos</label>
-          <label class="perm-check"><input type="checkbox" data-perm="pendientes-out"> Pendientes OUT</label>
           <label class="perm-check"><input type="checkbox" data-perm="dev-cdp"> Dev→CDP</label>
           <label class="perm-check"><input type="checkbox" data-perm="validacion"> Validación</label>
           <label class="perm-check"><input type="checkbox" data-perm="averias"> Averías</label>
@@ -4784,8 +4724,8 @@ function isHistorialUser(u) {
 /** Oculta / muestra ítems de nav según sectionPerms del usuario */
 function applyNavPerms() {
   var sections = [
-    'buscar','devoluciones','contenedores','reposicion','solicitudes','pendientes','ordenes',
-    'sin-adjuntos','pendientes-out','dev-cdp',
+    'buscar','devoluciones','contenedores','reposicion','solicitudes',
+    'sin-adjuntos','dev-cdp',
     'validacion','averias','reportes','wwp'
   ];
   sections.forEach(function(s) {
@@ -4802,8 +4742,7 @@ function applyNavPerms() {
     'navg-analisis':    ['devoluciones','validacion','averias'],
     'navg-plataforma':  ['wwp'],
     'navg-compras':     ['contenedores','reposicion','solicitudes'],
-    'navg-tiemporeal':  ['pendientes','ordenes'],
-    'navg-despachos':   ['sin-adjuntos','pendientes-out','dev-cdp']
+    'navg-despachos':   ['sin-adjuntos','dev-cdp']
   };
   Object.keys(GROUPS).forEach(function(gid) {
     var anyVisible = GROUPS[gid].some(function(s){ return canSection(s); });
@@ -8311,8 +8250,6 @@ async function checkSheetsConnection(retries, delay){
 window.addEventListener('DOMContentLoaded',function(){
   if (window.lucide) lucide.createIcons();
   renderDevoluciones();
-  renderPendientes();
-  renderOrdenesActivas();
   initDespFiltro();
   // Fecha default del reporte Dev→CDP: último mes
   (function(){
@@ -8323,7 +8260,6 @@ window.addEventListener('DOMContentLoaded',function(){
     }
   })();
   checkOdooConnection().then(function(){
-    cargarPendientesOut();
     cargarSinAdjuntos();
   });
   checkSheetsConnection();
@@ -11690,7 +11626,7 @@ async function cargarPendientesOut(){
 // ════════════════════════════════════════════════════
 
 // Todas las secciones de página
-var PAGE_SECTIONS=['buscar','devoluciones','contenedores','reposicion','solicitudes','pendientes','sin-adjuntos','pendientes-out','dev-cdp','validacion','averias','reportes'];
+var PAGE_SECTIONS=['buscar','devoluciones','contenedores','reposicion','solicitudes','sin-adjuntos','dev-cdp','validacion','averias','reportes'];
 
 // Mapa: id del nav-item → id de la sección (ordenes comparte contenedor con pendientes)
 var NAV_SECTION_MAP={
@@ -11699,10 +11635,7 @@ var NAV_SECTION_MAP={
   'contenedores':    'contenedores',
   'reposicion':      'reposicion',
   'solicitudes':     'solicitudes',
-  'pendientes':      'pendientes',
-  'ordenes':         'pendientes',
   'sin-adjuntos':    'sin-adjuntos',
-  'pendientes-out':  'pendientes-out',
   'validacion':      'validacion',
   'averias':         'averias',
   'reportes':        'reportes',
@@ -11953,7 +11886,6 @@ function navTo(section){
   if(target==='contenedores'&&!CONT_LOADED) cargarContenedores();
   if(target==='reposicion') { loadSolicitudes(false).then(function(){ initReposicion(); }); }
   if(target==='solicitudes') { loadSolicitudes(true); }
-  if(target==='pendientes'){renderPendientes();renderOrdenesActivas();}
   if(target==='reportes') loadAllReports();
   if(target==='dev-cdp') loadDevCdpReport();
 }
