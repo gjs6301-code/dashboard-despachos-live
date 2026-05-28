@@ -4134,55 +4134,61 @@ const server = http.createServer(async (req, res) => {
       const odooId = jp.odooId;
       if (!odooId) return sendJson(res, 400, { ok: false, error: 'Tu usuario no tiene odooId configurado' });
 
+      // Asegurar que odooUid está resuelto (el UID real que devolvió Odoo al autenticar)
+      if (!odooUid) await authenticate();
+
       let partnerId = null;
       let userName  = jp.name || 'Usuario';
-      const diag    = { odooId, method: null, rawResult: null };
+      const diag    = { odooIdJwt: odooId, odooUidReal: odooUid, steps: [] };
 
-      // Intento 1: read() directo — bypasea filtros active/domain
-      try {
-        const readResult = await odooCall('res.users', 'read', [[odooId], ['id', 'name', 'partner_id']]);
-        diag.method = 'res.users.read';
-        diag.rawResult = readResult;
-        if (readResult && readResult.length && readResult[0].partner_id) {
-          partnerId = readResult[0].partner_id[0];
-          userName  = readResult[0].name || userName;
-        }
-      } catch(e1) { diag.readError = e1.message; }
-
-      // Intento 2: search_read con active in [true,false]
-      if (!partnerId) {
+      // Función helper para registrar cada intento en el diag
+      const tryStep = async (label, fn) => {
         try {
-          const sr = await odooCall('res.users', 'search_read',
-            [[['id', '=', odooId], ['active', 'in', [true, false]]]],
-            { fields: ['id', 'name', 'partner_id'], limit: 1 }
-          );
-          diag.method = 'res.users.search_read+active';
-          diag.rawResult = sr;
-          if (sr && sr.length && sr[0].partner_id) {
-            partnerId = sr[0].partner_id[0];
-            userName  = sr[0].name || userName;
-          }
-        } catch(e2) { diag.srError = e2.message; }
+          const result = await fn();
+          diag.steps.push({ label, result });
+          return result;
+        } catch(e) {
+          diag.steps.push({ label, error: e.message });
+          return null;
+        }
+      };
+
+      // Intento 1: read() usando el odooUid REAL (no el del JWT)
+      const r1 = await tryStep('read(odooUidReal)', () =>
+        odooCall('res.users', 'read', [[odooUid], ['id', 'name', 'partner_id']])
+      );
+      if (r1 && r1.length && r1[0].partner_id) {
+        partnerId = r1[0].partner_id[0];
+        userName  = r1[0].name || userName;
       }
 
-      // Intento 3: partner_id desde res.partner buscando por email del JWT
+      // Intento 2: read() usando odooId del JWT (puede diferir del real)
+      if (!partnerId && odooId !== odooUid) {
+        const r2 = await tryStep('read(odooIdJwt)', () =>
+          odooCall('res.users', 'read', [[odooId], ['id', 'name', 'partner_id']])
+        );
+        if (r2 && r2.length && r2[0].partner_id) {
+          partnerId = r2[0].partner_id[0];
+          userName  = r2[0].name || userName;
+        }
+      }
+
+      // Intento 3: res.partner search por email del JWT
       if (!partnerId && jp.email) {
-        try {
-          const pr = await odooCall('res.partner', 'search_read',
+        const r3 = await tryStep('partner_by_email', () =>
+          odooCall('res.partner', 'search_read',
             [[['email', '=', jp.email]]],
             { fields: ['id', 'name'], limit: 1 }
-          );
-          diag.method = 'res.partner.email';
-          diag.rawResult = pr;
-          if (pr && pr.length) {
-            partnerId = pr[0].id;
-            userName  = pr[0].name || userName;
-          }
-        } catch(e3) { diag.partnerError = e3.message; }
+          )
+        );
+        if (r3 && r3.length) {
+          partnerId = r3[0].id;
+          userName  = r3[0].name || userName;
+        }
       }
 
       if (!partnerId) {
-        return sendJson(res, 404, { ok: false, error: `No se encontró partner_id para odooId=${odooId}`, diag });
+        return sendJson(res, 404, { ok: false, error: `No se encontró partner_id`, diag });
       }
 
       const body = `<p>Hola <b>${userName}</b>,</p>
