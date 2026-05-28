@@ -23,7 +23,7 @@
 function _loadXlsx(cb){
   if(window.XLSX){ cb(); return; }
   var s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.src='/xlsx.min.js';
   s.onload=cb; s.onerror=function(){ alert('No se pudo cargar la librería de Excel. Verifica tu conexión.'); };
   document.head.appendChild(s);
 }
