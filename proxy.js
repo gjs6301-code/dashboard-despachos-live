@@ -1476,12 +1476,34 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // PASO 4 — info del producto
+      // PASO 4 — info del producto + categoría
       _step = 'products';
       const prods = await odooCall('product.product', 'search_read',
         [[['id', 'in', targetIds]]],
-        { fields: ['id', 'default_code', 'name', 'barcode', 'image_128'], limit: 5000 }
+        { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 5000 }
       );
+
+      // PASO 4b — jerarquía de categorías para resolver familia (2do nivel bajo Muebles id=53)
+      _step = 'categories';
+      const MUEBLES_ID = 53;
+      const allCategs = await odooCall('product.category', 'search_read',
+        [[]], { fields: ['id', 'name', 'parent_id'], limit: 500 }
+      );
+      const categMap = {};
+      allCategs.forEach(c => { categMap[c.id] = c; });
+
+      function getFamilia(categId) {
+        if (!categId || !categMap[categId]) return null;
+        let cur = categMap[categId];
+        let prev = null;
+        while (cur.parent_id && categMap[cur.parent_id[0]]) {
+          prev = cur;
+          cur  = categMap[cur.parent_id[0]];
+          if (cur.id === MUEBLES_ID) return prev.name; // prev es el hijo directo de Muebles
+        }
+        if (cur.id === MUEBLES_ID) return categMap[categId]?.name || null;
+        return null; // no es hijo de Muebles
+      }
 
       // PASO 5 — último movimiento hacia/desde showroom
       //   Dos queries separados (sin | — causa unhashable en algunos Odoo)
@@ -1525,6 +1547,7 @@ const server = http.createServer(async (req, res) => {
           image:    p.image_128 || '',
           qtyAlm:   almMap[p.id] || 0,
           qtyCdp:   cdpMap[p.id] || 0,
+          familia:  getFamilia(p.categ_id ? p.categ_id[0] : null),
           almacen,
           ubicacion,
           ultimaVez,
