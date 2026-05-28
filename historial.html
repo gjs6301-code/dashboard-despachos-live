@@ -10082,13 +10082,13 @@ async function runReposicionAnalysis(){
     var conHistorial = total - nunca;
     var conCdp       = _rsItems.filter(function(i){ return i.qtyCdp > 0; }).length;
     var maxDias      = _rsItems.reduce(function(m,i){ return i.diasSin!==null&&i.diasSin>m?i.diasSin:m; }, 0);
-    _rsFilter = 'all';
+    _rsFilter = conCdp > 0 ? 'con-cdp' : 'all';
     stats.innerHTML =
-      '<div class="cont-stat alert rs-clickable rs-active" id="rs-stat-all" onclick="setRsFilter(\'all\')"><div class="cont-stat-num">'+total+'</div><div class="cont-stat-lbl">Para Reponer</div></div>'+
+      (conCdp>0?'<div class="cont-stat rs-clickable'+(conCdp>0?' rs-active':'')+'" id="rs-stat-con-cdp" onclick="setRsFilter(\'con-cdp\')" title="Artículos con existencia disponible en CDP"><div class="cont-stat-num" style="color:var(--blue-text)">'+conCdp+'</div><div class="cont-stat-lbl">Existencia CDP</div></div>':'')+
+      '<div class="cont-stat alert rs-clickable" id="rs-stat-all" onclick="setRsFilter(\'all\')"><div class="cont-stat-num">'+total+'</div><div class="cont-stat-lbl">Para Reponer</div></div>'+
       '<div class="cont-stat rs-clickable" id="rs-stat-con-historial" onclick="setRsFilter(\'con-historial\')"><div class="cont-stat-num">'+conHistorial+'</div><div class="cont-stat-lbl">Con historial showroom</div></div>'+
       '<div class="cont-stat warn rs-clickable" id="rs-stat-nunca" onclick="setRsFilter(\'nunca\')"><div class="cont-stat-num">'+nunca+'</div><div class="cont-stat-lbl">Nunca en showroom</div></div>'+
-      (maxDias>0?'<div class="cont-stat rs-clickable" id="rs-stat-antiguos" onclick="setRsFilter(\'antiguos\')"><div class="cont-stat-num">'+maxDias+'d</div><div class="cont-stat-lbl">Máx. días sin showroom</div></div>':'')+
-      (conCdp>0?'<div class="cont-stat rs-clickable" id="rs-stat-con-cdp" onclick="setRsFilter(\'con-cdp\')" title="Artículos con existencia disponible en CDP"><div class="cont-stat-num" style="color:var(--blue-text)">'+conCdp+'</div><div class="cont-stat-lbl">Existencia CDP</div></div>':'');
+      (maxDias>0?'<div class="cont-stat rs-clickable" id="rs-stat-antiguos" onclick="setRsFilter(\'antiguos\')"><div class="cont-stat-num">'+maxDias+'d</div><div class="cont-stat-lbl">Máx. días sin showroom</div></div>':'');
     stats.style.display = 'flex';
 
     renderReposicion();
