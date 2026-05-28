@@ -12325,7 +12325,7 @@ function navTo(section){
   showSection(target);
   setNavActive(section);
   if(target==='contenedores'&&!CONT_LOADED) cargarContenedores();
-  if(target==='reposicion') { loadSolicitudes(false).then(function(){ initReposicion(); }); }
+  if(target==='reposicion') { initReposicion(); loadSolicitudes(false); }
   if(target==='solicitudes') { loadSolicitudes(true); }
   if(target==='reportes') loadAllReports();
   if(target==='dev-cdp') loadDevCdpReport();
