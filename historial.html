@@ -2929,7 +2929,7 @@ body{font-family:var(--font);min-height:100dvh}
   #section-solicitudes .rs-card-hdr{flex-direction:column;align-items:stretch}
   #section-solicitudes .rs-card-hdr>div:last-child{flex-direction:column;gap:6px}
   #section-solicitudes .rs-card-hdr>div:last-child>div{width:100%}
-  #section-solicitudes .rs-btn-refresh,.sol-print-btn{width:100%;min-height:42px;justify-content:center}
+  #section-solicitudes .rs-btn-refresh,.sol-print-btn{width:100%!important;min-height:42px;justify-content:center;padding:0 12px}
 }
 
 /* ── Photo source popover (siempre position:fixed, funciona en móvil y desktop) ── */
@@ -3487,11 +3487,11 @@ body{font-family:var(--font);min-height:100dvh}
             <button class="sol-tab-btn"                id="sol-tab-cancelado"  onclick="setSolFilter('cancelado')">Canceladas</button>
             <button class="sol-tab-btn"                id="sol-tab-all"        onclick="setSolFilter('all')">Todas</button>
           </div>
-          <button class="rs-btn-refresh" onclick="loadSolicitudes(true)" title="Actualizar">
-            <i data-lucide="refresh-cw" style="width:13px;height:13px"></i> Actualizar
+          <button class="rs-btn-refresh" onclick="loadSolicitudes(true)" title="Actualizar" style="width:auto;padding:0 12px;white-space:nowrap;gap:5px">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;flex-shrink:0"></i> Actualizar
           </button>
-          <button class="rs-btn-refresh" onclick="printSolicitudes()" title="Imprimir PDF" style="background:var(--accent);color:#fff;border-color:var(--accent)">
-            <i data-lucide="printer" style="width:13px;height:13px"></i> Imprimir PDF
+          <button class="rs-btn-refresh" onclick="printSolicitudes()" title="Imprimir PDF" style="width:auto;padding:0 12px;white-space:nowrap;gap:5px;background:var(--accent);color:#fff;border-color:var(--accent)">
+            <i data-lucide="printer" style="width:13px;height:13px;flex-shrink:0"></i> Imprimir PDF
           </button>
         </div>
       </div>
