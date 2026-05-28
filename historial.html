@@ -3478,6 +3478,7 @@ body{font-family:var(--font);min-height:100dvh}
             <th class="rs-th" onclick="sortRs('almacen')">Almacén <span class="rs-arr" id="rs-arr-almacen">↕</span></th>
             <th class="rs-th" onclick="sortRs('ubicacion')">Ubicación <span class="rs-arr" id="rs-arr-ubicacion">↕</span></th>
             <th class="rs-th" style="text-align:right" onclick="sortRs('qtyAlm')">Stock Alm. <span class="rs-arr" id="rs-arr-qtyAlm">↕</span></th>
+            <th class="rs-th" style="text-align:right" onclick="sortRs('qtyCdp')">Exist. CDP <span class="rs-arr" id="rs-arr-qtyCdp">↕</span></th>
             <th class="rs-th" onclick="sortRs('ultimaVez')">Última vez en Showroom <span class="rs-arr" id="rs-arr-ultimaVez">↕</span></th>
             <th class="rs-th" style="text-align:right" onclick="sortRs('diasSin')">Días sin Showroom <span class="rs-arr" id="rs-arr-diasSin">↓</span></th>
           </tr></thead>
@@ -9326,6 +9327,40 @@ function solForContItem(contId) {
 }
 
 /** Toggle del checkbox en la vista de análisis de contenedor */
+/** Crea solicitud directamente sin modal de nota */
+async function solCreateDirect(data) {
+  try {
+    var r = await authFetch('/api/solicitudes-showroom', {
+      method: 'POST',
+      body: JSON.stringify({
+        source:      data.source,
+        productId:   data.productId  || null,
+        contId:      data.contId     || null,
+        name:        data.name,
+        ref:         data.ref,
+        barcode:     data.barcode,
+        almacen:     data.almacen,
+        ubicacion:   data.ubicacion,
+        imageBase64: data.imageBase64,
+        nota:        ''
+      })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      _solicitudes.push(d.solicitud);
+      if (data.chkEl) data.chkEl.checked = true;
+      if (document.getElementById('sol-tbody')) renderSolicitudes();
+      _rsRenderGlobal();
+    } else {
+      alert('Error al guardar: ' + (d.error || 'desconocido'));
+      if (data.chkEl) data.chkEl.checked = false;
+    }
+  } catch(e) {
+    alert('Error de conexión: ' + e.message);
+    if (data.chkEl) data.chkEl.checked = false;
+  }
+}
+
 function solToggleCA(chkEl, contId, name, ref, img64) {
   var sol = solForContItem(contId);
   if (sol) {
@@ -9337,8 +9372,8 @@ function solToggleCA(chkEl, contId, name, ref, img64) {
     if (!confirm('¿Cancelar la solicitud de "'+name+'"?')) { chkEl.checked = true; return; }
     solCancel(sol.id, chkEl);
   } else {
-    chkEl.checked = false;
-    _solModalData = {
+    chkEl.checked = false; // revertir hasta confirmar
+    solCreateDirect({
       productId:   null,
       contId:      contId,
       name:        name,
@@ -9349,11 +9384,7 @@ function solToggleCA(chkEl, contId, name, ref, img64) {
       imageBase64: img64 || '',
       source:      'contenedores',
       chkEl:       chkEl
-    };
-    document.getElementById('sol-modal-name').textContent = name;
-    document.getElementById('sol-modal-nota').value = '';
-    document.getElementById('sol-modal-overlay').style.display = 'flex';
-    setTimeout(function(){ document.getElementById('sol-modal-nota').focus(); }, 80);
+    });
   }
 }
 
@@ -9390,24 +9421,19 @@ function solToggleRS(chkEl, productId) {
     }
     solCancel(sol.id, chkEl);
   } else {
-    // No existe → abrir modal para nota
+    // No existe → crear directamente sin modal
     chkEl.checked = false; // revertir hasta confirmar
-    _solModalData = {
+    solCreateDirect({
       productId:   productId,
       name:        name,
       ref:         item.ref       || '',
       barcode:     item.barcode   || '',
       almacen:     item.almacen   || '',
       ubicacion:   item.ubicacion || '',
-      imageBase64: item.image     || '',  // base64 sin prefijo
+      imageBase64: item.image     || '',
       source:      'reposicion',
       chkEl:       chkEl
-    };
-    document.getElementById('sol-modal-name').textContent = name;
-    document.getElementById('sol-modal-nota').value = '';
-    var ov = document.getElementById('sol-modal-overlay');
-    ov.style.display = 'flex';
-    setTimeout(function(){ document.getElementById('sol-modal-nota').focus(); }, 80);
+    });
   }
 }
 
@@ -10116,6 +10142,7 @@ function _rsRowCells(item) {
     +'<td>'+almHtml+'</td>'
     +'<td>'+ubHtml+'</td>'
     +'<td style="text-align:right;font-size:12px;font-weight:600;color:var(--green-text)">'+(item.qtyAlm||0).toFixed(0)+'</td>'
+    +'<td style="text-align:right;font-size:12px;font-weight:600;color:var(--text-secondary)">'+(item.qtyCdp > 0 ? item.qtyCdp.toFixed(0) : '<span style="color:var(--text-muted)">—</span>')+'</td>'
     +'<td style="text-align:center">'+ultimaVezHtml+'</td>'
     +'<td style="text-align:right">'+diasHtml+'</td>';
 }

@@ -1293,10 +1293,14 @@ const server = http.createServer(async (req, res) => {
       if (!q) return sendJson(res, 200, { ok: true, items: [] });
 
       // Buscar en product.product por nombre, barcode y referencia interna
-      const domain = ['|', '|',
-        ['name', 'ilike', q],
-        ['barcode', 'ilike', q],
-        ['default_code', 'ilike', q],
+      // Solo productos con stock positivo
+      const domain = ['&',
+        ['qty_available', '>', 0],
+        ['|', '|',
+          ['name', 'ilike', q],
+          ['barcode', 'ilike', q],
+          ['default_code', 'ilike', q],
+        ],
       ];
       const products = await odooCall('product.product', 'search_read',
         [domain],
@@ -1395,6 +1399,16 @@ const server = http.createServer(async (req, res) => {
         allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id)
       );
 
+      // Ubicaciones CDP (excluye obsoleto y devolución)
+      const cdpLocSet = new Set(
+        allLocs.filter(l => {
+          const cn = l.complete_name || '';
+          return almLabel(cn) === 'CDP'
+              && !/obsoleto/i.test(cn)
+              && !/devoluci[oó]n/i.test(cn);
+        }).map(l => l.id)
+      );
+
       // Etiquetas de almacén excluidas explícitamente
       const EXCLUDED_ALM_LABELS = new Set([
         'DIF.PTN', 'Existencias', 'MICHELL II',
@@ -1432,6 +1446,15 @@ const server = http.createServer(async (req, res) => {
       });
       const srMap  = {};
       srQuants.forEach( q => { const p = q.product_id[0]; srMap[p]  = (srMap[p] ||0) + q.quantity; });
+
+      // Stock CDP por producto (ubicaciones CDP, sin obsoleto, sin devolución)
+      const cdpMap = {};
+      allQuants.forEach(q => {
+        if (cdpLocSet.has(q.location_id[0])) {
+          const pid = q.product_id[0];
+          cdpMap[pid] = (cdpMap[pid] || 0) + q.quantity;
+        }
+      });
 
       // Productos que tienen stock en almacén y cero en showroom
       const targetIds = Object.keys(almMap).map(Number).filter(pid => !(srMap[pid] > 0));
@@ -1490,12 +1513,13 @@ const server = http.createServer(async (req, res) => {
           barcode:  p.barcode || '',
           image:    p.image_128 || '',
           qtyAlm:   almMap[p.id] || 0,
+          qtyCdp:   cdpMap[p.id] || 0,
           almacen,
           ubicacion,
           ultimaVez,
           diasSin
         };
-      });
+      }).filter(item => item.qtyAlm > 0);
 
       items.sort((a, b) => {
         if (a.diasSin !== null && b.diasSin !== null) return b.diasSin - a.diasSin;
