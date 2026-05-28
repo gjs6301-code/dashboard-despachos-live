@@ -1106,14 +1106,16 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 [data-theme='dark'] .cont-table tr.cont-row-amber:hover td{background:#362a0a}
 /* ── Reposición Showroom ── */
 .rs-card-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:3px}
-.rs-card-controls{display:flex;align-items:center;gap:8px}
+.rs-card-controls{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .rs-select{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);font-size:12px;cursor:pointer;outline:none;transition:border-color .15s;max-width:220px}
 .rs-select:focus{border-color:var(--border-focus)}
+/* Selects de showroom y almacén ocultos visualmente (funcionales en el DOM) */
+#rs-showroom-select,#rs-alm-filter{display:none!important}
 .rs-btn-refresh{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--text-secondary);cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s}
 .rs-btn-refresh:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
 .rs-btn-refresh:disabled{opacity:.4;cursor:not-allowed}
 /* Buscador Reposición */
-.rs-search-wrap{position:relative;display:inline-flex;align-items:center;flex:1;min-width:140px;max-width:220px}
+.rs-search-wrap{position:relative;display:inline-flex;align-items:center;flex:1;min-width:140px;max-width:480px}
 /* Barra de familias */
 #rs-familia-bar{display:flex;align-items:center;gap:0;padding:8px 0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--border-light);margin-bottom:6px}
 #rs-familia-bar::-webkit-scrollbar{display:none}
@@ -2869,7 +2871,6 @@ body{font-family:var(--font);min-height:100dvh}
   /* Header: apila título + controles */
   .rs-card-hdr{flex-direction:column;align-items:stretch;gap:8px}
   .rs-card-controls{width:100%}
-  .rs-select{flex:1;max-width:100%!important;font-size:16px;min-height:44px;padding:10px 12px}
   .rs-btn-refresh{width:44px;height:44px;flex-shrink:0}
 
   /* KPI cards: 2 por fila, táctiles */
@@ -2903,12 +2904,9 @@ body{font-family:var(--font);min-height:100dvh}
   .rs-set-hdr td{padding:6px 8px!important}
 
   /* ── Reposición: controles en mobile ───────────────────────────────────── */
-  /* Selects apilan, botón siempre a la derecha del primero */
-  .rs-card-controls{flex-wrap:wrap;gap:6px}
-  #rs-showroom-select{flex:1 1 calc(100% - 52px);max-width:calc(100% - 52px)!important}
-  #rs-alm-filter{flex:1 1 100%;max-width:100%!important;order:3}
-  #rs-btn-analizar{order:2;width:44px;height:44px;flex-shrink:0}
-  #rs-search-wrap{flex:1 1 100%;max-width:100%!important;order:4}
+  .rs-card-controls{flex-wrap:nowrap;gap:6px;width:100%}
+  #rs-btn-analizar{width:44px;height:44px;flex-shrink:0}
+  #rs-search-wrap{flex:1;max-width:100%!important}
   .rs-search-input{font-size:16px;min-height:44px;padding:10px 32px 10px 30px}
   /* KPIs reposición: 2 por fila con mínimos táctiles */
   #rs-stats .cont-stat{flex:1 1 calc(50% - 5px);min-width:0;min-height:48px}
