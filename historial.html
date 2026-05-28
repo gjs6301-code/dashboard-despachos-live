@@ -12408,11 +12408,12 @@ function setHistorialUser() {
   if (typeof checkOdooConnection === 'function') checkOdooConnection();
   if (typeof checkSheetsConnection === 'function') checkSheetsConnection();
   // Para usuarios no-admin: navegar a la primera sección permitida
+  // Usar navTo() para que se ejecuten los init específicos de cada sección (ej: initReposicion)
   if (_user.role !== 'admin') {
     var ORDER = ['buscar','devoluciones','contenedores','reposicion','solicitudes','pendientes',
       'sin-adjuntos','pendientes-out','dev-cdp','validacion','averias','reportes'];
     var first = ORDER.find(function(s){ return canSection(s); });
-    if (first) { showSection(first); setNavActive(first); }
+    if (first) { navTo(first); }
   }
 }
 
