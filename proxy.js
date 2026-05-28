@@ -4286,11 +4286,11 @@ const server = http.createServer(async (req, res) => {
 
       const partnerByOdooId = new Map(); // odooUserId → partnerId
       try {
-        const usersInfo = await odooCall('res.users', 'search_read',
-          [[['id', 'in', allUserIds]]],
-          { fields: ['id', 'partner_id'], limit: 200 }
+        // Usar read() en lugar de search_read — bypasea filtros de acceso/active
+        const usersInfo = await odooCall('res.users', 'read',
+          [allUserIds, ['id', 'partner_id']]
         );
-        usersInfo.forEach(u => { if (u.partner_id) partnerByOdooId.set(u.id, u.partner_id[0]); });
+        usersInfo.forEach(u => { if (u && u.partner_id) partnerByOdooId.set(u.id, u.partner_id[0]); });
       } catch(e) {
         return sendJson(res, 503, { ok: false, error: 'No se pudo consultar res.users en Odoo: ' + e.message });
       }
