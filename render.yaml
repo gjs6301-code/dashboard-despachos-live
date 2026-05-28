@@ -3,7 +3,7 @@ services:
     name: dashboard-despachos
     runtime: node
     plan: starter          # $7/month — never sleeps, needed for workforce platform
-    buildCommand: echo "No build step required"
+    buildCommand: npm install --production
     startCommand: node proxy.js
     healthCheckPath: /api/health
 
