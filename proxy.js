@@ -386,6 +386,7 @@ function buildSinAdjOdooMsg(userName, pickings, period, supervisorName) {
   <tbody>${rows}</tbody>
 </table>
 ${supNote}`;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // ── NOTIFICACIONES ───────────────────────────────────────────────────────
