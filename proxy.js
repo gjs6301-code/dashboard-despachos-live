@@ -1402,6 +1402,9 @@ const server = http.createServer(async (req, res) => {
       const ptnLocSet = new Set(
         allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id)
       );
+      const recepcionLocSet = new Set(
+        allLocs.filter(l => /recepci[oó]n|embarque/i.test(l.complete_name)).map(l => l.id)
+      );
 
       // Ubicaciones CDP (excluye obsoleto y devolución)
       const cdpLocSet = new Set(
@@ -1424,7 +1427,7 @@ const server = http.createServer(async (req, res) => {
       // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN, sin etiquetas excluidas)
       const almQuants = allQuants.filter(q => {
         const lid = q.location_id[0];
-        if (srLocSet.has(lid) || obsLocSet.has(lid) || ptnLocSet.has(lid)) return false;
+        if (srLocSet.has(lid) || obsLocSet.has(lid) || ptnLocSet.has(lid) || recepcionLocSet.has(lid)) return false;
         const cn  = locNameMap[lid] || q.location_id[1] || '';
         const lbl = almLabel(cn);
         // Excluir etiquetas exactas + cualquier variante de MONTIBELLO PTN
