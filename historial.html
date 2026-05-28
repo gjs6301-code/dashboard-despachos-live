@@ -10019,7 +10019,7 @@ async function runReposicionAnalysis(){
   tableWrap.style.display = 'none';
   emptyMsg.style.display  = 'none';
 
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-3)">'
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-3)">'
     +'<div class="spinner" style="margin:0 auto 8px"></div>Consultando Odoo…</td></tr>';
   tableWrap.style.display = 'block';
 
@@ -10035,11 +10035,12 @@ async function runReposicionAnalysis(){
     if (btn) { btn.disabled = false; }
 
     if (!d.ok) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--red-text)">'+esc(d.error||'Error al consultar')+'</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--red-text)">'+esc(d.error||'Error al consultar')+'</td></tr>';
       return;
     }
 
     _rsItems    = d.items || [];
+    if (d._meta) console.log('[Reposición _meta]', JSON.stringify(d._meta));
     _rsAlmOpen  = {};       // reset estado abierto/cerrado al cargar nuevos datos
     _rsAlmFilter = 'all';   // reset filtro almacén
     _rsSearch      = '';    // reset búsqueda
@@ -10094,7 +10095,7 @@ async function runReposicionAnalysis(){
   } catch(e) {
     if (btn) { btn.disabled = false; }
     var tbody2 = document.getElementById('rs-tbody');
-    tbody2.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--red-text)">Error: '+esc(e.message)+'</td></tr>';
+    tbody2.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--red-text)">Error: '+esc(e.message)+'</td></tr>';
   }
 }
 

@@ -1537,8 +1537,14 @@ const server = http.createServer(async (req, res) => {
         return (a.name||'').localeCompare(b.name||'');
       });
 
+      const _meta = {
+        cdpLocs:    cdpLocSet.size,
+        cdpItems:   Object.keys(cdpMap).length,
+        recepLocs:  recepcionLocSet.size,
+        reservedUsed: true
+      };
       res.writeHead(200, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify({ ok: true, items, total: items.length }));
+      res.end(JSON.stringify({ ok: true, items, total: items.length, _meta }));
     } catch(e) {
       res.writeHead(502, {'Content-Type': 'application/json'});
       res.end(JSON.stringify({ ok: false, error: '[' + _step + '] ' + e.message }));
