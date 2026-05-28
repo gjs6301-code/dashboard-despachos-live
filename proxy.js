@@ -4197,12 +4197,13 @@ const server = http.createServer(async (req, res) => {
 <p style="color:#6b7280;font-size:12px">Enviado desde el Dashboard de Despachos — ${new Date().toLocaleString('es-DO')}</p>`;
 
       const msgId = await odooCall('mail.message', 'create', [{
-        message_type: 'notification',
+        message_type: 'user_notification',
         model: false,
         res_id: false,
         body,
         partner_ids: [[6, 0, [partnerId]]],
         subject: 'Prueba de notificación — Dashboard Despachos',
+        notification_ids: [[0, 0, { notification_type: 'inbox', res_partner_id: partnerId }]],
       }]);
 
       return sendJson(res, 200, { ok: true, msgId, partnerId, userName, diag });
@@ -4315,12 +4316,13 @@ const server = http.createServer(async (req, res) => {
         const body = buildSinAdjOdooMsg(group.odooName, group.pickings, periodStr, group.supervisorName);
         try {
           await odooCall('mail.message', 'create', [{
-            message_type: 'notification',
+            message_type: 'user_notification',
             model: false,
             res_id: false,
             body,
             partner_ids: [[6, 0, msgPartnerIds]],
             subject: `${group.pickings.length} despacho${group.pickings.length !== 1 ? 's' : ''} pendiente${group.pickings.length !== 1 ? 's' : ''} de comprobante — ${periodStr}`,
+            notification_ids: msgPartnerIds.map(pid => [0, 0, { notification_type: 'inbox', res_partner_id: pid }]),
           }]);
           results.sent.push({
             name: group.odooName, odooId: group.odooId, count: group.pickings.length,
