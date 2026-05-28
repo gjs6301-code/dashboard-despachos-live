@@ -1372,8 +1372,12 @@ const server = http.createServer(async (req, res) => {
       _step = 'quants';
       const allQuants = await odooCall('stock.quant', 'search_read',
         [[['location_id.usage', '=', 'internal'], ['quantity', '>', 0]]],
-        { fields: ['product_id', 'location_id', 'quantity'], limit: 10000 }
+        { fields: ['product_id', 'location_id', 'quantity', 'reserved_quantity'], limit: 10000 }
       );
+      // Calcular qty disponible real (qty_on_hand - reserved) en cada quant
+      allQuants.forEach(q => {
+        q._availQty = Math.max(0, q.quantity - (q.reserved_quantity || 0));
+      });
 
       // Mapa locId → complete_name (ya los tenemos de allLocs)
       const locNameMap = {};
@@ -1435,24 +1439,26 @@ const server = http.createServer(async (req, res) => {
       const almMap    = {};
       const prodLocMap = {};   // pid → [{cn, alm, qty}]
       almQuants.forEach(q => {
+        const avail = q._availQty;
+        if (avail <= 0) return; // toda la qty está reservada en un pick
         const pid = q.product_id[0];
-        almMap[pid] = (almMap[pid]||0) + q.quantity;
+        almMap[pid] = (almMap[pid]||0) + avail;
         const cn  = locNameMap[q.location_id[0]] || q.location_id[1] || '';
         const alm = almLabel(cn);
         if (!prodLocMap[pid]) prodLocMap[pid] = [];
         const ex = prodLocMap[pid].find(x => x.cn === cn);
-        if (ex) ex.qty += q.quantity;
-        else prodLocMap[pid].push({ cn, alm, qty: q.quantity });
+        if (ex) ex.qty += avail;
+        else prodLocMap[pid].push({ cn, alm, qty: avail });
       });
       const srMap  = {};
       srQuants.forEach( q => { const p = q.product_id[0]; srMap[p]  = (srMap[p] ||0) + q.quantity; });
 
-      // Stock CDP por producto (ubicaciones CDP, sin obsoleto, sin devolución)
+      // Stock CDP disponible por producto (sin reservas)
       const cdpMap = {};
       allQuants.forEach(q => {
-        if (cdpLocSet.has(q.location_id[0])) {
+        if (cdpLocSet.has(q.location_id[0]) && q._availQty > 0) {
           const pid = q.product_id[0];
-          cdpMap[pid] = (cdpMap[pid] || 0) + q.quantity;
+          cdpMap[pid] = (cdpMap[pid] || 0) + q._availQty;
         }
       });
 
