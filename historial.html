@@ -10793,53 +10793,55 @@ function renderReposicion(){
         html += '<tr class="rs-alm-row-'+almKey+'" style="'+rowStyle+'">' + _rsRowCells(u.item) + '</tr>';
 
       } else {
-        // type === 'cama' (padre real o sintético)
+        // type === 'cama' — render unificado (padre real o sintético)
+        // Cantidad del kit = mínimo de las existencias de los hijos
+        // (para armar 1 kit necesitas 1 de cada pieza → el limitante es la pieza con menos stock)
         var cama = u.cama, idx = cama.idx, parent = cama.parent;
+        var kitQty = Math.min.apply(null, cama.children.map(function(c){ return c.qtyAlm || 0; }));
+        var kitCdp = Math.min.apply(null, cama.children.map(function(c){ return c.qtyCdp || 0; }));
 
-        if (cama.synthetic) {
-          // ── Padre sintético: cabecera colapsable con código d2=0 + checkbox ──
-          var solS = solForSynth(parent.barcode, 'reposicion');
-          var chkdS = solS && (solS.status === 'activo' || solS.status === 'completado');
-          var isCompS = solS && solS.status === 'completado';
-          var bcSafe = parent.barcode.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          var chkHtmlS = '<div class="sol-chk-wrap">'
-            + '<input type="checkbox" class="sol-chk" '+(chkdS?'checked':'')
-            + (isCompS
-                ? ' disabled style="accent-color:#059669;opacity:1" title="Transferido al showroom ✓"'
-                : ' onchange="solToggleSynth(this,\''+bcSafe+'\')" title="Solicitar para showroom"')
-            + '></div>';
-          var imgH = parent.image
-            ? '<img style="width:36px;height:36px;object-fit:contain;border-radius:4px;border:1px solid var(--border-light);flex-shrink:0" src="data:image/png;base64,'+parent.image+'" alt="">'
-            : '<div style="width:36px;height:36px;background:var(--surface-3);border-radius:4px;flex-shrink:0"></div>';
-          html += '<tr class="rs-alm-row-'+almKey+' rs-set-hdr cont-btc-hdr" onclick="event.stopPropagation();rsCamaToggle(\''+idx+'\')" style="'+rowStyle+';cursor:pointer">'
-            + '<td style="text-align:center;width:1%;white-space:nowrap;padding:6px 8px" onclick="event.stopPropagation()">'+chkHtmlS+'</td>'
-            + '<td colspan="'+(COLS-1)+'" style="padding:7px 12px">'
-            + '<div style="display:flex;align-items:center;gap:8px">'
-            + imgH
-            + '<span style="font-size:12px;font-weight:800;color:var(--text-primary);font-family:monospace;flex-shrink:0">'+esc(parent.barcode)+'</span>'
-            + '<span style="font-size:11px;color:var(--text-secondary);flex-shrink:0">'+esc(parent.name)+'</span>'
-            + '<span style="font-size:10px;color:var(--text-muted);margin-left:2px">· '+cama.children.length+' piezas</span>'
-            + '<span id="rs-cama-chev-'+idx+'" style="margin-left:auto;font-size:10px;color:var(--text-muted);transition:transform .2s">▶</span>'
-            + '</div></td></tr>';
-          // Hijos (ocultos inicialmente)
-          cama.children.forEach(function(child){
-            html += '<tr class="rs-cama-row-'+idx+'" style="display:none;background:var(--surface-2)">' + _rsRowCellsCamaChild(child) + '</tr>';
-          });
+        var _bcSafe = (parent.barcode||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        var _solP   = solForSynth(parent.barcode, 'reposicion');
+        var _chkdP  = _solP && (_solP.status==='activo'||_solP.status==='completado');
+        var _compP  = _solP && _solP.status==='completado';
+        var _chkP   = '<div class="sol-chk-wrap"><input type="checkbox" class="sol-chk" '+(_chkdP?'checked':'')
+          + (_compP
+              ? ' disabled style="accent-color:#059669;opacity:1" title="Transferido al showroom ✓"'
+              : ' onchange="solToggleSynth(this,\''+_bcSafe+'\')" title="Solicitar para showroom"')
+          + '></div>';
 
-        } else {
-          // ── Padre real: fila completa con checkbox + botón expandir hijos ──
-          html += '<tr class="rs-alm-row-'+almKey+'" style="'+rowStyle+'">' + _rsRowCells(parent) + '</tr>';
-          html += '<tr class="rs-alm-row-'+almKey+'" style="'+rowStyle+'">'
-            + '<td colspan="'+COLS+'" style="padding:0 12px 4px 52px">'
-            + '<button onclick="event.stopPropagation();rsCamaToggle(\''+idx+'\')" style="display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:10px;color:var(--text-muted);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor=\'var(--brand)\';this.style.color=\'var(--brand)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--text-muted)\'">'
-            + '<span id="rs-cama-chev-'+idx+'" style="font-size:9px;transition:transform .2s">▶</span>'
-            + cama.children.length+' partes'
-            + '</button></td></tr>';
-          // Hijos (ocultos inicialmente)
-          cama.children.forEach(function(child){
-            html += '<tr class="rs-cama-row-'+idx+'" style="display:none;background:var(--surface-2)">' + _rsRowCellsCamaChild(child) + '</tr>';
-          });
-        }
+        var _imgP = parent.image
+          ? '<img style="width:36px;height:36px;object-fit:contain;border-radius:4px;border:1px solid var(--border-light)" src="data:image/png;base64,'+parent.image+'" alt="">'
+          : '<div style="width:36px;height:36px;background:var(--surface-3);border-radius:4px"></div>';
+
+        var _qtyColor = kitQty > 0 ? 'var(--green-text)' : 'var(--text-muted)';
+        var _qtyH = '<span style="font-size:13px;font-weight:700;color:'+_qtyColor+'">'+kitQty.toFixed(0)+'</span>';
+        var _cdpH = kitCdp > 0
+          ? '<span style="font-size:12px;font-weight:600;color:var(--text-secondary)">'+kitCdp.toFixed(0)+'</span>'
+          : '<span style="color:var(--text-muted)">—</span>';
+
+        html += '<tr class="rs-alm-row-'+almKey+' rs-set-hdr cont-btc-hdr" onclick="event.stopPropagation();rsCamaToggle(\''+idx+'\')" style="'+rowStyle+';cursor:pointer">'
+          + '<td style="text-align:center;width:1%;white-space:nowrap;padding:6px 8px" onclick="event.stopPropagation()">'+_chkP+'</td>'
+          + '<td style="padding:6px 8px">'+_imgP+'</td>'
+          + '<td style="font-size:11px;font-weight:700;color:var(--text-primary)">'+esc(parent.ref||parent.barcode)+'</td>'
+          + '<td style="font-size:11px;font-family:monospace;font-weight:700;color:var(--brand)">'+esc(parent.barcode)+'</td>'
+          + '<td style="font-size:12px;color:var(--text-primary)">'
+            + esc(parent.name)
+            + ' <span style="color:var(--text-muted);font-size:10px;white-space:nowrap">· '+cama.children.length+' partes'
+            + ' <span id="rs-cama-chev-'+idx+'" style="transition:transform .2s;display:inline-block">▶</span></span>'
+          + '</td>'
+          + '<td></td>'   // almacen
+          + '<td></td>'   // ubicacion
+          + '<td style="text-align:right">'+_qtyH+'</td>'
+          + '<td style="text-align:right">'+_cdpH+'</td>'
+          + '<td></td>'   // ultimaVez
+          + '<td></td>'   // diasSin
+          + '</tr>';
+
+        // Hijos (ocultos inicialmente, expandibles al click)
+        cama.children.forEach(function(child){
+          html += '<tr class="rs-cama-row-'+idx+'" style="display:none;background:var(--surface-2)">' + _rsRowCellsCamaChild(child) + '</tr>';
+        });
       }
     });
   });
