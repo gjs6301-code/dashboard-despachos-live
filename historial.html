@@ -10674,32 +10674,54 @@ function renderReposicion(){
 
     } else {
       // ── Formato 3D (ej. 113.0007.GDF) ──────────────────────────────────────
-      var d2Set = new Set(entries.map(function(e){ return e.d2; }));
-      var d3Set = new Set(entries.map(function(e){ return e.d3; }));
-      // Formato B: d2 constante y d3 varía; Formato A: d3 constante o ambas varían
-      var fmt = (d2Set.size === 1 && d3Set.size > 1) ? 'B' : 'A';
+      // Detectar Formato D: un padre con d2=0, hijos tienen d2===d3 (dígito repetido)
+      // Ej: 105.0040.JLC (padre) + 144.0040.JLC + 155.0040.JLC (hijos C4, C5)
+      var parent0entries = entries.filter(function(e){ return e.d2 === '0'; });
+      var nonZeroEntries = entries.filter(function(e){ return e.d2 !== '0'; });
+      var isFormatD = parent0entries.length === 1 &&
+                      nonZeroEntries.length > 0 &&
+                      nonZeroEntries.every(function(e){ return e.d2 === e.d3; });
 
-      var subGroups = {};
-      entries.forEach(function(e) {
-        var subKey = fmt === 'A'
-          ? (e.d1 + e.d3 + '.' + e.suffix)   // A: clave=d1+d3+suf, pieza=d2
-          : (e.d1 + e.d2 + '.' + e.suffix);   // B: clave=d1+d2+suf, pieza=d3
-        var pieceNum = parseInt(fmt === 'A' ? e.d2 : e.d3);
-        if (!subGroups[subKey]) subGroups[subKey] = { parent: null, children: [], fmt: fmt };
-        if (pieceNum === 0) subGroups[subKey].parent = e.item;
-        else subGroups[subKey].children.push({ item: e.item, part: pieceNum });
-      });
-
-      Object.keys(subGroups).forEach(function(subKey) {
-        var g = subGroups[subKey];
-        _pushGroup(g, subKey, function(rep, sk) {
-          var mr = bcPartRx.exec(rep.barcode);
-          if (!mr) return sk;
-          return g.fmt === 'A'
-            ? (mr[1] + '0' + mr[3] + '.' + mr[4])   // A: d2=0
-            : (mr[1] + mr[2] + '0' + '.' + mr[4]);   // B: d3=0
+      if (isFormatD) {
+        // ── Formato D: todos los hijos (d2=d3) pertenecen al único padre (d2=0) ──
+        var gD = { parent: parent0entries[0].item, children: [], fmt: 'D' };
+        nonZeroEntries.forEach(function(e) {
+          gD.children.push({ item: e.item, part: parseInt(e.d2) });
         });
-      });
+        _pushGroup(gD, fk, function(rep, sk) {
+          var mr = bcPartRx.exec(rep.barcode);
+          return mr ? (mr[1] + '00' + '.' + mr[4]) : sk; // sintético: d2=0,d3=0
+        });
+
+      } else {
+        // ── Formato A / B ────────────────────────────────────────────────────
+        var d2Set = new Set(entries.map(function(e){ return e.d2; }));
+        var d3Set = new Set(entries.map(function(e){ return e.d3; }));
+        // Formato B: d2 constante y d3 varía; Formato A: d3 constante o ambas varían
+        var fmt = (d2Set.size === 1 && d3Set.size > 1) ? 'B' : 'A';
+
+        var subGroups = {};
+        entries.forEach(function(e) {
+          var subKey = fmt === 'A'
+            ? (e.d1 + e.d3 + '.' + e.suffix)   // A: clave=d1+d3+suf, pieza=d2
+            : (e.d1 + e.d2 + '.' + e.suffix);   // B: clave=d1+d2+suf, pieza=d3
+          var pieceNum = parseInt(fmt === 'A' ? e.d2 : e.d3);
+          if (!subGroups[subKey]) subGroups[subKey] = { parent: null, children: [], fmt: fmt };
+          if (pieceNum === 0) subGroups[subKey].parent = e.item;
+          else subGroups[subKey].children.push({ item: e.item, part: pieceNum });
+        });
+
+        Object.keys(subGroups).forEach(function(subKey) {
+          var g = subGroups[subKey];
+          _pushGroup(g, subKey, function(rep, sk) {
+            var mr = bcPartRx.exec(rep.barcode);
+            if (!mr) return sk;
+            return g.fmt === 'A'
+              ? (mr[1] + '0' + mr[3] + '.' + mr[4])   // A: d2=0
+              : (mr[1] + mr[2] + '0' + '.' + mr[4]);   // B: d3=0
+          });
+        });
+      }
     }
   });
 
