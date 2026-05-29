@@ -10052,12 +10052,14 @@ document.addEventListener('click', function(e) {
     if (drop) drop.classList.remove('open');
   }
 });
-// Cerrar al scroll (el dropdown fijo quedaría flotando si no se cierra)
-window.addEventListener('scroll', function() {
+// Cerrar al scroll fuera del dropdown (el dropdown fijo quedaría flotando si no se cierra)
+window.addEventListener('scroll', function(e) {
   if (!_rsFamDropOpen) return;
-  _rsFamDropOpen = false;
-  var btn  = document.getElementById('rs-fam-btn');
   var drop = document.getElementById('rs-fam-drop');
+  // ignorar scroll que ocurre dentro del propio dropdown
+  if (drop && drop.contains(e.target)) return;
+  _rsFamDropOpen = false;
+  var btn = document.getElementById('rs-fam-btn');
   if (btn)  btn.classList.remove('open');
   if (drop) drop.classList.remove('open');
 }, true);
