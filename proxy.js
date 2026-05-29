@@ -2753,7 +2753,7 @@ const server = http.createServer(async (req, res) => {
     const _jpSol = requireJwt(req, res); if (!_jpSol) return;
     try {
       const d = await readBody(req);
-      if (!d.productId && !d.contId) {
+      if (!d.productId && !d.contId && !d.barcode) {
         res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'productId o contId requerido'})); return;
       }
       const list = loadSolicitudes();
@@ -2761,7 +2761,11 @@ const server = http.createServer(async (req, res) => {
       const dup = list.find(s =>
         s.status === 'activo' &&
         s.source === d.source &&
-        (d.productId ? s.productId === d.productId : s.contId === d.contId)
+        (d.productId
+          ? s.productId === d.productId
+          : d.contId
+            ? s.contId === d.contId
+            : s.barcode === d.barcode)
       );
       if (dup) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, solicitud: dup, existing: true})); return; }
       const users = loadAuthUsers();

@@ -9317,6 +9317,7 @@ function toggleDept(el){
 // ════════════════════════════════════════════════════
 var _solicitudes    = [];   // cache de solicitudes del servidor
 var _solFilter      = 'activo'; // 'activo' | 'cancelado' | 'all'
+var _solSynthOpen   = {};  // solId → bool (expansión hijos en solicitudes)
 var _solModalData   = null; // datos pendientes mientras el modal está abierto
 
 /** Contexto del contenedor actualmente analizado */
@@ -9329,24 +9330,32 @@ function solForItem(productId, source) {
   }) || null;
 }
 
-/** Busca solicitud para un padre sintético (productId=null) por barcode */
+/** Busca solicitud para un padre sintético por contId=barcode */
 function solForSynth(barcode, source) {
   return _solicitudes.find(function(s) {
     return (s.status === 'activo' || s.status === 'completado')
-        && s.source === source && s.productId === null && s.barcode === barcode;
+        && s.source === source
+        && (s.contId === barcode || (s.productId === null && s.barcode === barcode));
   }) || null;
+}
+
+/** Encuentra el item hijo representativo de un padre sintético */
+function _synthRep(barcode) {
+  var bcRx = /^(\d)(\d)(\d)\.(.+)$/;
+  // Intentar encontrar hijo en _rsItems: Format A (d2=0→padre) o Format B (d3=0→padre)
+  return _rsItems.find(function(i) {
+    var m = bcRx.exec(i.barcode || '');
+    if (!m) return false;
+    var fmtA = m[1] + '0' + m[3] + '.' + m[4]; // padre Formato A
+    var fmtB = m[1] + m[2] + '0' + '.' + m[4]; // padre Formato B
+    return fmtA === barcode || fmtB === barcode;
+  }) || {};
 }
 
 /** Toggle checkbox para padres sintéticos (sin producto en stock) */
 function solToggleSynth(chkEl, barcode) {
   var sol = solForSynth(barcode, 'reposicion');
-  // Tomar datos representativos del primer hijo que coincida
-  var bcRx = /^(\d)(\d)(\d)\.(.+)$/;
-  var rep = _rsItems.find(function(i) {
-    var m = bcRx.exec(i.barcode || '');
-    if (!m || m[2] === '0') return false;
-    return (m[1] + '0' + m[3] + '.' + m[4]) === barcode;
-  }) || {};
+  var rep = _synthRep(barcode);
   var name = rep.name || barcode;
   if (sol) {
     if (sol.status === 'completado') {
@@ -9359,7 +9368,9 @@ function solToggleSynth(chkEl, barcode) {
   } else {
     chkEl.checked = false;
     solCreateDirect({
-      productId: null, name: name,
+      productId: null,
+      contId: barcode,       // identificador único para padres sintéticos
+      name: name,
       ref: barcode, barcode: barcode,
       almacen: rep.almacen || '', ubicacion: rep.ubicacion || '',
       imageBase64: rep.image || '',
@@ -9583,6 +9594,32 @@ function _solMeta(sol, today) {
 }
 
 /** Genera HTML de una fila de tabla (desktop) */
+/** Devuelve los ítems hijos de un padre sintético usando _rsItems */
+function _solSynthChildren(contId) {
+  var bcRx = /^(\d)(\d)(\d)\.(.+)$/;
+  var mp = bcRx.exec(contId || '');
+  if (!mp) return [];
+  return _rsItems.filter(function(i) {
+    var mc = bcRx.exec(i.barcode || '');
+    if (!mc) return false;
+    // Hijo Formato A: mismo d1+d3+suffix, d2≠0
+    var fmtA = mc[1] === mp[1] && mc[3] === mp[3] && mc[4] === mp[4] && mc[2] !== '0' && mp[2] === '0';
+    // Hijo Formato B: mismo d1+d2+suffix, d3≠0
+    var fmtB = mc[1] === mp[1] && mc[2] === mp[2] && mc[4] === mp[4] && mc[3] !== '0' && mp[3] === '0';
+    return fmtA || fmtB;
+  }).sort(function(a, b){ return (a.barcode||'').localeCompare(b.barcode||''); });
+}
+
+/** Toggle expansión hijos en solicitudes */
+function solSynthToggle(solId) {
+  _solSynthOpen[solId] = !_solSynthOpen[solId];
+  var rows = document.querySelectorAll('.sol-synth-child-'+solId);
+  var open = _solSynthOpen[solId];
+  rows.forEach(function(r){ r.style.display = open ? '' : 'none'; });
+  var chev = document.getElementById('sol-synth-chev-'+solId);
+  if (chev) chev.style.transform = open ? 'rotate(90deg)' : '';
+}
+
 function _solRowHtml(sol, today) {
   var m = _solMeta(sol, today);
   var imgHtml = sol.imageBase64
@@ -9604,6 +9641,28 @@ function _solRowHtml(sol, today) {
     : sol.status === 'completado'
     ? '<span style="font-size:10px;color:#065f46;font-weight:600">'+(sol.fechaCompletado ? new Date(sol.fechaCompletado).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'}) : '—')+'</span>'
     : '<span style="font-size:10px;color:var(--text-muted)">'+(sol.fechaCancelacion ? new Date(sol.fechaCancelacion).toLocaleDateString('es-DO',{day:'2-digit',month:'short'}) : '—')+'</span>';
+  // Padres sintéticos: botón de piezas colapsable
+  var isSynth = !sol.productId && sol.contId;
+  var synthRows = '';
+  if (isSynth) {
+    var kids = _solSynthChildren(sol.contId);
+    if (kids.length) {
+      var chevIcon = '<span id="sol-synth-chev-'+sol.id+'" style="font-size:9px;transition:transform .2s;display:inline-block">▶</span>';
+      sourceIcon += '<button onclick="event.stopPropagation();solSynthToggle(\''+sol.id+'\')" style="display:inline-flex;align-items:center;gap:4px;margin-left:6px;background:none;border:1px solid var(--border);border-radius:10px;padding:1px 8px;font-size:10px;color:var(--text-muted);cursor:pointer">'+chevIcon+' '+kids.length+' piezas</button> ';
+      synthRows = kids.map(function(kid){
+        var kidImg = kid.image
+          ? '<img src="data:image/png;base64,'+kid.image+'" style="width:28px;height:28px;object-fit:contain;border-radius:3px;border:1px solid var(--border-light)">'
+          : '<div style="width:28px;height:28px;background:var(--surface-3);border-radius:3px"></div>';
+        return '<tr class="sol-synth-child-'+sol.id+' sol-row-'+sol.status+'" style="display:none;background:var(--surface-2);opacity:.85">'
+          + '<td style="padding-left:20px;opacity:.5">↳</td>'
+          + '<td style="padding:4px 8px">'+kidImg+'</td>'
+          + '<td style="font-size:11px;color:var(--text-secondary)">'+esc(kid.ref||'—')+'</td>'
+          + '<td colspan="8" style="font-size:11px;color:var(--text-secondary)">'+esc(kid.name||'—')+'</td>'
+          + '</tr>';
+      }).join('');
+    }
+  }
+
   return '<tr class="sol-row-'+sol.status+'">'
     + '<td>'+imgHtml+'</td>'
     + '<td style="font-size:12px;font-weight:600;color:var(--text-primary)">'+sourceIcon+esc(sol.name||'—')+'</td>'
@@ -9616,7 +9675,8 @@ function _solRowHtml(sol, today) {
     + '<td style="font-weight:700;color:'+(sol.status==='completado'?'#065f46':m.diasN>=7?'var(--red-text)':'var(--text-primary)')+'">'+m.diasStr+'</td>'
     + '<td>'+statusHtml+'</td>'
     + '<td class="sol-no-print">'+accionHtml+'</td>'
-    + '</tr>';
+    + '</tr>'
+    + synthRows;
 }
 
 /** Genera HTML de una tarjeta (móvil) */
