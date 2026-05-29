@@ -10674,23 +10674,26 @@ function renderReposicion(){
 
     } else {
       // ── Formato 3D (ej. 113.0007.GDF) ──────────────────────────────────────
-      // Detectar Formato D: un padre con d2=0, hijos tienen d2===d3 (dígito repetido)
-      // Ej: 105.0040.JLC (padre) + 144.0040.JLC + 155.0040.JLC (hijos C4, C5)
+      // Detectar Formato D: hijos tienen d2===d3 (dígito repetido), padre tiene d2=0
+      // Ej: 105.0040.JLC (padre, d2=0) + 144.0040.JLC + 155.0040.JLC (hijos C4, C5)
+      // Funciona aunque el padre no esté visible (se genera sintético)
       var parent0entries = entries.filter(function(e){ return e.d2 === '0'; });
       var nonZeroEntries = entries.filter(function(e){ return e.d2 !== '0'; });
-      var isFormatD = parent0entries.length === 1 &&
-                      nonZeroEntries.length > 0 &&
-                      nonZeroEntries.every(function(e){ return e.d2 === e.d3; });
+      var isFormatD = nonZeroEntries.length >= 2 &&
+                      nonZeroEntries.every(function(e){ return e.d2 === e.d3; }) &&
+                      parent0entries.length <= 1;  // 0 (sintético) o 1 (real)
 
       if (isFormatD) {
-        // ── Formato D: todos los hijos (d2=d3) pertenecen al único padre (d2=0) ──
-        var gD = { parent: parent0entries[0].item, children: [], fmt: 'D' };
+        // ── Formato D: todos los hijos (d2=d3) bajo el padre (d2=0 real o sintético) ──
+        var realParent = parent0entries.length === 1 ? parent0entries[0].item : null;
+        var gD = { parent: realParent, children: [], fmt: 'D' };
         nonZeroEntries.forEach(function(e) {
           gD.children.push({ item: e.item, part: parseInt(e.d2) });
         });
         _pushGroup(gD, fk, function(rep, sk) {
+          // Sintético: d2=0, d3=0 → ej. 100.0040.JLC
           var mr = bcPartRx.exec(rep.barcode);
-          return mr ? (mr[1] + '00' + '.' + mr[4]) : sk; // sintético: d2=0,d3=0
+          return mr ? (mr[1] + '00.' + mr[4]) : sk;
         });
 
       } else {
@@ -10727,7 +10730,7 @@ function renderReposicion(){
 
   // Unidades de renderizado: artículos sueltos + grupos
   var units = [];
-  sorted.filter(function(item){ return !inGroup.has(item.id); })
+  sorted.filter(function(item){ return !inGroup.has(item.id) && !item.isKitParent; })
         .forEach(function(item){ units.push({ type:'item', item:item }); });
   groupUnits.forEach(function(u){ units.push(u); });
 
