@@ -1492,6 +1492,37 @@ const server = http.createServer(async (req, res) => {
         { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 5000 }
       );
 
+      // PASO 4.5 — padres kit que pueden tener stock=0 (para foto correcta en grupos)
+      // Para cada barcode de 3 dígitos, calcula los barcodes padre según Format A/B/D.
+      // Para barcodes de 2 dígitos calcula padre Format 2D.
+      // Luego busca en Odoo los que no están ya en prods.
+      _step = 'parent-lookup';
+      {
+        const _pr3 = /^(\d)(\d)(\d)\.(.+)$/;
+        const _pr2 = /^(\d)(\d)\.(.+)$/;
+        const _parentBcSet = new Set();
+        prods.forEach(p => {
+          const m3 = _pr3.exec(p.barcode || '');
+          if (m3) {
+            _parentBcSet.add(m3[1] + '0'  + m3[3] + '.' + m3[4]);  // Format A: d2=0
+            _parentBcSet.add(m3[1] + m3[2] + '0'  + '.' + m3[4]);  // Format B: d3=0
+            _parentBcSet.add(m3[1] + '00.' + m3[4]);                // Format D: d2=d3=0
+          } else {
+            const m2 = _pr2.exec(p.barcode || '');
+            if (m2) _parentBcSet.add('0' + m2[2] + '.' + m2[3]);   // Format 2D: d1=0
+          }
+        });
+        const _existBcs = new Set(prods.map(p => p.barcode || '').filter(Boolean));
+        const _missingBcs = [..._parentBcSet].filter(bc => bc && !_existBcs.has(bc));
+        if (_missingBcs.length) {
+          const _kitProds = await odooCall('product.product', 'search_read',
+            [[['barcode', 'in', _missingBcs]]],
+            { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 500 }
+          );
+          _kitProds.forEach(p => { p._isKitParent = true; prods.push(p); });
+        }
+      }
+
       // PASO 4b — jerarquía de categorías para resolver familia (2do nivel bajo Muebles id=53)
       _step = 'categories';
       const MUEBLES_ID = 53;
@@ -1560,9 +1591,10 @@ const server = http.createServer(async (req, res) => {
           almacen,
           ubicacion,
           ultimaVez,
-          diasSin
+          diasSin,
+          ...(p._isKitParent ? { isKitParent: true } : {})
         };
-      }).filter(item => item.qtyAlm > 0);
+      }).filter(item => item.qtyAlm > 0 || item.isKitParent);
 
       items.sort((a, b) => {
         if (a.diasSin !== null && b.diasSin !== null) return b.diasSin - a.diasSin;
