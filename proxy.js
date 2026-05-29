@@ -2812,6 +2812,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/admin/export-data — exportar todos los archivos JSON para sync local ──
+  // Solo admins. Excluye sesiones activas y audit log (datos sensibles/grandes).
+  if (reqPath === '/api/admin/export-data' && req.method === 'GET') {
+    const _jpEx = requireJwt(req, res); if (!_jpEx) return;
+    if (_jpEx.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo admin'})); return; }
+    try {
+      const exportFiles = [
+        { key: 'wwp-solicitudes-showroom', file: WWP_SOLICITUDES_FILE },
+        { key: 'wwp-tasks',      file: WWP_TASKS_FILE },
+        { key: 'wwp-users-auth', file: WWP_AUTH_FILE },
+        { key: 'wwp-roles',      file: WWP_ROLES_FILE },
+        { key: 'wwp-role-defs',  file: WWP_ROLE_DEFS_FILE },
+        { key: 'wwp-lunch-breaks', file: WWP_LUNCH_FILE },
+        { key: 'wwp-notifications', file: WWP_NOTIF_FILE },
+        { key: 'averias',        file: AVERIAS_FILE },
+        { key: 'empaque-materiales', file: EMP_MATERIALES_FILE },
+        { key: 'empaque-reglas', file: EMP_REGLAS_FILE },
+      ];
+      const data = { exportedAt: new Date().toISOString(), files: {} };
+      exportFiles.forEach(({ key, file }) => {
+        try { data.files[key] = JSON.parse(fs.readFileSync(file, 'utf-8')); }
+        catch { data.files[key] = null; }
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="data-export.json"' });
+      res.end(JSON.stringify(data, null, 2));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // ── PATCH /api/solicitudes-showroom/:id — cancelar o editar nota ──────────
   if (reqPath.match(/^\/api\/solicitudes-showroom\/[^/]+$/) && req.method === 'PATCH') {
     const _jpSol = requireJwt(req, res); if (!_jpSol) return;
