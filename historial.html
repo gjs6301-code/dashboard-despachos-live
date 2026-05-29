@@ -1125,7 +1125,7 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .rs-fam-btn-label{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rs-fam-btn-arrow{font-size:10px;transition:transform .2s;flex-shrink:0}
 .rs-fam-btn.open .rs-fam-btn-arrow{transform:rotate(180deg)}
-.rs-fam-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);width:260px;max-height:320px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.rs-fam-dropdown{display:none;position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);width:260px;max-height:320px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .rs-fam-dropdown.open{display:block}
 .rs-fam-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:1px solid var(--border-light)}
 .rs-fam-opt:last-child{border-bottom:none}
@@ -10014,10 +10014,27 @@ function setRsFamily(f) {
   renderReposicion();
 }
 
+function _rsFamPosition() {
+  var btn  = document.getElementById('rs-fam-btn');
+  var drop = document.getElementById('rs-fam-drop');
+  if (!btn || !drop) return;
+  var rect = btn.getBoundingClientRect();
+  var dropW = Math.max(260, rect.width);
+  var leftPos = rect.left;
+  if (leftPos + dropW > window.innerWidth - 8) leftPos = window.innerWidth - dropW - 8;
+  if (leftPos < 8) leftPos = 8;
+  drop.style.top      = (rect.bottom + 4) + 'px';
+  drop.style.left     = leftPos + 'px';
+  drop.style.width    = dropW + 'px';
+  var spaceBelow = window.innerHeight - rect.bottom - 8;
+  drop.style.maxHeight = Math.min(320, Math.max(120, spaceBelow)) + 'px';
+}
+
 function _rsFamToggle() {
   _rsFamDropOpen = !_rsFamDropOpen;
   var btn  = document.getElementById('rs-fam-btn');
   var drop = document.getElementById('rs-fam-drop');
+  if (_rsFamDropOpen) _rsFamPosition();
   if (btn)  btn.classList.toggle('open', _rsFamDropOpen);
   if (drop) drop.classList.toggle('open', _rsFamDropOpen);
 }
@@ -10025,15 +10042,25 @@ function _rsFamToggle() {
 // Cerrar al click fuera
 document.addEventListener('click', function(e) {
   if (!_rsFamDropOpen) return;
-  var bar = document.getElementById('rs-familia-bar');
-  if (bar && !bar.contains(e.target)) {
+  var bar  = document.getElementById('rs-familia-bar');
+  var drop = document.getElementById('rs-fam-drop');
+  // también verificar el dropdown fijo que puede estar fuera de bar visualmente
+  if (bar && !bar.contains(e.target) && drop && !drop.contains(e.target)) {
     _rsFamDropOpen = false;
-    var btn  = document.getElementById('rs-fam-btn');
-    var drop = document.getElementById('rs-fam-drop');
+    var btn = document.getElementById('rs-fam-btn');
     if (btn)  btn.classList.remove('open');
     if (drop) drop.classList.remove('open');
   }
 });
+// Cerrar al scroll (el dropdown fijo quedaría flotando si no se cierra)
+window.addEventListener('scroll', function() {
+  if (!_rsFamDropOpen) return;
+  _rsFamDropOpen = false;
+  var btn  = document.getElementById('rs-fam-btn');
+  var drop = document.getElementById('rs-fam-drop');
+  if (btn)  btn.classList.remove('open');
+  if (drop) drop.classList.remove('open');
+}, true);
 
 function _rsRenderFamiliaBar() {
   var bar = document.getElementById('rs-familia-bar');
@@ -10058,12 +10085,24 @@ function _rsRenderFamiliaBar() {
     return '<div class="rs-fam-opt'+active+'" onclick="setRsFamily(\''+safe+'\')">'+esc(f)+'<span class="rs-fam-opt-count">'+counts[f]+'</span></div>';
   }).join('');
 
+  // El botón va dentro de bar; el dropdown va al <body> para escapar cualquier overflow
   bar.innerHTML =
     '<div id="rs-fam-btn" class="rs-fam-btn'+hasFilter+isOpen+'" onclick="event.stopPropagation();_rsFamToggle()">'
     + '<span class="rs-fam-btn-label">'+esc(label)+'</span>'
     + '<span class="rs-fam-btn-arrow">▾</span>'
-    + '</div>'
-    + '<div id="rs-fam-drop" class="rs-fam-dropdown'+isOpen+'">'+opts+'</div>';
+    + '</div>';
+
+  // Reutilizar o crear el dropdown en el <body>
+  var existDrop = document.getElementById('rs-fam-drop');
+  if (!existDrop) {
+    existDrop = document.createElement('div');
+    existDrop.id = 'rs-fam-drop';
+    document.body.appendChild(existDrop);
+  }
+  existDrop.className = 'rs-fam-dropdown' + isOpen;
+  existDrop.innerHTML = opts;
+  // si estaba abierto, reposicionar después de repintar el botón
+  if (_rsFamDropOpen) requestAnimationFrame(_rsFamPosition);
 
   bar.style.display = 'block';
 }
