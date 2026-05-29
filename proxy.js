@@ -1438,6 +1438,7 @@ const server = http.createServer(async (req, res) => {
 
       // Acumular stock por producto
       const almMap = {}, prodLocMap = {}, srMap = {}, cdpMap = {};
+      const _unknownLocs = new Set(); // ubicaciones sin etiqueta reconocida (diagnóstico)
       allQuants.forEach(q => {
         const lid = q.location_id[0];
         const avail = q._availQty;
@@ -1446,10 +1447,12 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         if (obsLocSet.has(lid) || ptnLocSet.has(lid) || recepcionLocSet.has(lid)) return;
-        const cn  = locNameMap[lid] || q.location_id[1] || '';
+        const cn  = locNameMap[lid] || (Array.isArray(q.location_id) ? q.location_id[1] : '') || '';
         const lbl = almLabel(cn);
         if (EXCLUDED_ALM_LABELS.has(lbl) || /^MONTIBELLO\s+PTN/i.test(lbl) || /MONTIBELLO.*PTN/i.test(cn)) return;
         if (avail <= 0) return;
+        // Ignorar ubicaciones sin etiqueta reconocida para evitar el grupo "—"
+        if (lbl === '—') { _unknownLocs.add(cn || `id:${lid}`); return; }
         const pid = q.product_id[0];
         almMap[pid] = (almMap[pid] || 0) + avail;
         if (!prodLocMap[pid]) prodLocMap[pid] = [];
@@ -1563,7 +1566,10 @@ const server = http.createServer(async (req, res) => {
       const _meta = {
         cdpLocs: cdpLocSet.size, cdpItems: Object.keys(cdpMap).length,
         recepLocs: recepcionLocSet.size, reservedUsed: true,
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
+        // Ubicaciones ignoradas por no tener etiqueta reconocida (A-CDP, B-STI, etc.)
+        // Si aparecen ubicaciones legítimas aquí, hay que agregarlas a almLabel()
+        unknownLocs: _unknownLocs.size ? [..._unknownLocs] : undefined
       };
       const _responseJson = JSON.stringify({ ok: true, items, total: items.length, _meta });
 
