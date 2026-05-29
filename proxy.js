@@ -131,6 +131,12 @@ function wwpId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 }
 
+// ── Caché en memoria para /api/analysis/reposicion ───────────────────────────
+// Guarda el resultado por showroomId. TTL: 10 minutos.
+// Se invalida con ?refresh=1 o automáticamente al vencer.
+const _repoCache = new Map(); // showroomId → { json, ts }
+const REPO_CACHE_TTL = 10 * 60 * 1000; // 10 minutos en ms
+
 // ── WWP Auth — sin dependencias externas ────────────────────────────────────
 const WWP_AUTH_FILE     = path.join(DATA_DIR, 'wwp-users-auth.json');
 const WWP_SESSIONS_FILE = path.join(DATA_DIR, 'wwp-sessions.json');
@@ -1359,42 +1365,48 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: false, error: 'Se requiere showroom' }));
       return;
     }
+
+    // ── Caché: devolver resultado guardado si es fresco y no se pidió refresh ──
+    const _cacheKey    = String(showroomId);
+    const _forceRefresh = parsed.query.refresh === '1';
+    const _cached = _repoCache.get(_cacheKey);
+    if (!_forceRefresh && _cached && (Date.now() - _cached.ts) < REPO_CACHE_TTL) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
+      res.end(_cached.json);
+      return;
+    }
+
     let _step = 'init';
     try {
-      // PASO 1 — complete_name del showroom (para identificar sus ubicaciones en JS)
-      _step = 'loc-read';
-      const srLocInfo = await odooCall('stock.location', 'read',
-        [[showroomId]], { fields: ['id', 'complete_name'] }
-      );
+      // ── BATCH 1: 4 llamadas independientes en paralelo ───────────────────────
+      // loc-read, loc-list, quants y categories no se bloquean entre sí
+      _step = 'batch1';
+      const [srLocInfo, allLocs, allQuants, allCategs] = await Promise.all([
+        odooCall('stock.location', 'read',
+          [[showroomId]], { fields: ['id', 'complete_name'] }),
+        odooCall('stock.location', 'search_read',
+          [[['usage', '=', 'internal']]], { fields: ['id', 'complete_name'], limit: 1000 }),
+        odooCall('stock.quant', 'search_read',
+          [[['location_id.usage', '=', 'internal'], ['quantity', '>', 0]]],
+          { fields: ['product_id', 'location_id', 'quantity', 'reserved_quantity'], limit: 10000 }),
+        odooCall('product.category', 'search_read',
+          [[]], { fields: ['id', 'name', 'parent_id'], limit: 500 })
+      ]);
+
+      // Validar showroom
       const srBase = (srLocInfo[0]?.complete_name || '').trim();
       if (!srBase) throw new Error('Showroom no encontrado (id=' + showroomId + ')');
 
-      // PASO 2 — todas las ubicaciones internas (mismo query que /api/analysis/localities)
-      _step = 'loc-list';
-      const allLocs = await odooCall('stock.location', 'search_read',
-        [[['usage', '=', 'internal']]],
-        { fields: ['id', 'complete_name'], limit: 1000 }
-      );
-      const srLocSet = new Set(allLocs.filter(l => l.complete_name.startsWith(srBase)).map(l => l.id));
-      const srLocIds = [...srLocSet];
-
-      // PASO 3 — TODO el stock interno con location_id incluido
-      //   Mismo patrón que fetchStockMap (que ya funciona en producción)
-      _step = 'quants';
-      const allQuants = await odooCall('stock.quant', 'search_read',
-        [[['location_id.usage', '=', 'internal'], ['quantity', '>', 0]]],
-        { fields: ['product_id', 'location_id', 'quantity', 'reserved_quantity'], limit: 10000 }
-      );
-      // Calcular qty disponible real (qty_on_hand - reserved) en cada quant
+      // Calcular qty disponible (qty_on_hand - reserved)
       allQuants.forEach(q => {
         q._availQty = Math.max(0, q.quantity - (q.reserved_quantity || 0));
       });
 
-      // Mapa locId → complete_name (ya los tenemos de allLocs)
+      // Mapa locId → complete_name
       const locNameMap = {};
       allLocs.forEach(l => { locNameMap[l.id] = l.complete_name; });
 
-      // Helper: etiqueta de almacén a partir del complete_name
+      // Etiqueta de almacén
       function almLabel(cn) {
         if (!cn) return '—';
         if (/A-CDP/i.test(cn))          return 'CDP';
@@ -1406,28 +1418,17 @@ const server = http.createServer(async (req, res) => {
         return parts[1] || parts[0] || '—';
       }
 
-      // Sets de ubicaciones excluidas por tipo/nombre de ruta
-      const obsLocSet = new Set(
-        allLocs.filter(l => /obsoleto/i.test(l.complete_name)).map(l => l.id)
-      );
-      const ptnLocSet = new Set(
-        allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id)
-      );
-      const recepcionLocSet = new Set(
-        allLocs.filter(l => /recepci[oó]n|embarque/i.test(l.complete_name)).map(l => l.id)
-      );
+      // Sets de ubicaciones
+      const srLocSet = new Set(allLocs.filter(l => l.complete_name.startsWith(srBase)).map(l => l.id));
+      const srLocIds = [...srLocSet];
+      const obsLocSet = new Set(allLocs.filter(l => /obsoleto/i.test(l.complete_name)).map(l => l.id));
+      const ptnLocSet = new Set(allLocs.filter(l => /D-PTN/i.test(l.complete_name)).map(l => l.id));
+      const recepcionLocSet = new Set(allLocs.filter(l => /recepci[oó]n|embarque/i.test(l.complete_name)).map(l => l.id));
+      const cdpLocSet = new Set(allLocs.filter(l => {
+        const cn = l.complete_name || '';
+        return almLabel(cn) === 'CDP' && !/obsoleto/i.test(cn) && !/devoluci[oó]n/i.test(cn);
+      }).map(l => l.id));
 
-      // Ubicaciones CDP (excluye obsoleto y devolución)
-      const cdpLocSet = new Set(
-        allLocs.filter(l => {
-          const cn = l.complete_name || '';
-          return almLabel(cn) === 'CDP'
-              && !/obsoleto/i.test(cn)
-              && !/devoluci[oó]n/i.test(cn);
-        }).map(l => l.id)
-      );
-
-      // Etiquetas de almacén excluidas explícitamente
       const EXCLUDED_ALM_LABELS = new Set([
         'DIF.PTN', 'Existencias', 'MICHELL II',
         'MONTIBELLO NACO', 'Stam House', 'Stock',
@@ -1435,149 +1436,106 @@ const server = http.createServer(async (req, res) => {
         'MONTIBELLO PTN-LOB4', 'MONTIBELLO PTN-LOB5'
       ]);
 
-      // Separar en JS: showroom vs almacén (sin obsoletos, sin PTN, sin etiquetas excluidas)
-      const almQuants = allQuants.filter(q => {
+      // Acumular stock por producto
+      const almMap = {}, prodLocMap = {}, srMap = {}, cdpMap = {};
+      allQuants.forEach(q => {
         const lid = q.location_id[0];
-        if (srLocSet.has(lid) || obsLocSet.has(lid) || ptnLocSet.has(lid) || recepcionLocSet.has(lid)) return false;
+        const avail = q._availQty;
+        if (srLocSet.has(lid)) {
+          srMap[q.product_id[0]] = (srMap[q.product_id[0]] || 0) + q.quantity;
+          return;
+        }
+        if (obsLocSet.has(lid) || ptnLocSet.has(lid) || recepcionLocSet.has(lid)) return;
         const cn  = locNameMap[lid] || q.location_id[1] || '';
         const lbl = almLabel(cn);
-        // Excluir etiquetas exactas + cualquier variante de MONTIBELLO PTN
-        // (el label puede ser "LOB1" cuando el complete_name es "MONTIBELLO PTN / LOB1 / ...")
-        return !EXCLUDED_ALM_LABELS.has(lbl)
-          && !/^MONTIBELLO\s+PTN/i.test(lbl)
-          && !/MONTIBELLO.*PTN/i.test(cn);
-      });
-      const srQuants  = allQuants.filter(q =>  srLocSet.has(q.location_id[0]));
-
-      // Acumular stock por producto + mapa de ubicaciones
-      const almMap    = {};
-      const prodLocMap = {};   // pid → [{cn, alm, qty}]
-      almQuants.forEach(q => {
-        const avail = q._availQty;
-        if (avail <= 0) return; // toda la qty está reservada en un pick
+        if (EXCLUDED_ALM_LABELS.has(lbl) || /^MONTIBELLO\s+PTN/i.test(lbl) || /MONTIBELLO.*PTN/i.test(cn)) return;
+        if (avail <= 0) return;
         const pid = q.product_id[0];
-        almMap[pid] = (almMap[pid]||0) + avail;
-        const cn  = locNameMap[q.location_id[0]] || q.location_id[1] || '';
-        const alm = almLabel(cn);
+        almMap[pid] = (almMap[pid] || 0) + avail;
         if (!prodLocMap[pid]) prodLocMap[pid] = [];
         const ex = prodLocMap[pid].find(x => x.cn === cn);
-        if (ex) ex.qty += avail;
-        else prodLocMap[pid].push({ cn, alm, qty: avail });
-      });
-      const srMap  = {};
-      srQuants.forEach( q => { const p = q.product_id[0]; srMap[p]  = (srMap[p] ||0) + q.quantity; });
-
-      // Stock CDP disponible por producto (sin reservas)
-      const cdpMap = {};
-      allQuants.forEach(q => {
-        if (cdpLocSet.has(q.location_id[0]) && q._availQty > 0) {
-          const pid = q.product_id[0];
-          cdpMap[pid] = (cdpMap[pid] || 0) + q._availQty;
-        }
+        if (ex) ex.qty += avail; else prodLocMap[pid].push({ cn, alm: lbl, qty: avail });
+        if (cdpLocSet.has(lid)) cdpMap[pid] = (cdpMap[pid] || 0) + avail;
       });
 
-      // Productos que tienen stock en almacén y cero en showroom
       const targetIds = Object.keys(almMap).map(Number).filter(pid => !(srMap[pid] > 0));
-
       if (!targetIds.length) {
-        res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify({ ok: true, items: [], total: 0 }));
-        return;
+        const empty = JSON.stringify({ ok: true, items: [], total: 0 });
+        _repoCache.set(_cacheKey, { json: empty, ts: Date.now() });
+        res.writeHead(200, {'Content-Type': 'application/json'}); res.end(empty); return;
       }
 
-      // PASO 4 — info del producto + categoría
-      _step = 'products';
-      const prods = await odooCall('product.product', 'search_read',
-        [[['id', 'in', targetIds]]],
-        { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 5000 }
-      );
+      // Categorías (ya llegaron del BATCH 1)
+      const MUEBLES_ID = 53;
+      const categMap = {};
+      allCategs.forEach(c => { categMap[c.id] = c; });
+      function getFamilia(categId) {
+        if (!categId || !categMap[categId]) return null;
+        let cur = categMap[categId], prev = null;
+        while (cur.parent_id && categMap[cur.parent_id[0]]) {
+          prev = cur; cur = categMap[cur.parent_id[0]];
+          if (cur.id === MUEBLES_ID) return prev.name;
+        }
+        if (cur.id === MUEBLES_ID) return categMap[categId]?.name || null;
+        return null;
+      }
 
-      // PASO 4.5 — padres kit que pueden tener stock=0 (para foto correcta en grupos)
-      // Para cada barcode de 3 dígitos, calcula los barcodes padre según Format A/B/D.
-      // Para barcodes de 2 dígitos calcula padre Format 2D.
-      // Luego busca en Odoo los que no están ya en prods.
+      // ── BATCH 2: products + moves-to + moves-from en paralelo ───────────────
+      _step = 'batch2';
+      const [prodsRaw, movesTo, movesFrom] = await Promise.all([
+        odooCall('product.product', 'search_read',
+          [[['id', 'in', targetIds]]],
+          { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 5000 }),
+        srLocIds.length ? odooCall('stock.move', 'search_read',
+          [[['product_id', 'in', targetIds], ['state', '=', 'done'], ['location_dest_id', 'in', srLocIds]]],
+          { fields: ['product_id', 'date'], limit: 5000, order: 'date desc' }) : Promise.resolve([]),
+        srLocIds.length ? odooCall('stock.move', 'search_read',
+          [[['product_id', 'in', targetIds], ['state', '=', 'done'], ['location_id', 'in', srLocIds]]],
+          { fields: ['product_id', 'date'], limit: 5000, order: 'date desc' }) : Promise.resolve([])
+      ]);
+      const prods = prodsRaw; // mutable — kit parents se agregan abajo
+
+      // ── BATCH 3: padres kit (depende de prods) ───────────────────────────────
       _step = 'parent-lookup';
       {
-        const _pr3 = /^(\d)(\d)(\d)\.(.+)$/;
-        const _pr2 = /^(\d)(\d)\.(.+)$/;
-        const _parentBcSet = new Set();
+        const _pr3 = /^(\d)(\d)(\d)\.(.+)$/, _pr2 = /^(\d)(\d)\.(.+)$/;
+        const _pSet = new Set();
         prods.forEach(p => {
           const m3 = _pr3.exec(p.barcode || '');
           if (m3) {
-            _parentBcSet.add(m3[1] + '0'  + m3[3] + '.' + m3[4]);  // Format A: d2=0
-            _parentBcSet.add(m3[1] + m3[2] + '0'  + '.' + m3[4]);  // Format B: d3=0
-            _parentBcSet.add(m3[1] + '00.' + m3[4]);                // Format D: d2=d3=0
+            _pSet.add(m3[1] + '0'   + m3[3] + '.' + m3[4]);
+            _pSet.add(m3[1] + m3[2] + '0'   + '.' + m3[4]);
+            _pSet.add(m3[1] + '00.' + m3[4]);
           } else {
             const m2 = _pr2.exec(p.barcode || '');
-            if (m2) _parentBcSet.add('0' + m2[2] + '.' + m2[3]);   // Format 2D: d1=0
+            if (m2) _pSet.add('0' + m2[2] + '.' + m2[3]);
           }
         });
         const _existBcs = new Set(prods.map(p => p.barcode || '').filter(Boolean));
-        const _missingBcs = [..._parentBcSet].filter(bc => bc && !_existBcs.has(bc));
-        if (_missingBcs.length) {
+        const _missing  = [..._pSet].filter(bc => bc && !_existBcs.has(bc));
+        if (_missing.length) {
           const _kitProds = await odooCall('product.product', 'search_read',
-            [[['barcode', 'in', _missingBcs]]],
+            [[['barcode', 'in', _missing]]],
             { fields: ['id', 'default_code', 'name', 'barcode', 'image_128', 'categ_id'], limit: 500 }
           );
           _kitProds.forEach(p => { p._isKitParent = true; prods.push(p); });
         }
       }
 
-      // PASO 4b — jerarquía de categorías para resolver familia (2do nivel bajo Muebles id=53)
-      _step = 'categories';
-      const MUEBLES_ID = 53;
-      const allCategs = await odooCall('product.category', 'search_read',
-        [[]], { fields: ['id', 'name', 'parent_id'], limit: 500 }
-      );
-      const categMap = {};
-      allCategs.forEach(c => { categMap[c.id] = c; });
-
-      function getFamilia(categId) {
-        if (!categId || !categMap[categId]) return null;
-        let cur = categMap[categId];
-        let prev = null;
-        while (cur.parent_id && categMap[cur.parent_id[0]]) {
-          prev = cur;
-          cur  = categMap[cur.parent_id[0]];
-          if (cur.id === MUEBLES_ID) return prev.name; // prev es el hijo directo de Muebles
-        }
-        if (cur.id === MUEBLES_ID) return categMap[categId]?.name || null;
-        return null; // no es hijo de Muebles
-      }
-
-      // PASO 5 — último movimiento hacia/desde showroom
-      //   Dos queries separados (sin | — causa unhashable en algunos Odoo)
-      _step = 'moves-to-sr';
-      const movesTo = srLocIds.length ? await odooCall('stock.move', 'search_read',
-        [[['product_id', 'in', targetIds], ['state', '=', 'done'], ['location_dest_id', 'in', srLocIds]]],
-        { fields: ['product_id', 'date'], limit: 5000, order: 'date desc' }
-      ) : [];
-
-      _step = 'moves-from-sr';
-      const movesFrom = srLocIds.length ? await odooCall('stock.move', 'search_read',
-        [[['product_id', 'in', targetIds], ['state', '=', 'done'], ['location_id', 'in', srLocIds]]],
-        { fields: ['product_id', 'date'], limit: 5000, order: 'date desc' }
-      ) : [];
-
-      // Combinar y quedarse con el más reciente por producto
+      // Último movimiento por producto
       const lastMoveMap = {};
       [...movesTo, ...movesFrom]
         .sort((a, b) => b.date.localeCompare(a.date))
         .forEach(m => { const p = m.product_id[0]; if (!lastMoveMap[p]) lastMoveMap[p] = m.date; });
 
-      // PASO 6 — construir resultado
+      // ── PASO 6: construir resultado ──────────────────────────────────────────
       const copiaRx = /\s*\((copia|copy)\)\s*/gi;
       const today = new Date(); today.setHours(0,0,0,0);
       const items = prods.map(p => {
         const raw = lastMoveMap[p.id];
         let ultimaVez = null, diasSin = null;
-        if (raw) {
-          ultimaVez = raw.slice(0,10);
-          diasSin = Math.round((today - new Date(ultimaVez)) / 86400000);
-        }
+        if (raw) { ultimaVez = raw.slice(0,10); diasSin = Math.round((today - new Date(ultimaVez)) / 86400000); }
         const locs = (prodLocMap[p.id] || []).sort((a, b) => b.qty - a.qty);
-        const almacen   = [...new Set(locs.map(l => l.alm))].join(' · ') || '—';
-        const ubicacion = locs.map(l => l.cn).join(' · ') || '—';
         copiaRx.lastIndex = 0;
         return {
           id:       p.id,
@@ -1588,10 +1546,9 @@ const server = http.createServer(async (req, res) => {
           qtyAlm:   almMap[p.id] || 0,
           qtyCdp:   cdpMap[p.id] || 0,
           familia:  getFamilia(p.categ_id ? p.categ_id[0] : null),
-          almacen,
-          ubicacion,
-          ultimaVez,
-          diasSin,
+          almacen:  [...new Set(locs.map(l => l.alm))].join(' · ') || '—',
+          ubicacion: locs.map(l => l.cn).join(' · ') || '—',
+          ultimaVez, diasSin,
           ...(p._isKitParent ? { isKitParent: true } : {})
         };
       }).filter(item => item.qtyAlm > 0 || item.isKitParent);
@@ -1604,13 +1561,17 @@ const server = http.createServer(async (req, res) => {
       });
 
       const _meta = {
-        cdpLocs:    cdpLocSet.size,
-        cdpItems:   Object.keys(cdpMap).length,
-        recepLocs:  recepcionLocSet.size,
-        reservedUsed: true
+        cdpLocs: cdpLocSet.size, cdpItems: Object.keys(cdpMap).length,
+        recepLocs: recepcionLocSet.size, reservedUsed: true,
+        cachedAt: new Date().toISOString()
       };
-      res.writeHead(200, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify({ ok: true, items, total: items.length, _meta }));
+      const _responseJson = JSON.stringify({ ok: true, items, total: items.length, _meta });
+
+      // Guardar en caché
+      _repoCache.set(_cacheKey, { json: _responseJson, ts: Date.now() });
+
+      res.writeHead(200, {'Content-Type': 'application/json', 'X-Cache': 'MISS'});
+      res.end(_responseJson);
     } catch(e) {
       res.writeHead(502, {'Content-Type': 'application/json'});
       res.end(JSON.stringify({ ok: false, error: '[' + _step + '] ' + e.message }));

@@ -3494,12 +3494,13 @@ body{font-family:var(--font);min-height:100dvh}
               <i data-lucide="x"></i>
             </button>
           </div>
-          <button class="rs-btn-refresh" id="rs-btn-analizar" onclick="runReposicionAnalysis()" title="Actualizar">
+          <button class="rs-btn-refresh" id="rs-btn-analizar" onclick="runReposicionAnalysis(true)" title="Actualizar desde Odoo (datos frescos)">
             <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
           </button>
         </div>
       </div>
       <div class="cont-subtitle">Artículos con stock en almacén sin existencia en showroom — candidatos a reposición.</div>
+      <div id="rs-cache-info" style="display:none;font-size:11px;color:var(--text-muted);margin:-4px 0 8px;padding-left:2px"></div>
 
       <!-- KPIs -->
       <div class="cont-stats" id="rs-stats" style="display:none"></div>
@@ -10351,7 +10352,7 @@ async function loadRsLocalities(){
   }
 }
 
-async function runReposicionAnalysis(){
+async function runReposicionAnalysis(forceRefresh){
   var srId = parseInt(document.getElementById('rs-showroom-select').value);
   if (!srId) { document.getElementById('rs-showroom-select').focus(); return; }
 
@@ -10364,8 +10365,11 @@ async function runReposicionAnalysis(){
   tableWrap.style.display = 'none';
   emptyMsg.style.display  = 'none';
 
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-3)">'
-    +'<div class="spinner" style="margin:0 auto 8px"></div>Consultando Odoo…</td></tr>';
+  // Mensaje de carga diferente según si usa caché o va a Odoo
+  var loadMsg = forceRefresh
+    ? '<div class="spinner" style="margin:0 auto 8px"></div>Consultando Odoo…'
+    : '<div class="spinner" style="margin:0 auto 8px"></div>Cargando…';
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-3)">'+loadMsg+'</td></tr>';
   tableWrap.style.display = 'block';
 
   var almSelEl = document.getElementById('rs-alm-filter');
@@ -10375,7 +10379,8 @@ async function runReposicionAnalysis(){
   if (btn) { btn.disabled = true; }
 
   try {
-    var r = await authFetch('/api/analysis/reposicion?showroom='+srId);
+    var url = '/api/analysis/reposicion?showroom='+srId+(forceRefresh?'&refresh=1':'');
+    var r = await authFetch(url);
     var d = await r.json();
     if (btn) { btn.disabled = false; }
 
@@ -10386,6 +10391,18 @@ async function runReposicionAnalysis(){
 
     _rsItems    = d.items || [];
     if (d._meta) console.log('[Reposición _meta]', JSON.stringify(d._meta));
+
+    // Mostrar indicador de caché (cuándo se obtuvieron los datos de Odoo)
+    var _cacheEl = document.getElementById('rs-cache-info');
+    if (_cacheEl && d._meta && d._meta.cachedAt) {
+      var _cacheDate = new Date(d._meta.cachedAt);
+      var _cacheMin  = Math.round((Date.now() - _cacheDate.getTime()) / 60000);
+      var _fromCache = r.headers.get('X-Cache') === 'HIT';
+      _cacheEl.innerHTML = _fromCache
+        ? '⚡ Datos de hace '+_cacheMin+' min &nbsp;·&nbsp; <a href="#" onclick="runReposicionAnalysis(true);return false;" style="color:var(--brand);text-decoration:none">Actualizar desde Odoo</a>'
+        : '✓ Datos actualizados ahora';
+      _cacheEl.style.display = 'block';
+    }
     _rsFamily   = '';
     _rsAlmOpen  = {};       // reset estado abierto/cerrado al cargar nuevos datos
     _rsAlmFilter = 'all';   // reset filtro almacén
