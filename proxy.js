@@ -2731,6 +2731,14 @@ const server = http.createServer(async (req, res) => {
             });
 
             // 4. Marcar completadas (solo si el movimiento es posterior a la solicitud)
+            // Odoo devuelve fechas con espacio ("2026-05-28 14:00:00") y fechaSolicitud
+            // es ISO con T ("2026-05-28T14:00:00.000Z"). Normalizar antes de comparar
+            // para evitar que espacio < T cause falsos negativos el mismo día.
+            function parseFecha(s) {
+              if (!s) return 0;
+              const norm = s.includes('T') ? s : s.replace(' ', 'T') + 'Z';
+              return Date.parse(norm) || 0;
+            }
             let changed = false;
             list.forEach(sol => {
               if (sol.status !== 'activo') return;
@@ -2738,7 +2746,7 @@ const server = http.createServer(async (req, res) => {
               if (!pid) return;
               const mv = mvByProd[pid];
               if (!mv) return;
-              if (mv.date >= sol.fechaSolicitud) {
+              if (parseFecha(mv.date) >= parseFecha(sol.fechaSolicitud)) {
                 sol.status          = 'completado';
                 sol.fechaCompletado = mv.date;
                 sol.completadoRef   = mv.ref;
