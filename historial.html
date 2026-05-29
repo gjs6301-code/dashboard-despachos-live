@@ -9341,6 +9341,7 @@ var _solModalData   = null; // datos pendientes mientras el modal está abierto
 
 /** Contexto del contenedor actualmente analizado */
 var _caCurrentContext = null; // { exp, pos, loc }
+var _caImgMap = {};           // contId → base64 image (para solicitudes sin pasar img en onclick)
 
 /** Busca solicitud activa o completada para un item de Reposición */
 function solForItem(productId, source) {
@@ -9440,7 +9441,7 @@ async function solCreateDirect(data) {
   }
 }
 
-function solToggleCA(chkEl, contId, name, ref, img64) {
+function solToggleCA(chkEl, contId, name, ref) {
   var sol = solForContItem(contId);
   if (sol) {
     if (sol.status === 'completado') {
@@ -9460,7 +9461,7 @@ function solToggleCA(chkEl, contId, name, ref, img64) {
       barcode:     contId,
       almacen:     _caCurrentContext ? _caCurrentContext.exp  : '',
       ubicacion:   _caCurrentContext ? _caCurrentContext.loc  : '',
-      imageBase64: img64 || '',
+      imageBase64: _caImgMap[contId] || '',   // imagen desde mapa global
       source:      'contenedores',
       chkEl:       chkEl
     });
@@ -9687,7 +9688,9 @@ function _solRowHtml(sol, today) {
     + '<td style="font-size:12px;font-weight:600;color:var(--text-primary)">'+sourceIcon+esc(sol.name||'—')+'</td>'
     + '<td style="font-size:10px;font-family:monospace;color:var(--text-secondary)">'+esc(sol.barcode||'—')+'</td>'
     + '<td>'+almCells+'</td>'
-    + '<td style="font-size:10px;color:var(--text-secondary)">'+esc((sol.ubicacion||'—').replace(/ · /g,' › '))+'</td>'
+    + '<td style="font-size:10px;color:var(--text-secondary)">'+(sol.source==='contenedores'
+        ? '<span style="color:var(--text-muted);font-style:italic">En contenedor</span>'
+        : esc((sol.ubicacion||'—').replace(/ · /g,' › ')))+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);font-style:'+(sol.nota?'normal':'italic')+'">'+esc(sol.nota||'—')+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">'+esc(sol.solicitadoPor ? sol.solicitadoPor.name.split(' ')[0] : '—')+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">'+m.fechaStr+'</td>'
@@ -13760,7 +13763,8 @@ function caProductRow(p, rowClass) {
   var sol         = contId ? solForContItem(contId) : null;
   var chkd        = sol && (sol.status === 'activo' || sol.status === 'completado');
   var isCompletado = sol && sol.status === 'completado';
-  var img64  = p.image || '';
+  // Guardar imagen en mapa global para usarla en solToggleCA sin pasar strings enormes en onclick
+  if (contId && p.image) _caImgMap[contId] = p.image;
   var chkHtml = contId
     ? '<input type="checkbox" class="sol-chk" '+(chkd?'checked':'')
       +' onclick="event.stopPropagation()"'
@@ -13769,7 +13773,7 @@ function caProductRow(p, rowClass) {
         : ' onchange="solToggleCA(this,\''+contId.replace(/'/g,"\\'")+'\''+
             ',\''+esc(p.name||'').replace(/'/g,"\\'")+'\''+
             ',\''+esc(p.ref||'').replace(/'/g,"\\'")+'\''+
-            ',\'\')" title="Solicitar para showroom"')
+            ')" title="Solicitar para showroom"')
       +'>'
     : '';
   return '<tr'+(rowClass?' class="'+rowClass+'"':'')+'>'
@@ -13834,13 +13838,14 @@ function caTable(items, rowClass) {
     var kitContId = kit.ref || groupKey;
     var kitSol    = kitContId ? solForContItem(kitContId) : null;
     var kitChkd   = kitSol && kitSol.status === 'activo';
+    // Guardar imagen del kit en mapa global
+    if (kitContId && kit.image) _caImgMap[kitContId] = kit.image;
     h += '<div style="display:flex;align-items:stretch;gap:0">'
       + '<div style="display:flex;align-items:center;padding:0 8px;background:var(--surface-2);border:1px solid var(--border);border-right:none;border-radius:var(--radius-sm) 0 0 var(--radius-sm)">'
       + '<input type="checkbox" class="sol-chk" '+(kitChkd?'checked':'')
       + ' onchange="solToggleCA(this,\''+kitContId.replace(/'/g,"\\'")+'\''+
         ',\''+esc(kit.name||'').replace(/'/g,"\\'")+'\''+
         ',\''+esc(kit.ref||'').replace(/'/g,"\\'")+'\''+
-        ',\'\''+ // sin imagen para evitar strings enormes
       ')" title="Solicitar SET para showroom"></div>'
       + '<div style="flex:1">';
 
