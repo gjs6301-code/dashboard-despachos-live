@@ -10334,61 +10334,89 @@ function renderReposicion(){
     return String(va).localeCompare(String(vb)) * dir;
   });
 
-  // ── 3. Agrupar por barcode (unificado: d2=0 → padre real o sintético) ──────
+  // ── 3. Agrupar por barcode (dual-formato) ────────────────────────────────
+  // Formato A: d2 varía (=pieza), d3 constante → key=d1+d3+suffix, padre=d2=0
+  // Formato B: d3 varía (=pieza), d2 constante → key=d1+d2+suffix, padre=d3=0
   _rsCamaOpen = {};
   var bcPartRx = /^(\d)(\d)(\d)\.(.+)$/;
-  var groupMap = {};
 
+  // PASO 1 — familia bruta: d1+suffix
+  var familyMap = {};
   sorted.forEach(function(item) {
     var m = bcPartRx.exec(item.barcode || '');
     if (!m) return;
-    var key = m[1] + m[3] + '.' + m[4]; // d1 + d3 + suffix
-    if (!groupMap[key]) groupMap[key] = { parent: null, children: [] };
-    if (m[2] === '0') groupMap[key].parent = item;
-    else groupMap[key].children.push({ item: item, part: parseInt(m[2]) });
+    var fk = m[1] + '.' + m[4];
+    if (!familyMap[fk]) familyMap[fk] = [];
+    familyMap[fk].push({ item: item, d1: m[1], d2: m[2], d3: m[3], suffix: m[4] });
   });
 
+  // PASO 2 — detectar formato y construir grupos
   var groupCounter = 0;
   var inGroup = new Set();
   var groupUnits = [];
 
-  Object.keys(groupMap).forEach(function(key) {
-    var g = groupMap[key];
-    if (!g.children.length) return; // padre sin hijos → artículo suelto
-    // Requiere ≥2 ítems reales (padre+1 hijo, o 2+ hijos sin padre)
-    var totalReal = (g.parent ? 1 : 0) + g.children.length;
-    if (totalReal < 2) return;
+  Object.keys(familyMap).forEach(function(fk) {
+    var entries = familyMap[fk];
+    if (entries.length < 2) return; // suelto
 
-    g.children.sort(function(a, b){ return a.part - b.part; });
-    var idx    = 'ca' + (groupCounter++);
-    var synthetic = !g.parent;
-    var parent;
+    var d2Set = new Set(entries.map(function(e){ return e.d2; }));
+    var d3Set = new Set(entries.map(function(e){ return e.d3; }));
+    // Formato B: d2 constante y d3 varía
+    var fmt = (d2Set.size === 1 && d3Set.size > 1) ? 'B' : 'A';
 
-    if (!synthetic) {
-      parent = g.parent;
-    } else {
-      // Sintetizar padre con barcode d2=0, usando imagen/nombre del primer hijo
-      var rep = g.children[0].item;
-      var mr  = bcPartRx.exec(rep.barcode);
-      var synBC = mr ? (mr[1] + '0' + mr[3] + '.' + mr[4]) : key;
-      parent = {
-        id: null, synthetic: true,
-        barcode: synBC, ref: synBC,
-        name: rep.name, image: rep.image || '',
-        almacen: rep.almacen || '—', ubicacion: '',
-        qtyAlm: 0, qtyCdp: 0,
-        ultimaVez: null, diasSin: null,
-        familia: rep.familia
-      };
-    }
+    // Sub-agrupar según formato
+    var subGroups = {};
+    entries.forEach(function(e) {
+      var subKey = fmt === 'A'
+        ? (e.d1 + e.d3 + '.' + e.suffix)   // A: clave=d1+d3+suf, pieza=d2
+        : (e.d1 + e.d2 + '.' + e.suffix);   // B: clave=d1+d2+suf, pieza=d3
+      var pieceNum = parseInt(fmt === 'A' ? e.d2 : e.d3);
+      if (!subGroups[subKey]) subGroups[subKey] = { parent: null, children: [], fmt: fmt };
+      if (pieceNum === 0) subGroups[subKey].parent = e.item;
+      else subGroups[subKey].children.push({ item: e.item, part: pieceNum });
+    });
 
-    groupUnits.push({ type:'cama', cama:{
-      idx: idx, parent: parent, synthetic: synthetic,
-      children: g.children.map(function(c){ return c.item; })
-    }});
+    Object.keys(subGroups).forEach(function(subKey) {
+      var g = subGroups[subKey];
+      if (!g.children.length) return;
+      var totalReal = (g.parent ? 1 : 0) + g.children.length;
+      if (totalReal < 2) return;
 
-    if (!synthetic) inGroup.add(g.parent.id);
-    g.children.forEach(function(c){ inGroup.add(c.item.id); });
+      g.children.sort(function(a, b){ return a.part - b.part; });
+      var idx = 'ca' + (groupCounter++);
+      var synthetic = !g.parent;
+      var parent;
+
+      if (!synthetic) {
+        parent = g.parent;
+      } else {
+        var rep = g.children[0].item;
+        var mr  = bcPartRx.exec(rep.barcode);
+        // Barcode sintético: pone 0 en la posición de la pieza
+        var synBC = mr
+          ? (g.fmt === 'A'
+              ? (mr[1] + '0' + mr[3] + '.' + mr[4])   // A: d2=0
+              : (mr[1] + mr[2] + '0' + '.' + mr[4]))   // B: d3=0
+          : subKey;
+        parent = {
+          id: null, synthetic: true,
+          barcode: synBC, ref: synBC,
+          name: rep.name, image: rep.image || '',
+          almacen: rep.almacen || '—', ubicacion: '',
+          qtyAlm: 0, qtyCdp: 0,
+          ultimaVez: null, diasSin: null,
+          familia: rep.familia
+        };
+      }
+
+      groupUnits.push({ type:'cama', cama:{
+        idx: idx, parent: parent, synthetic: synthetic,
+        children: g.children.map(function(c){ return c.item; })
+      }});
+
+      if (!synthetic) inGroup.add(g.parent.id);
+      g.children.forEach(function(c){ inGroup.add(c.item.id); });
+    });
   });
 
   // Unidades de renderizado: artículos sueltos + grupos
