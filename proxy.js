@@ -2817,6 +2817,117 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/solicitudes-showroom/movimientos ────────────────────────────
+  // Para cada solicitud activa: ¿hubo movimientos en Odoo después de crearla?
+  // ¿Dónde está el artículo ahora? Devuelve mapa solId → { hasMoved, lastMove, currentLocs }
+  if (reqPath === '/api/solicitudes-showroom/movimientos' && req.method === 'GET') {
+    const _jpMov = requireJwt(req, res); if (!_jpMov) return;
+    try {
+      const list    = loadSolicitudes();
+      const activas = list.filter(s => s.status === 'activo');
+
+      if (!activas.length) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: true, movimientos: {} })); return;
+      }
+
+      // ── 1. Resolver solId → productId de Odoo ──────────────────────────────
+      const prodIdMap = {};
+      activas.filter(s => s.productId).forEach(s => { prodIdMap[s.id] = s.productId; });
+
+      const contAct = activas.filter(s => !s.productId && s.contId);
+      if (contAct.length) {
+        const bcs    = [...new Set(contAct.map(s => s.contId))];
+        const cProds = await odooCall('product.product', 'search_read',
+          [[['barcode', 'in', bcs]]], { fields: ['id', 'barcode'], limit: 500 });
+        const byBc = {};
+        cProds.forEach(p => { byBc[p.barcode] = p.id; });
+        contAct.forEach(s => { const pid = byBc[s.contId]; if (pid) prodIdMap[s.id] = pid; });
+      }
+
+      const allPids = [...new Set(Object.values(prodIdMap))];
+      if (!allPids.length) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: true, movimientos: {} })); return;
+      }
+
+      // ── 2. Fecha límite inferior: solicitud más antigua (con 24h de margen) ─
+      function parseFechaMov(s) {
+        if (!s) return 0;
+        const norm = s.includes('T') ? s : s.replace(' ', 'T') + 'Z';
+        return Date.parse(norm) || 0;
+      }
+      const oldest = activas.reduce((mn, s) => {
+        const ts = parseFechaMov(s.fechaSolicitud);
+        return (ts && ts < mn) ? ts : mn;
+      }, Date.now());
+      const oldestStr = new Date(oldest - 24*3600*1000).toISOString().slice(0,19).replace('T',' ');
+
+      // ── 3. Consultas paralelas: moves + quants actuales ─────────────────────
+      const [moves, quants] = await Promise.all([
+        odooCall('stock.move', 'search_read', [[
+          ['product_id', 'in', allPids],
+          ['state', '=', 'done'],
+          ['date', '>=', oldestStr],
+          ['location_dest_id.usage', '=', 'internal']
+        ]], { fields: ['product_id','date','reference','location_dest_id'], limit: 3000 }),
+        odooCall('stock.quant', 'search_read', [[
+          ['product_id', 'in', allPids],
+          ['quantity', '>', 0],
+          ['location_id.usage', '=', 'internal']
+        ]], { fields: ['product_id','location_id','quantity'], limit: 3000 })
+      ]);
+
+      // Agrupar moves por producto
+      const movesByProd = {};
+      moves.forEach(m => {
+        const pid = m.product_id[0];
+        if (!movesByProd[pid]) movesByProd[pid] = [];
+        movesByProd[pid].push({
+          date:     m.date,
+          ref:      m.reference || '',
+          destName: Array.isArray(m.location_dest_id) ? m.location_dest_id[1] : ''
+        });
+      });
+
+      // Agrupar quants (ubicaciones actuales) por producto
+      const quantsByProd = {};
+      quants.forEach(q => {
+        const pid  = q.product_id[0];
+        const name = Array.isArray(q.location_id) ? q.location_id[1] : '';
+        if (!quantsByProd[pid]) quantsByProd[pid] = [];
+        if (name) quantsByProd[pid].push(name);
+      });
+
+      // ── 4. Construir resultado por solicitud ────────────────────────────────
+      const TOLERANCIA_MOV = 24 * 3600 * 1000; // 24h de margen hacia atrás
+      const resultado = {};
+      activas.forEach(sol => {
+        const pid = prodIdMap[sol.id];
+        if (!pid) return;
+        const solTs = parseFechaMov(sol.fechaSolicitud);
+        const movsDespues = (movesByProd[pid] || [])
+          .filter(m => parseFechaMov(m.date) >= (solTs - TOLERANCIA_MOV))
+          .sort((a, b) => parseFechaMov(b.date) - parseFechaMov(a.date));
+        const currentLocs = [...new Set((quantsByProd[pid] || []))];
+        resultado[sol.id] = {
+          hasMoved:     movsDespues.length > 0,
+          lastMoveDate: movsDespues[0]?.date   || null,
+          lastMoveRef:  movsDespues[0]?.ref    || null,
+          lastMoveDest: movsDespues[0]?.destName || null,
+          currentLocs
+        };
+      });
+
+      res.writeHead(200, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: true, movimientos: resultado }));
+    } catch(e) {
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
   // ── POST /api/solicitudes-showroom — crear solicitud ─────────────────────
   if (reqPath === '/api/solicitudes-showroom' && req.method === 'POST') {
     const _jpSol = requireJwt(req, res); if (!_jpSol) return;

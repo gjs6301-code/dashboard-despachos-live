@@ -1169,6 +1169,7 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .rs-badge-nunca{display:inline-block;padding:2px 7px;border-radius:10px;background:var(--surface-3);color:var(--text-muted);font-size:10px;font-weight:600}
 .rs-dias{font-weight:700;color:var(--red-text)}
 .rs-dias-warn{font-weight:700;color:var(--amber-text)}
+.sol-mov-badge{display:inline-flex;align-items:center;gap:3px;margin-top:3px;padding:1px 6px;border-radius:8px;background:var(--amber-bg);color:var(--amber-text);font-size:9px;font-weight:700}
 .rs-origen-embarque{display:inline-block;padding:1px 6px;border-radius:8px;background:var(--blue-bg);color:var(--blue-text);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:4px;vertical-align:middle}
 .rs-origen-inicial{display:inline-block;padding:1px 6px;border-radius:8px;background:var(--surface-3);color:var(--text-muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:4px;vertical-align:middle}
 .rs-origen-otro{display:inline-block;padding:1px 6px;border-radius:8px;background:var(--amber-bg);color:var(--amber-text);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:4px;vertical-align:middle}
@@ -9353,6 +9354,8 @@ function toggleDept(el){
 var _solicitudes    = [];   // cache de solicitudes del servidor
 var _solFilter      = 'activo'; // 'activo' | 'cancelado' | 'all'
 var _solSynthOpen   = {};  // solId → bool (expansión hijos en solicitudes)
+var _solMovimientos = {};  // solId → { hasMoved, lastMoveDate, lastMoveRef, lastMoveDest, currentLocs }
+var _solMovLoading  = false; // evita llamadas paralelas
 var _solUserOpen    = {};  // userName → bool (grupos por usuario, true=abierto)
 var _solModalData   = null; // datos pendientes mientras el modal está abierto
 
@@ -9493,6 +9496,8 @@ async function loadSolicitudes(showSection) {
     if (d.ok) {
       _solicitudes = d.solicitudes || [];
       if (showSection) renderSolicitudes();
+      // Si el filtro activo es "activo", cargar movimientos en paralelo
+      if (_solFilter === 'activo') loadSolMovimientos();
     }
   } catch(e) { /* silencioso */ }
 }
@@ -9605,6 +9610,22 @@ async function solCancel(solId, chkEl) {
   }
 }
 
+/** Carga movimientos post-solicitud desde Odoo para las solicitudes activas */
+async function loadSolMovimientos() {
+  if (_solMovLoading) return;
+  _solMovLoading = true;
+  try {
+    var r = await authFetch('/api/solicitudes-showroom/movimientos');
+    if (!r.ok) return;
+    var d = await r.json();
+    if (d.ok && d.movimientos) {
+      _solMovimientos = d.movimientos;
+      renderSolicitudes(); // refrescar tabla con la nueva info
+    }
+  } catch(e) { /* silencioso — no crítico */ }
+  finally { _solMovLoading = false; }
+}
+
 /** Cambia el filtro de estado en la sección Solicitudes */
 function setSolFilter(f) {
   _solFilter = f;
@@ -9613,6 +9634,8 @@ function setSolFilter(f) {
     if (btn) btn.classList.toggle('sol-tab-active', t === f);
   });
   renderSolicitudes();
+  // Al entrar al tab Activas, cargar movimientos desde Odoo
+  if (f === 'activo') loadSolMovimientos();
 }
 
 /** Helpers compartidos para renderizar una solicitud */
@@ -9708,13 +9731,30 @@ function _solRowHtml(sol, today) {
     + '<td style="font-size:10px;color:var(--text-secondary)">'+(sol.source==='contenedores'
         ? '<span style="color:var(--text-muted);font-style:italic">En contenedor</span>'
         : (function(){
-            // Intentar leer ubicación actualizada desde datos en vivo de reposición
-            var liveItem = sol.productId
-              ? (_rsItems.find(function(i){ return i.id === sol.productId; })
-              || _rsGlobalItems.find(function(i){ return i.id === sol.productId; }))
-              : null;
-            var ub = (liveItem && liveItem.ubicacion) ? liveItem.ubicacion : (sol.ubicacion || '—');
-            return esc(ub.replace(/ · /g,' › '));
+            // Ubicación: primero desde _solMovimientos (más fresco), luego _rsItems, luego snapshot
+            var mov = _solMovimientos[sol.id];
+            var ubText;
+            if (mov && mov.currentLocs && mov.currentLocs.length) {
+              ubText = mov.currentLocs.join(' › ');
+            } else {
+              var liveItem = sol.productId
+                ? (_rsItems.find(function(i){ return i.id === sol.productId; })
+                || _rsGlobalItems.find(function(i){ return i.id === sol.productId; }))
+                : null;
+              ubText = (liveItem && liveItem.ubicacion) ? liveItem.ubicacion : (sol.ubicacion || '—');
+            }
+            var html = esc(ubText.replace(/ · /g,' › '));
+            // Badge de movimiento si el artículo se movió después de la solicitud
+            if (mov && mov.hasMoved && mov.lastMoveDate) {
+              var movFecha = new Date(mov.lastMoveDate.replace(' ','T')+'Z')
+                .toLocaleDateString('es-DO',{day:'2-digit',month:'short'});
+              var movTitle = (mov.lastMoveRef ? mov.lastMoveRef + ' · ' : '') + (mov.lastMoveDest || '');
+              html += '<div class="sol-mov-badge" title="'+esc(movTitle)+'">↗ movido '+esc(movFecha)+'</div>';
+            } else if (mov && !mov.hasMoved) {
+              // Sin movimientos: indicador sutil de que los datos están frescos
+              html += '<div style="font-size:9px;color:var(--text-muted);margin-top:2px">sin movimientos</div>';
+            }
+            return html;
           })())+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);font-style:'+(sol.nota?'normal':'italic')+'">'+esc(sol.nota||'—')+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">'+esc(sol.solicitadoPor ? sol.solicitadoPor.name.split(' ')[0] : '—')+'</td>'
