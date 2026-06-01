@@ -9707,7 +9707,15 @@ function _solRowHtml(sol, today) {
     + '<td>'+almCells+'</td>'
     + '<td style="font-size:10px;color:var(--text-secondary)">'+(sol.source==='contenedores'
         ? '<span style="color:var(--text-muted);font-style:italic">En contenedor</span>'
-        : esc((sol.ubicacion||'—').replace(/ · /g,' › ')))+'</td>'
+        : (function(){
+            // Intentar leer ubicación actualizada desde datos en vivo de reposición
+            var liveItem = sol.productId
+              ? (_rsItems.find(function(i){ return i.id === sol.productId; })
+              || _rsGlobalItems.find(function(i){ return i.id === sol.productId; }))
+              : null;
+            var ub = (liveItem && liveItem.ubicacion) ? liveItem.ubicacion : (sol.ubicacion || '—');
+            return esc(ub.replace(/ · /g,' › '));
+          })())+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);font-style:'+(sol.nota?'normal':'italic')+'">'+esc(sol.nota||'—')+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">'+esc(sol.solicitadoPor ? sol.solicitadoPor.name.split(' ')[0] : '—')+'</td>'
     + '<td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">'+m.fechaStr+'</td>'
