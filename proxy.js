@@ -1563,6 +1563,50 @@ const server = http.createServer(async (req, res) => {
         return (a.name||'').localeCompare(b.name||'');
       });
 
+      // ── BATCH 4: origen de artículos "nunca en showroom" ─────────────────────
+      // Solo para los productos con ultimaVez=null. Busca su PRIMER movimiento
+      // hacia cualquier ubicación interna para identificar si vino de una OC/embarque
+      // o fue una carga inicial del sistema.
+      _step = 'batch4-origen';
+      {
+        const nuncaIds = items.filter(i => i.ultimaVez === null && !i.isKitParent).map(i => i.id);
+        if (nuncaIds.length) {
+          // Pedimos los primeros moves para cada producto (orden: fecha ASC = más antiguo primero)
+          const firstMoves = await odooCall('stock.move', 'search_read', [[
+            ['product_id', 'in', nuncaIds],
+            ['state', '=', 'done'],
+            ['location_dest_id.usage', '=', 'internal']
+          ]], { fields: ['product_id', 'date', 'location_id', 'origin'], order: 'date asc', limit: nuncaIds.length * 3 });
+
+          // Quedarnos con el move más antiguo por producto
+          const firstMoveByProd = {};
+          firstMoves.forEach(m => {
+            const pid = m.product_id[0];
+            if (!firstMoveByProd[pid]) firstMoveByProd[pid] = m;
+          });
+
+          // Clasificar origen según la ubicación de procedencia
+          items.forEach(item => {
+            if (item.ultimaVez !== null || item.isKitParent) return;
+            const m = firstMoveByProd[item.id];
+            if (!m) { item.origen = 'desconocido'; return; }
+
+            const locId   = Array.isArray(m.location_id) ? m.location_id[0] : 0;
+            const locName = (Array.isArray(m.location_id) ? m.location_id[1] : '') || locNameMap[locId] || '';
+            item.primeraEntrada = m.date ? m.date.slice(0, 10) : null;
+            item.origenRef      = m.origin || '';
+
+            if (recepcionLocSet.has(locId) || /recepci[oó]n|embarque/i.test(locName)) {
+              item.origen = 'embarque';   // vino por un picking de recepción / OC
+            } else if (/inventari|ajuste|opening|virtual/i.test(locName)) {
+              item.origen = 'inicial';    // carga inicial o ajuste de inventario
+            } else {
+              item.origen = 'otro';       // transferencia interna, proveedor directo, etc.
+            }
+          });
+        }
+      }
+
       const _meta = {
         cdpLocs: cdpLocSet.size, cdpItems: Object.keys(cdpMap).length,
         recepLocs: recepcionLocSet.size, reservedUsed: true,
