@@ -4458,6 +4458,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Mapa de almacén (concepto) ────────────────────────────────────────────
+  if (reqPath === '/almacen-mapa' || reqPath === '/almacen-mapa.html') {
+    const f = path.join(__dirname, 'almacen-mapa.html');
+    if (fs.existsSync(f)) {
+      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+      res.end(fs.readFileSync(f));
+    } else {
+      res.writeHead(404); res.end('Not found');
+    }
+    return;
+  }
+
   // ── Redirect raíz → historial ─────────────────────────────────────────────
   if (reqPath === '/') {
     res.writeHead(302, { 'Location': '/historial.html' });
