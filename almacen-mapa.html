@@ -433,8 +433,12 @@ function drawLabels(ctx){
 function render3D(){
   const canvas=document.getElementById('canvas-3d');
   if(!canvas||canvas.style.display==='none') return;
-  const W=canvas.width,H=canvas.height;
+  // Use CSS dimensions (not canvas pixel dimensions which may be scaled for HiDPI)
+  const W=parseInt(canvas.style.width)||canvas.clientWidth||canvas.width;
+  const H=parseInt(canvas.style.height)||canvas.clientHeight||canvas.height;
   const ctx=canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);
   ctx.clearRect(0,0,W,H);
 
   // Background gradient
@@ -504,7 +508,8 @@ function render3D(){
     ctx.fillText(`PFRONTAL · ${pfCnt} art.`,mid.x,mid.y-6);
   }
 
-  ctx.restore();
+  ctx.restore(); // end translate+scale
+  ctx.restore(); // end DPR transform
 
   // Update zoom display
   document.getElementById('zoom-val').textContent=Math.round(V.zoom*100)+'%';
@@ -527,12 +532,14 @@ function ptInPoly(px,py,pts){
   return inside;
 }
 
-function hitTest(canvasX,canvasY){
+function hitTest(cssX,cssY){
   const canvas=document.getElementById('canvas-3d');
-  const W=canvas.width,H=canvas.height;
+  // Use CSS dimensions, not canvas pixel dimensions (HiDPI safe)
+  const W=parseInt(canvas.style.width)||canvas.clientWidth;
+  const H=parseInt(canvas.style.height)||canvas.clientHeight;
   // Convert to world coords
-  const wx=(canvasX-W/2-V.panX)/V.zoom;
-  const wy=(canvasY-H*0.60-V.panY)/V.zoom;
+  const wx=(cssX-W/2-V.panX)/V.zoom;
+  const wy=(cssY-H*0.60-V.panY)/V.zoom;
 
   const filterRow=document.getElementById('filter-row').value;
   const candidates=[];
@@ -653,7 +660,13 @@ function resetView(){ V.azimuth=Math.PI*0.28; V.elevation=0.55; V.panX=0; V.panY
 function resizeCanvas(){
   const canvas=document.getElementById('canvas-3d');
   const cont=document.getElementById('map-container');
-  canvas.width=cont.clientWidth; canvas.height=cont.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = cont.clientWidth  * dpr;
+  canvas.height = cont.clientHeight * dpr;
+  canvas.style.width  = cont.clientWidth  + 'px';
+  canvas.style.height = cont.clientHeight + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale context for HiDPI
   schedRender();
 }
 
