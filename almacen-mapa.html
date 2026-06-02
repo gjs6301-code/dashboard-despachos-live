@@ -17,7 +17,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .topbar .sub{font-size:10px;opacity:.65;margin-top:1px}
 .mock-badge{background:#fff3cd;border:1px solid #ffc107;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;color:#856404}
 #btn-refresh{background:rgba(255,255,255,.15);border:none;color:#fff;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600}
-.layout{flex:1;display:grid;grid-template-columns:190px 1fr 260px;overflow:hidden;min-height:0}
+.layout{flex:1;display:grid;grid-template-columns:190px 1fr 290px;overflow:hidden;min-height:0}
 
 /* LEFT */
 .side-left{background:var(--surface);border-right:1px solid var(--border);padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
@@ -99,7 +99,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <div class="topbar">
   <div>
     <h1>🏭 Mapa Almacén CDP · Vista 3D &nbsp;<span class="mock-badge">⚠ DIMS MOCK</span></h1>
-    <div class="sub">AlTriTempi · Arrastra para rotar · Rueda para zoom · Clic en bin para detalle</div>
+    <div class="sub">AlTriTempi · Arrastra = rotar · ↕ = inclinar · Shift+drag = mover · Rueda = zoom · Clic = detalle</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span id="last-update" style="font-size:10px;opacity:.6"></span>
@@ -194,10 +194,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
           <button class="rot-btn" onclick="rotateBy(Math.PI/8)" title="Girar derecha">▶</button>
         </div>
         <div class="rot-btns" style="margin-top:2px">
+          <button class="rot-btn" onclick="tiltBy(-0.12)" title="Inclinar arriba">▲</button>
+          <button class="rot-btn" onclick="tiltBy(0.12)" title="Inclinar abajo">▼</button>
+        </div>
+        <div class="rot-btns" style="margin-top:2px">
           <button class="rot-btn" onclick="zoom3D(1.2)" title="Acercar">+</button>
           <button class="rot-btn" onclick="zoom3D(0.83)" title="Alejar">−</button>
         </div>
-        <div id="rot-hint">Arrastra para rotar</div>
+        <div id="rot-hint">↔ Rotar · ↕ Inclinar</div>
         <div id="zoom-label">Zoom: <span id="zoom-val">100%</span></div>
       </div>
     </div>
@@ -247,6 +251,7 @@ let _dimA={w:120,d:90,h:65}, _dimB={w:120,d:90,h:55};
 // ═══════════════════════════════════════════════════════════════════
 const V = {
   azimuth: Math.PI * 0.28,   // horizontal rotation (radians)
+  elevation: 0.55,            // vertical tilt (0=side, PI/2=top-down)
   panX: 0, panY: 0,
   zoom: 1.0,
   dragging: false,
@@ -258,21 +263,24 @@ const V = {
 const TW=50, TH=25, LH=30;   // tile width, tile height (2:1), level height px
 
 // ═══════════════════════════════════════════════════════════════════
-// PROJECTION — rotatable isometric
+// PROJECTION — full orbit (azimuth + elevation)
 // ═══════════════════════════════════════════════════════════════════
 function proj(c, ry, lv) {
-  // c = column index (0-6), ry = physical row Y, lv = level (0-based)
   const ca=Math.cos(V.azimuth), sa=Math.sin(V.azimuth);
+  const elev = V.elevation;  // 0=side view, ~0.55=default iso, PI/2=top
+  const xFlat = (c*ca - ry*sa) * TW;
+  const yFlat = (c*sa + ry*ca) * TH;
+  const zUp   = lv * LH;
   return {
-    x: (c*ca - ry*sa) * TW,
-    y: -(c*sa + ry*ca) * TH - lv*LH
+    x: xFlat,
+    y: -yFlat * Math.sin(elev) - zUp * Math.cos(elev)
   };
 }
 
 // Painter sort key: depth from viewer in current rotation
 function sortDepth(c, ry, lv) {
   const ca=Math.cos(V.azimuth), sa=Math.sin(V.azimuth);
-  return c*sa + ry*ca - lv*0.001; // lv tie-break (lower = painted first)
+  return c*sa + ry*ca - lv*0.001;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -568,10 +576,13 @@ function initEvents(){
   const canvas=document.getElementById('canvas-3d');
   const tip=document.getElementById('iso-tooltip');
 
-  // Drag to rotate
+  // Drag: left = rotate+tilt, middle or shift+left = pan
+  let _dragMode = 'rotate'; // 'rotate' or 'pan'
   canvas.addEventListener('mousedown',e=>{
     V.dragging=true;V.lastMX=e.clientX;V.lastMY=e.clientY;
+    _dragMode = (e.button===1 || e.shiftKey) ? 'pan' : 'rotate';
     canvas.classList.add('rotating');
+    if(e.button===1) e.preventDefault();
   });
   window.addEventListener('mouseup',e=>{
     V.dragging=false;canvas.classList.remove('rotating');
@@ -579,8 +590,12 @@ function initEvents(){
   window.addEventListener('mousemove',e=>{
     if(V.dragging){
       const dx=e.clientX-V.lastMX, dy=e.clientY-V.lastMY;
-      V.azimuth += dx*0.009;       // horizontal drag → rotate
-      V.panY    += dy*0.5;         // vertical drag → pan up/down
+      if(_dragMode==='pan'){
+        V.panX += dx; V.panY += dy;
+      } else {
+        V.azimuth   += dx*0.008;
+        V.elevation  = Math.max(0.08, Math.min(1.45, V.elevation + dy*0.006));
+      }
       V.lastMX=e.clientX;V.lastMY=e.clientY;
       schedRender();
     } else if(document.getElementById('canvas-3d').style.display!=='none'){
@@ -631,8 +646,9 @@ function initEvents(){
 // VIEW CONTROLS
 // ═══════════════════════════════════════════════════════════════════
 function rotateBy(delta){ V.azimuth+=delta; schedRender(); }
+function tiltBy(delta){ V.elevation=Math.max(0.08,Math.min(1.45,V.elevation+delta)); schedRender(); }
 function zoom3D(f){ V.zoom=Math.max(0.25,Math.min(5,V.zoom*f)); schedRender(); }
-function resetView(){ V.azimuth=Math.PI*0.28; V.panX=0; V.panY=0; V.zoom=1.0; schedRender(); }
+function resetView(){ V.azimuth=Math.PI*0.28; V.elevation=0.55; V.panX=0; V.panY=0; V.zoom=1.0; schedRender(); }
 
 function resizeCanvas(){
   const canvas=document.getElementById('canvas-3d');
@@ -795,20 +811,29 @@ function showDetail({code,path,tot,pct,ok,vU,bV,items}){
   const fc=tot===0?'#4caf50':(!ok?'#1976d2':(pct<50?'#f9a825':(pct<80?'#ef6c00':'#c62828')));
   const fp=tot===0?0:(!ok?25:pct);
   let ih='';
-  items.slice(0,20).forEach(it=>{
+  items.slice(0,25).forEach(it=>{
     const p=_prodMap[it.prodId];if(!p)return;
     const hd=!!p.dims;
-    ih+=`<div class="item-card">
-      <div style="display:flex;justify-content:space-between;gap:3px">
-        <span class="ref">${p.ref}</span><span class="${hd?'bdims':'bnodim'}">${hd?'✓':'sin dims'}</span>
+    const imgSrc = p.image ? 'data:image/png;base64,'+p.image : '';
+    const imgHtml = imgSrc
+      ? `<img src="${imgSrc}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;border:1px solid var(--border);background:var(--surface-2);flex-shrink:0">`
+      : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border-radius:4px;border:1px solid var(--border);flex-shrink:0;color:var(--text-3);font-size:8px">Sin foto</div>`;
+    ih+=`<div class="item-card" style="display:flex;gap:8px;align-items:flex-start">
+      ${imgHtml}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;gap:3px;align-items:flex-start">
+          <span class="ref">${p.ref}</span>
+          <span style="font-size:11px;font-weight:800;color:var(--accent);white-space:nowrap;flex-shrink:0">×${it.qty}</span>
+        </div>
+        <div class="name">${p.name.length>45?p.name.slice(0,43)+'…':p.name}</div>
+        ${p.barcode?`<div style="font-size:9px;color:var(--text-2);font-family:monospace;margin-top:2px">🏷 ${p.barcode}</div>`:''}
+        ${hd?`<div class="dims">📐 ${p.dims.w}×${p.dims.d}×${p.dims.h} cm</div>`:''}
+        ${it.slot&&it.slot!==code?`<div style="font-size:9px;color:var(--text-3)">📍 ${it.slot}</div>`:''}
       </div>
-      <div class="name">${p.name.length>50?p.name.slice(0,48)+'…':p.name}</div>
-      ${hd?`<div class="dims">📐 ${p.dims.w}×${p.dims.d}×${p.dims.h} cm</div>`:''}
-      <div style="font-size:9px;color:var(--text-3);margin-top:1px">Qty: ${it.qty}${it.slot&&it.slot!==code?' · '+it.slot:''}</div>
     </div>`;
   });
-  if(!items.length) ih=`<div style="text-align:center;color:var(--text-3);padding:12px;font-size:11px">✅ Bin vacío</div>`;
-  else if(items.length>20) ih+=`<div style="text-align:center;font-size:10px;color:var(--text-3);padding:5px">+${items.length-20} más…</div>`;
+  if(!items.length) ih=`<div style="text-align:center;color:var(--text-3);padding:16px;font-size:12px">✅ Bin vacío — sin artículos</div>`;
+  else if(items.length>25) ih+=`<div style="text-align:center;font-size:10px;color:var(--text-3);padding:6px;border-top:1px solid var(--border);margin-top:4px">+${items.length-25} artículos más…</div>`;
   document.getElementById('bin-detail').style.display='block';
   document.getElementById('bin-detail').innerHTML=`
     <div class="bin-code">${code}</div>
@@ -852,7 +877,7 @@ async function initMap(){
     const ids=[...new Set(_quants.map(q=>q.product_id[0]))];
     setLoading('Cargando productos…',ids.length+' referencias');
     const prods=await odoo('product.product','search_read',[[['id','in',ids]]],
-      {fields:['id','default_code','name','description_purchase'],limit:3000});
+      {fields:['id','default_code','name','barcode','description_purchase','image_128'],limit:3000});
     let wd=0,nd=0,ne=0;
     prods.forEach(p=>{
       const desc=(p.description_purchase||'').trim();
@@ -862,7 +887,7 @@ async function initMap(){
           if(w>0&&d>0){dims={w,d,h:h>0?h:d};wd++;} else nd++;
         } else nd++;
       } else ne++;
-      _prodMap[p.id]={ref:p.default_code||'—',name:p.name||'—',desc,dims};
+      _prodMap[p.id]={ref:p.default_code||'—',name:p.name||'—',barcode:p.barcode||'',image:p.image_128||'',desc,dims};
     });
     document.getElementById('cov-yes').textContent=wd;
     document.getElementById('cov-no').textContent=nd;
