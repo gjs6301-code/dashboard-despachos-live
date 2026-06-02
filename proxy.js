@@ -100,17 +100,42 @@ function saveWwpRoles(obj) { saveJson(WWP_ROLES_FILE, obj); }
 
 // ── Role Definitions — permisos viven en el rol, no en el usuario ─────────
 const WWP_ROLE_DEFS_FILE = path.join(DATA_DIR, 'wwp-role-defs.json');
+// sectionPerms mínimos por defecto para cada rol built-in.
+// NOTA: 'wwp.validar_tarea' NO se incluye para manager — solo admin puede validar.
 const BUILTIN_ROLE_DEFS = [
   { id:'admin',     name:'Admin',     isBuiltin:true, sectionPerms:null },
-  { id:'manager',   name:'Encargado', isBuiltin:true, sectionPerms:{} },
+  { id:'manager',   name:'Encargado', isBuiltin:true, sectionPerms:{
+      'wwp.crear_tarea':    true,
+      'wwp.editar_tarea':   true,
+      'wwp.eliminar_tarea': true,
+      'wwp.usuarios':       true,
+      'wwp.dashboard':      true,
+    }
+  },
   { id:'assistant', name:'Auxiliar',  isBuiltin:true, sectionPerms:{} },
 ];
 function loadRoleDefs() {
   let defs;
   try { defs = fs.existsSync(WWP_ROLE_DEFS_FILE) ? JSON.parse(fs.readFileSync(WWP_ROLE_DEFS_FILE,'utf-8')) : null; }
   catch { defs = null; }
-  if (!defs) defs = BUILTIN_ROLE_DEFS.map(r=>({...r}));
-  else { BUILTIN_ROLE_DEFS.forEach(br=>{ if(!defs.find(r=>r.id===br.id)) defs.unshift({...br}); }); }
+  if (!defs) {
+    defs = BUILTIN_ROLE_DEFS.map(r=>({...r, sectionPerms: r.sectionPerms ? {...r.sectionPerms} : r.sectionPerms}));
+  } else {
+    // Asegurar que los roles built-in existen
+    BUILTIN_ROLE_DEFS.forEach(br => { if (!defs.find(r=>r.id===br.id)) defs.unshift({...br}); });
+    // Migración: si el manager tiene sectionPerms vacíos ({}) aplicar los defaults built-in
+    let changed = false;
+    defs.forEach(def => {
+      const builtin = BUILTIN_ROLE_DEFS.find(b=>b.id===def.id);
+      if (!builtin || !builtin.sectionPerms) return;
+      const sp = def.sectionPerms || {};
+      if (Object.keys(sp).length === 0) {
+        def.sectionPerms = {...builtin.sectionPerms};
+        changed = true;
+      }
+    });
+    if (changed) saveRoleDefs(defs); // persiste la migración
+  }
   return defs;
 }
 function saveRoleDefs(defs) { fs.writeFileSync(WWP_ROLE_DEFS_FILE, JSON.stringify(defs,null,2)); }
@@ -332,7 +357,7 @@ const ROLE_PERMISSIONS = {
   create_task:  ['admin','manager'],
   edit_task:    ['admin','manager'],
   delete_task:  ['admin','manager'],
-  validate_task:['admin','manager'],
+  validate_task:['admin'],          // Solo admin puede validar tareas
   assign_task:  ['admin','manager'],
   update_status:['admin','manager','assistant'],
   evidence:     ['admin','manager','assistant'],

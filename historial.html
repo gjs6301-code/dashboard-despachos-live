@@ -636,7 +636,7 @@ main{flex:1;padding:18px 20px;overflow-x:hidden;min-width:0}
 .veh-field input,.veh-field select,.veh-field textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--surface);color:var(--text-primary);transition:border-color .15s;box-sizing:border-box}
 .veh-field input:focus,.veh-field select:focus,.veh-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(27,59,111,.08)}
 .veh-field textarea{resize:vertical;min-height:70px}
-.veh-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-light)}
+.veh-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border-light);position:sticky;bottom:0;background:var(--surface);z-index:10;padding-bottom:12px}
 /* Check table */
 .veh-section-title{font-size:11px;font-weight:800;color:var(--text-secondary);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid var(--border-light)}
 .veh-section-title:first-child{margin-top:0}
@@ -4802,13 +4802,13 @@ function mediaUrl(u) {
 // ═══════════════════════════════════════════════════════════════════════
 
 // Mapa de sectionPerms → clave interna can()
+// validate_task ya NO está en el mapa — solo admin puede validar (hardcoded en can())
 const _PERM_SP_MAP = {
-  'create_task':   'wwp.crear_tarea',
-  'edit_task':     'wwp.editar_tarea',
-  'delete_task':   'wwp.eliminar_tarea',
-  'validate_task': 'wwp.validar_tarea',
-  'dashboard':     'wwp.dashboard',
-  'users_tab':     'wwp.usuarios',
+  'create_task':  'wwp.crear_tarea',
+  'edit_task':    'wwp.editar_tarea',
+  'delete_task':  'wwp.eliminar_tarea',
+  'dashboard':    'wwp.dashboard',
+  'users_tab':    'wwp.usuarios',
 };
 // Permisos que siempre son por rol (sin granularidad por usuario)
 const PERMISSIONS = {
@@ -4822,6 +4822,8 @@ const PERMISSIONS = {
 function can(perm) {
   if (!_user) return false;
   if (_user.role === 'admin') return true;  // admin siempre puede todo
+  // Validar tarea: solo admin (no se puede otorgar a otros roles)
+  if (perm === 'validate_task') return false;
   // Permisos mapeados a sectionPerms
   if (_PERM_SP_MAP[perm]) return !!(_user.sectionPerms||{})[_PERM_SP_MAP[perm]];
   // Fallback a permisos por rol
