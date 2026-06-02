@@ -3029,6 +3029,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── DELETE /api/solicitudes-showroom/bulk — eliminar solicitudes por IDs (admin) ──
+  if (reqPath === '/api/solicitudes-showroom/bulk' && req.method === 'DELETE') {
+    const _jpDel = requireJwt(req, res); if (!_jpDel) return;
+    if (_jpDel.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo admin'})); return; }
+    try {
+      const { ids } = await readBody(req);
+      if (!Array.isArray(ids) || !ids.length) throw new Error('ids requerido (array)');
+      const list = loadSolicitudes();
+      const idSet = new Set(ids);
+      const before = list.length;
+      const kept = list.filter(s => !idSet.has(s.id));
+      const removed = before - kept.length;
+      saveSolicitudes(kept);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, removed, remaining: kept.length}));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // ── PATCH /api/solicitudes-showroom/:id — cancelar o editar nota ──────────
   if (reqPath.match(/^\/api\/solicitudes-showroom\/[^/]+$/) && req.method === 'PATCH') {
     const _jpSol = requireJwt(req, res); if (!_jpSol) return;
