@@ -15,130 +15,105 @@
   --c-high:#ffcdd2;--c-high-b:#c62828;
   --c-nodata:#e3f2fd;--c-nodata-b:#1976d2;
   --c-pfrontal:#f3e5f5;--c-pfrontal-b:#7b1fa2;
-  --shadow:0 2px 12px rgba(0,0,0,.08);
   --radius:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;overflow:hidden}
 
 /* ── TOP BAR ── */
-.topbar{background:var(--accent);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.topbar h1{font-size:16px;font-weight:700;letter-spacing:.3px}
-.topbar .sub{font-size:11px;opacity:.7;margin-top:1px}
+.topbar{background:var(--accent);color:#fff;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar .sub{font-size:10px;opacity:.7;margin-top:1px}
 #last-update{font-size:10px;opacity:.6}
-#btn-refresh{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:background .15s}
+#btn-refresh{background:rgba(255,255,255,.15);border:none;color:#fff;padding:4px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600}
 #btn-refresh:hover{background:rgba(255,255,255,.28)}
+.mock-badge{display:inline-flex;align-items:center;gap:3px;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;color:#856404}
 
-/* ── MAIN LAYOUT ── */
-.main{display:grid;grid-template-columns:220px 1fr 280px;gap:0;height:calc(100vh - 44px)}
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:200px 1fr 270px;height:calc(100vh - 42px)}
 
-/* ── LEFT PANEL — Dimensiones ── */
-.side-left{background:var(--surface);border-right:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-.panel-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.dim-group{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
-.dim-group h4{font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)}
-.dim-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.dim-row label{font-size:10px;color:var(--text-2);width:60px;flex-shrink:0}
-.dim-row input{flex:1;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;font-family:monospace;text-align:right}
-.dim-row input:focus{outline:none;border-color:var(--accent)}
-.dim-unit{font-size:10px;color:var(--text-3);width:20px}
-#btn-apply-dims{width:100%;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px;cursor:pointer;font-size:12px;font-weight:600;margin-top:6px;transition:opacity .15s}
-#btn-apply-dims:hover{opacity:.85}
+/* ── LEFT PANEL ── */
+.side-left{background:var(--surface);border-right:1px solid var(--border);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.panel-title{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.dim-group{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:9px}
+.dim-group h4{font-size:11px;font-weight:700;margin-bottom:7px;color:var(--accent)}
+.dim-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.dim-row label{font-size:10px;color:var(--text-2);width:56px;flex-shrink:0}
+.dim-row input{flex:1;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:11px;font-family:monospace;text-align:right}
+.dim-unit{font-size:9px;color:var(--text-3);width:18px}
+#btn-apply-dims{width:100%;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px;cursor:pointer;font-size:11px;font-weight:600;margin-top:5px}
+.legend{display:flex;flex-direction:column;gap:4px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10px}
+.leg-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0;border-width:1px;border-style:solid}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat-box{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center}
+.stat-box .num{font-size:18px;font-weight:700;color:var(--accent)}
+.stat-box .lbl{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
 
-.legend{display:flex;flex-direction:column;gap:5px}
-.leg-item{display:flex;align-items:center;gap:7px;font-size:11px}
-.leg-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0;border-width:1px;border-style:solid}
-
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.stat-box{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center}
-.stat-box .num{font-size:20px;font-weight:700;color:var(--accent)}
-.stat-box .lbl{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
-
-/* ── CENTER — Mapa ── */
-.map-center{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-.map-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* ── CENTER MAP ── */
+.map-center{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.map-toolbar{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
 .view-toggle{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
-.view-btn{padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;border:none;color:var(--text-2);transition:all .12s}
+.view-btn{padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;border:none;color:var(--text-2);transition:all .12s}
 .view-btn.active{background:var(--accent);color:#fff}
-.filter-sel{border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;background:var(--surface)}
-.map-note{font-size:10px;color:var(--text-3);margin-left:auto}
+.filter-sel{border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;background:var(--surface)}
+.map-hint{font-size:10px;color:var(--text-3);margin-left:auto}
+#map-container{flex:1;position:relative;overflow:hidden}
+#canvas-3d{display:block;width:100%;height:100%;cursor:grab}
+#canvas-3d:active{cursor:grabbing}
+#canvas-2d-wrap{width:100%;height:100%;overflow:auto;padding:12px}
+.warehouse-svg .rack-cell{cursor:pointer;transition:filter .1s}
+.warehouse-svg .rack-cell:hover{filter:brightness(.88)}
+.warehouse-svg .rack-cell.selected{stroke-width:2.5px!important;filter:drop-shadow(0 0 5px rgba(27,59,111,.55))}
 
-#map-container{flex:1;min-height:400px}
+/* ── 3D TOOLTIP ── */
+#iso-tooltip{position:absolute;background:rgba(15,25,50,.92);color:#fff;font-size:11px;padding:7px 10px;border-radius:7px;pointer-events:none;display:none;line-height:1.5;max-width:200px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+#iso-tooltip .tip-code{font-size:13px;font-weight:800;margin-bottom:3px}
+#iso-tooltip .tip-util{font-size:10px;opacity:.85}
 
-/* ── FLOOR PLAN SVG ── */
-.warehouse-svg{font-family:'Inter',system-ui,sans-serif}
-.rack-cell{cursor:pointer;transition:filter .1s}
-.rack-cell:hover{filter:brightness(.88)}
-.rack-cell.selected{stroke-width:2.5px!important;filter:drop-shadow(0 0 4px rgba(27,59,111,.5))}
-.aisle-label{font-size:9px;fill:#888;font-weight:600}
-.rack-label{font-size:7px;fill:#333;font-weight:700;pointer-events:none}
-.level-text{font-size:6px;fill:#555;pointer-events:none}
+/* ── 3D CONTROLS HINT ── */
+.ctrl-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(15,25,50,.7);color:#fff;font-size:10px;padding:4px 12px;border-radius:20px;pointer-events:none;display:flex;gap:10px;white-space:nowrap}
+.ctrl-hint span{opacity:.75}
 
-/* ── RACK ELEVATION VIEW ── */
-#rack-elevation{display:none;flex-direction:column;gap:2px}
-.elev-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.elev-title{font-size:14px;font-weight:700}
-.elev-subtitle{font-size:11px;color:var(--text-2)}
-.elev-grid{display:flex;gap:3px;align-items:flex-end}
-.elev-col{display:flex;flex-direction:column-reverse;gap:2px}
-.elev-col-label{font-size:9px;color:var(--text-3);text-align:center;margin-top:4px}
-.elev-slot{width:100px;border-radius:4px;border:1px solid transparent;cursor:pointer;transition:filter .1s;position:relative;overflow:hidden}
-.elev-slot:hover{filter:brightness(.88)}
-.elev-slot-inner{padding:4px 5px}
-.elev-slot-label{font-size:9px;font-weight:700;color:#333}
-.elev-slot-items{font-size:8px;color:#555;margin-top:1px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.elev-slot-bar{height:3px;border-radius:1px;margin-top:3px;background:#4caf50}
-.elev-level-label{font-size:9px;color:var(--text-3);writing-mode:horizontal-tb;margin-right:4px;align-self:center;width:24px;text-align:right;flex-shrink:0}
-
-/* ── RIGHT PANEL — Detalle bin ── */
-.side-right{background:var(--surface);border-left:1px solid var(--border);padding:14px;overflow-y:auto}
-#detail-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text-3);font-size:12px;text-align:center;gap:8px}
-#detail-placeholder svg{opacity:.3}
+/* ── RIGHT PANEL ── */
+.side-right{background:var(--surface);border-left:1px solid var(--border);padding:12px;overflow-y:auto}
+#detail-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;color:var(--text-3);font-size:11px;text-align:center;gap:6px}
 #bin-detail{display:none}
-.bin-detail-header{margin-bottom:12px}
-.bin-code{font-size:22px;font-weight:800;color:var(--accent)}
-.bin-path{font-size:10px;color:var(--text-3);margin-top:2px}
-.bin-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
-.bin-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center}
-.bin-kpi .num{font-size:18px;font-weight:700;color:var(--accent)}
+.bin-code{font-size:20px;font-weight:800;color:var(--accent)}
+.bin-path{font-size:10px;color:var(--text-3);margin-top:1px;margin-bottom:10px}
+.bin-kpis{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.bin-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center}
+.bin-kpi .num{font-size:16px;font-weight:700;color:var(--accent)}
 .bin-kpi .lbl{font-size:9px;color:var(--text-3);text-transform:uppercase}
-.utilization-bar{background:var(--border);border-radius:4px;height:8px;margin:8px 0}
-.utilization-fill{height:8px;border-radius:4px;transition:width .4s}
-.item-list{display:flex;flex-direction:column;gap:5px;margin-top:8px}
-.item-card{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 9px}
+.util-bar{background:var(--border);border-radius:3px;height:6px;margin:6px 0}
+.util-fill{height:6px;border-radius:3px;transition:width .4s}
+.item-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.item-card{background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:6px 8px}
 .item-card .ref{font-size:10px;font-weight:700;color:var(--accent);font-family:monospace}
-.item-card .name{font-size:11px;color:var(--text);margin-top:1px;line-height:1.3}
-.item-card .dims{font-size:10px;color:var(--text-2);margin-top:3px;font-family:monospace}
-.item-card .qty{font-size:10px;color:var(--text-3);margin-top:2px}
+.item-card .name{font-size:10px;color:var(--text);margin-top:1px;line-height:1.3}
+.item-card .dims{font-size:9px;color:var(--text-2);margin-top:2px;font-family:monospace}
 .badge-nodim{font-size:8px;background:#e3f2fd;color:#1976d2;border-radius:3px;padding:1px 4px;font-weight:700}
 .badge-dims{font-size:8px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 4px;font-weight:700}
 
 /* ── LOADING ── */
-#loading-overlay{position:fixed;inset:0;background:rgba(240,241,236,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+#loading-overlay{position:fixed;inset:0;background:rgba(240,241,236,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:10px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loading-msg{font-size:13px;color:var(--text-2);font-weight:600}
-#loading-sub{font-size:11px;color:var(--text-3)}
-
-/* ── MOCK BADGE ── */
-.mock-badge{display:inline-flex;align-items:center;gap:4px;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;color:#856404}
-
-@media(max-width:1100px){.main{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 
 <div id="loading-overlay">
   <div class="spinner"></div>
-  <div id="loading-msg">Conectando con Odoo…</div>
-  <div id="loading-sub">Cargando ubicaciones y stock de CDP</div>
+  <div id="loading-msg" style="font-size:13px;font-weight:600;color:var(--text-2)">Conectando con Odoo…</div>
+  <div id="loading-sub" style="font-size:11px;color:var(--text-3)">Cargando ubicaciones y stock de CDP</div>
 </div>
 
 <!-- TOP BAR -->
 <div class="topbar">
   <div>
     <h1>🏭 Mapa de Almacén · CDP</h1>
-    <div class="sub">AlTriTempi — Análisis de utilización de espacio · <span class="mock-badge">⚠ DIMENSIONES MOCK</span></div>
+    <div class="sub">AlTriTempi · Análisis de utilización de espacio &nbsp;<span class="mock-badge">⚠ DIMENSIONES MOCK</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <span id="last-update"></span>
@@ -146,80 +121,76 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
 </div>
 
-<!-- MAIN 3-COLUMN LAYOUT -->
-<div class="main">
+<!-- MAIN LAYOUT -->
+<div class="layout">
 
-  <!-- LEFT: Controles y dimensiones -->
+  <!-- LEFT: controles -->
   <div class="side-left">
-
     <div>
-      <div class="panel-title">Dimensiones de Bins <span class="mock-badge" style="font-size:9px">MOCK — editar</span></div>
-
-      <div class="dim-group" style="margin-bottom:8px">
-        <h4>Tipo A — Estándar (Filas A,B,E–I)</h4>
+      <div class="panel-title">Dimensiones de Bins <span class="mock-badge">MOCK</span></div>
+      <div class="dim-group" style="margin-bottom:6px">
+        <h4>Tipo A · Estándar (A,B,E–I)</h4>
         <div class="dim-row"><label>Ancho</label><input id="dA-w" type="number" value="120"><span class="dim-unit">cm</span></div>
         <div class="dim-row"><label>Profund.</label><input id="dA-d" type="number" value="90"><span class="dim-unit">cm</span></div>
         <div class="dim-row"><label>H/nivel</label><input id="dA-h" type="number" value="65"><span class="dim-unit">cm</span></div>
-        <div style="font-size:10px;color:var(--text-3);margin-top:2px">Vol/slot: <b id="volA">—</b></div>
+        <div style="font-size:9px;color:var(--text-3);margin-top:1px">Vol/slot: <b id="volA">—</b></div>
       </div>
-
       <div class="dim-group">
-        <h4>Tipo B — Alto (Filas C,D · 7 niveles)</h4>
+        <h4>Tipo B · Alto (C,D · 7 niveles)</h4>
         <div class="dim-row"><label>Ancho</label><input id="dB-w" type="number" value="120"><span class="dim-unit">cm</span></div>
         <div class="dim-row"><label>Profund.</label><input id="dB-d" type="number" value="90"><span class="dim-unit">cm</span></div>
         <div class="dim-row"><label>H/nivel</label><input id="dB-h" type="number" value="55"><span class="dim-unit">cm</span></div>
-        <div style="font-size:10px;color:var(--text-3);margin-top:2px">Vol/slot: <b id="volB">—</b></div>
+        <div style="font-size:9px;color:var(--text-3);margin-top:1px">Vol/slot: <b id="volB">—</b></div>
       </div>
-
-      <button id="btn-apply-dims" onclick="applyDims()">✓ Aplicar dimensiones y recalcular</button>
+      <button id="btn-apply-dims" onclick="applyDims()">✓ Aplicar y recalcular</button>
     </div>
 
     <div>
       <div class="panel-title">Estadísticas</div>
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-box"><div class="num" id="st-total">—</div><div class="lbl">Bins total</div></div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="num" id="st-total">—</div><div class="lbl">Bins</div></div>
         <div class="stat-box"><div class="num" id="st-occupied">—</div><div class="lbl">Ocupados</div></div>
         <div class="stat-box"><div class="num" id="st-empty">—</div><div class="lbl">Vacíos</div></div>
-        <div class="stat-box"><div class="num" id="st-pct">—</div><div class="lbl">% Ocupación</div></div>
+        <div class="stat-box"><div class="num" id="st-pct">—</div><div class="lbl">Ocupación</div></div>
       </div>
     </div>
 
     <div>
       <div class="panel-title">Leyenda</div>
       <div class="legend">
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-empty);border-color:var(--c-empty-b)"></div> Vacío</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-low);border-color:var(--c-low-b)"></div> Ocupación &lt; 50%</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-mid);border-color:var(--c-mid-b)"></div> Ocupación 50–80%</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-high);border-color:var(--c-high-b)"></div> Ocupación &gt; 80%</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-nodata);border-color:var(--c-nodata-b)"></div> Artículos sin medidas</div>
-        <div class="leg-item"><div class="leg-dot" style="background:var(--c-pfrontal);border-color:var(--c-pfrontal-b)"></div> Ubicación especial</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#c8e6c9;border-color:#4caf50"></div>Vacío</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#fff9c4;border-color:#f9a825"></div>&lt; 50% lleno</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffe0b2;border-color:#ef6c00"></div>50–80% lleno</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffcdd2;border-color:#c62828"></div>&gt; 80% lleno</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#bbdefb;border-color:#1976d2"></div>Sin medidas</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#e1bee7;border-color:#7b1fa2"></div>Esp. PFRONTAL</div>
       </div>
     </div>
 
     <div>
-      <div class="panel-title">Cobertura de medidas</div>
-      <div style="font-size:11px;color:var(--text-2);line-height:1.6">
+      <div class="panel-title">Cobertura medidas</div>
+      <div style="font-size:10px;color:var(--text-2);line-height:1.7">
         <div>✅ Con medidas: <b id="cov-yes">—</b></div>
         <div>⚠️ Sin medidas: <b id="cov-no">—</b></div>
         <div>❌ Sin descripción: <b id="cov-none">—</b></div>
       </div>
     </div>
-
   </div>
 
-  <!-- CENTER: Mapa -->
+  <!-- CENTER: mapa -->
   <div class="map-center">
     <div class="map-toolbar">
       <div class="view-toggle">
-        <button class="view-btn active" id="btn-view-plant" onclick="setView('plant')">🗺 Vista Planta</button>
-        <button class="view-btn" id="btn-view-rack" onclick="setView('rack')">📐 Vista Rack</button>
+        <button class="view-btn" id="btn-view-plant" onclick="setView('plant')">🗺 Planta</button>
+        <button class="view-btn" id="btn-view-rack"  onclick="setView('rack')">📐 Rack</button>
+        <button class="view-btn active" id="btn-view-3d" onclick="setView('3d')">🧊 Vista 3D</button>
       </div>
-      <select class="filter-sel" id="filter-row" onchange="renderMap()">
+      <select class="filter-sel" id="filter-row" onchange="onFilterChange()">
         <option value="">Todas las filas</option>
       </select>
-      <select class="filter-sel" id="filter-level" onchange="renderMap()">
+      <select class="filter-sel" id="filter-level" onchange="onFilterChange()">
         <option value="">Todos los niveles</option>
-        <option value="1">Nivel 1</option>
+        <option value="1">Nivel 1 (suelo)</option>
         <option value="2">Nivel 2</option>
         <option value="3">Nivel 3</option>
         <option value="4">Nivel 4</option>
@@ -227,19 +198,26 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <option value="6">Nivel 6</option>
         <option value="7">Nivel 7</option>
       </select>
-      <span class="map-note" id="selected-rack-label">Haz clic en un rack para ver el detalle</span>
+      <span class="map-hint" id="map-hint">Arrastra · Rueda = zoom · Clic = detalle</span>
     </div>
 
     <div id="map-container">
-      <!-- SVG o Elevation view se insertan aquí -->
+      <canvas id="canvas-3d"></canvas>
+      <div id="canvas-2d-wrap" style="display:none"></div>
+      <div id="iso-tooltip"><div class="tip-code" id="tip-code"></div><div class="tip-util" id="tip-util"></div></div>
+      <div class="ctrl-hint" id="ctrl-hint">
+        <span>🖱 Arrastra para girar</span>
+        <span>⚲ Rueda para zoom</span>
+        <span>👆 Clic para detalle</span>
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT: Detalle del bin -->
+  <!-- RIGHT: detalle bin -->
   <div class="side-right">
     <div id="detail-placeholder">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      <div>Selecciona un rack en el mapa<br>para ver su contenido</div>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".4"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Haz clic en un bin<br>para ver su contenido
     </div>
     <div id="bin-detail"></div>
   </div>
@@ -248,501 +226,627 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// DATA LAYER
+// CONSTANTS & STATE
 // ═══════════════════════════════════════════════════════════════════════════
-let _locs = [], _quants = [], _prods = {};
-let _binMap = {};   // binCode → { locId, name, completeName, items:[{prodId,qty}] }
-let _prodMap = {};  // prodId → { ref, name, desc, dims:{w,h,d} }
-let _selectedBin = null;
-let _currentView = 'plant';
-
-const ROWS   = ['A','B','C','D','E','F','G','H','I'];
-const COLS   = ['A','B','C','D','E','F','G'];
-const TALL_ROWS = new Set(['C','D']); // 7 niveles
+const ROWS = ['A','B','C','D','E','F','G','H','I'];
+const COLS = ['A','B','C','D','E','F','G'];
+const TALL_ROWS = new Set(['C','D']);
 const BIN_PAT = /^([A-I])([A-G])([1-7])$/;
+const DIM_RX  = /(\d+(?:[.,]\d+)?)\s*[xX×\*]\s*(\d+(?:[.,]\d+)?)(?:\s*[xX×\*]\s*[HhDdCc]?\.?\s*(\d+(?:[.,]\d+)?))?/;
 
-// Regex para extraer dimensiones del description_purchase
-// Captura W x D x H (con o sin H., DIAM, etc.)
-const DIM_RX = /(\d+(?:[.,]\d+)?)\s*[xX×\*]\s*(\d+(?:[.,]\d+)?)(?:\s*[xX×\*]\s*[HhDdCc]?\.?\s*(\d+(?:[.,]\d+)?))?/;
+let _locs=[], _quants=[], _prodMap={}, _binMap={};
+let _selectedBin=null, _currentView='3d';
+let _dimA={w:120,d:90,h:65}, _dimB={w:120,d:90,h:55};
 
-async function odoo(model, method, args, kwargs={}) {
-  const r = await fetch('/api/odoo', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({model, method, args, kwargs})
-  });
+// 3D state
+const _3d = {
+  panX:0, panY:0, zoom:1,
+  rotX: 0.42,   // tilt (fixed, nice isometric angle)
+  rotY: -0.62,  // rotation around Y
+  dragging:false, lastMX:0, lastMY:0,
+  animReq:null
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ODOO & DATA
+// ═══════════════════════════════════════════════════════════════════════════
+async function odoo(model,method,args,kwargs={}) {
+  const r = await fetch('/api/odoo',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model,method,args,kwargs})});
   const d = await r.json();
-  if (!d.ok) throw new Error(d.error);
+  if(!d.ok) throw new Error(d.error);
   return d.result;
 }
-
-function setLoading(msg, sub) {
-  const el = document.getElementById('loading-overlay');
-  if (msg === false) { el.style.display='none'; return; }
+function setLoading(msg,sub){
+  const el=document.getElementById('loading-overlay');
+  if(msg===false){el.style.display='none';return;}
   el.style.display='flex';
-  document.getElementById('loading-msg').textContent = msg;
-  document.getElementById('loading-sub').textContent = sub || '';
+  document.getElementById('loading-msg').textContent=msg;
+  document.getElementById('loading-sub').textContent=sub||'';
 }
-
-async function initMap() {
-  setLoading('Cargando ubicaciones CDP…','Consultando Odoo');
-  try {
-    // 1. Ubicaciones CDP (sin devolución)
-    setLoading('Cargando ubicaciones CDP…','stock.location');
+async function initMap(){
+  setLoading('Cargando ubicaciones CDP…','stock.location');
+  try{
     _locs = await odoo('stock.location','search_read',
       [[['complete_name','ilike','A-CDP'],['usage','=','internal'],
         ['complete_name','not ilike','devoluci'],['active','=',true]]],
       {fields:['id','name','complete_name'],limit:500});
-
-    // 2. Quants con stock
     setLoading('Cargando stock…','stock.quant');
     _quants = await odoo('stock.quant','search_read',
       [[['location_id.complete_name','ilike','A-CDP'],
-        ['location_id.complete_name','not ilike','devoluci'],
-        ['quantity','>',0]]],
+        ['location_id.complete_name','not ilike','devoluci'],['quantity','>',0]]],
       {fields:['product_id','location_id','quantity'],limit:5000});
-
-    // 3. Productos con descripción de compra
-    const prodIds = [...new Set(_quants.map(q=>q.product_id[0]))];
-    setLoading('Cargando productos…', prodIds.length + ' referencias');
+    const prodIds=[...new Set(_quants.map(q=>q.product_id[0]))];
+    setLoading('Cargando productos…', prodIds.length+' referencias');
     const prods = await odoo('product.product','search_read',
       [[['id','in',prodIds]]],
       {fields:['id','default_code','name','description_purchase'],limit:3000});
-
-    // Parsear dimensiones
-    _prodMap = {};
-    let withDims=0, noDims=0, noDesc=0;
-    prods.forEach(p => {
-      const desc = (p.description_purchase||'').trim();
-      let dims = null;
-      if (desc) {
-        const m = DIM_RX.exec(desc);
-        if (m) {
-          const w = parseFloat(m[1].replace(',','.'));
-          const d = parseFloat(m[2].replace(',','.'));
-          const h = m[3] ? parseFloat(m[3].replace(',','.')) : null;
-          if (w > 0 && d > 0) { dims={w,d,h:h||d}; withDims++; }
-          else noDims++;
-        } else noDims++;
-      } else noDesc++;
-      _prodMap[p.id] = {ref:p.default_code||'—', name:p.name||'—', desc, dims};
+    let wD=0,nD=0,nE=0;
+    prods.forEach(p=>{
+      const desc=(p.description_purchase||'').trim();
+      let dims=null;
+      if(desc){ const m=DIM_RX.exec(desc);
+        if(m){ const w=parseFloat(m[1].replace(',','.')),d2=parseFloat(m[2].replace(',','.')),h=m[3]?parseFloat(m[3].replace(',','.')):null;
+          if(w>0&&d2>0){dims={w,d:d2,h:h||d2};wD++;} else nD++;
+        } else nD++;
+      } else nE++;
+      _prodMap[p.id]={ref:p.default_code||'—',name:p.name||'—',desc,dims};
     });
-
-    // Actualizar cobertura
-    document.getElementById('cov-yes').textContent = withDims;
-    document.getElementById('cov-no').textContent  = noDims;
-    document.getElementById('cov-none').textContent = noDesc;
-
-    // 4. Construir binMap
-    buildBinMap();
-    updateStats();
-    populateFilters();
-    applyDims();  // calcula volúmenes y renderiza
-    document.getElementById('last-update').textContent = 'Actualizado: '+new Date().toLocaleTimeString('es-DO');
+    document.getElementById('cov-yes').textContent=wD;
+    document.getElementById('cov-no').textContent=nD;
+    document.getElementById('cov-none').textContent=nE;
+    buildBinMap(); updateStats(); populateFilters(); applyDims();
+    document.getElementById('last-update').textContent='Actualizado: '+new Date().toLocaleTimeString('es-DO');
     setLoading(false);
-  } catch(e) {
-    setLoading(false);
-    alert('Error cargando datos: '+e.message);
+    if(_currentView==='3d') scheduleRender3D();
+  }catch(e){ setLoading(false); alert('Error: '+e.message); }
+}
+
+function buildBinMap(){
+  _binMap={};
+  _locs.forEach(l=>{ _binMap[l.name]={locId:l.id,name:l.name,completeName:l.complete_name,items:[]}; });
+  _quants.forEach(q=>{
+    const seg = q.location_id[1].split('/').pop();
+    if(_binMap[seg]) _binMap[seg].items.push({prodId:q.product_id[0],prodName:q.product_id[1],qty:q.quantity});
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DIMENSIONS & UTILIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+function applyDims(){
+  _dimA={w:+document.getElementById('dA-w').value||120,d:+document.getElementById('dA-d').value||90,h:+document.getElementById('dA-h').value||65};
+  _dimB={w:+document.getElementById('dB-w').value||120,d:+document.getElementById('dB-d').value||90,h:+document.getElementById('dB-h').value||55};
+  document.getElementById('volA').textContent=(_dimA.w*_dimA.d*_dimA.h/1e6).toFixed(3)+' m³';
+  document.getElementById('volB').textContent=(_dimB.w*_dimB.d*_dimB.h/1e6).toFixed(3)+' m³';
+  renderMap();
+}
+function getBinDim(code){ const m=BIN_PAT.exec(code); return(m&&TALL_ROWS.has(m[1]))?_dimB:_dimA; }
+function calcBinUtil(code){
+  const bin=_binMap[code]; if(!bin||!bin.items.length) return{pct:0,hasData:true,itemCount:0,volUsed:0,vol:getBinDim(code).w*getBinDim(code).d*getBinDim(code).h};
+  const binVol=getBinDim(code).w*getBinDim(code).d*getBinDim(code).h;
+  let volUsed=0,hasDims=false,noDims=0;
+  bin.items.forEach(it=>{ const p=_prodMap[it.prodId];
+    if(p&&p.dims){volUsed+=p.dims.w*p.dims.d*p.dims.h*it.qty;hasDims=true;} else noDims++;});
+  if(!hasDims) return{pct:-1,hasData:false,itemCount:bin.items.length,vol:binVol,volUsed:0,noDims};
+  return{pct:Math.min(100,volUsed/binVol*100),hasData:true,itemCount:bin.items.length,vol:binVol,volUsed,noDims};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ISOMETRIC 3D COLORS (RGB arrays for canvas)
+// ═══════════════════════════════════════════════════════════════════════════
+const C3D={
+  empty:   [200,232,202],
+  low:     [255,250,180],
+  mid:     [255,213,140],
+  high:    [255,160,160],
+  nodata:  [160,205,255],
+  special: [216,180,240],
+  floor:   [232,233,228],
+  floorLine:[180,182,176],
+  shadow:  [0,0,0]
+};
+function rgb(c,f=1,a=1){
+  if(a<1) return`rgba(${~~(c[0]*f)},${~~(c[1]*f)},${~~(c[2]*f)},${a})`;
+  return`rgb(${~~(c[0]*f)},${~~(c[1]*f)},${~~(c[2]*f)})`;
+}
+function getC3D(code){
+  if(!code||code==='PFRONTAL') return C3D.special;
+  const u=calcBinUtil(code);
+  if(u.itemCount===0) return C3D.empty;
+  if(!u.hasData)      return C3D.nodata;
+  if(u.pct<50)        return C3D.low;
+  if(u.pct<80)        return C3D.mid;
+  return C3D.high;
+}
+function getUtilLabel(code){
+  if(!code) return'';
+  const u=calcBinUtil(code);
+  if(u.itemCount===0) return'Vacío';
+  if(!u.hasData)      return u.itemCount+' art. (sin medidas)';
+  return Math.round(u.pct)+'% · '+u.itemCount+' art.';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3D ISOMETRIC RENDERER
+// ═══════════════════════════════════════════════════════════════════════════
+const TW=54, TH=27, LH=33;  // tile width, tile height (2:1), level height
+
+// Convert grid (col, row, level) to screen (2D isometric)
+function iso(c,r,l){ return{ x:(c-r)*TW/2, y:-(c+r)*TH/2 - l*LH }; }
+
+// Draw a filled polygon
+function poly(ctx,pts,fill,stroke,sw=0.5){
+  ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw;ctx.stroke();}
+}
+
+// Draw a single bin box (1×1×1 isometric box at grid c,r,l)
+function drawBox(ctx, c, r, l, baseC, isSel, filterLevel){
+  const opacity = filterLevel && l+1 !== parseInt(filterLevel) ? 0.22 : 1.0;
+  const fTop   = isSel ? rgb(baseC, 1.1)    : rgb(baseC, 1.0);
+  const fRight = isSel ? rgb(baseC, 0.82)   : rgb(baseC, 0.72);
+  const fLeft  = isSel ? rgb(baseC, 0.68)   : rgb(baseC, 0.58);
+  const stroke = isSel ? 'rgba(27,59,111,0.9)' : `rgba(60,60,60,${opacity*0.25})`;
+  const sw     = isSel ? 1.8 : 0.5;
+
+  if(opacity < 1){ ctx.save(); ctx.globalAlpha=opacity; }
+
+  const v=(dc,dr,dl)=>iso(c+dc,r+dr,l+dl);
+
+  // Right face (c+1 direction, viewer sees this as right wall)
+  poly(ctx,[v(1,0,0),v(1,0,1),v(1,1,1),v(1,1,0)], fRight, stroke, sw);
+  // Left face (r+1 direction, viewer sees this as left/front wall)
+  poly(ctx,[v(0,1,0),v(1,1,0),v(1,1,1),v(0,1,1)], fLeft,  stroke, sw);
+  // Top face
+  poly(ctx,[v(0,0,1),v(1,0,1),v(1,1,1),v(0,1,1)], fTop,   stroke, sw);
+
+  if(opacity < 1) ctx.restore();
+
+  // Label on top for selected
+  if(isSel){
+    const tp=iso(c+0.5, r+0.5, l+1);
+    ctx.save();
+    ctx.font='bold 7px Inter,sans-serif';
+    ctx.fillStyle='rgba(15,30,70,0.9)';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(ROWS[r]+COLS[c]+(l+1), tp.x, tp.y-3);
+    ctx.restore();
   }
 }
 
-function buildBinMap() {
-  _binMap = {};
-  // Inicializar todos los bins desde _locs
-  _locs.forEach(l => {
-    const name = l.name;
-    _binMap[name] = { locId:l.id, name, completeName:l.complete_name, items:[] };
+// Draw floor tile
+function drawFloor(ctx, c, r){
+  const p=[iso(c,r,0),iso(c+1,r,0),iso(c+1,r+1,0),iso(c,r+1,0)];
+  poly(ctx,p, rgb(C3D.floor), rgb(C3D.floorLine), 0.6);
+}
+
+// Axis labels
+function drawLabels(ctx){
+  ctx.font='bold 9px Inter,sans-serif';
+  ctx.fillStyle='rgba(70,70,80,0.75)';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  // Column labels (A-G) along the front (r=0) edge
+  COLS.forEach((col,ci)=>{
+    const p=iso(ci+0.5, -0.3, 0);
+    ctx.fillText(col, p.x, p.y);
   });
-  // Llenar con quants
-  _quants.forEach(q => {
-    const locName = q.location_id[1].split('/').pop(); // último segmento
-    if (_binMap[locName]) {
-      _binMap[locName].items.push({ prodId:q.product_id[0], prodName:q.product_id[1], qty:q.quantity });
+  // Row labels (A-I) along the left (c=0) edge
+  ROWS.forEach((row,ri)=>{
+    const p=iso(-0.55, ri+0.5, 0);
+    ctx.fillText(row, p.x, p.y);
+  });
+}
+
+// Main 3D render
+function render3D(){
+  const canvas=document.getElementById('canvas-3d');
+  if(!canvas||canvas.style.display==='none') return;
+  const W=canvas.width, H=canvas.height;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.fillStyle='#e8e9e4';
+  ctx.fillRect(0,0,W,H);
+
+  // Grid shadow at bottom
+  const grad=ctx.createLinearGradient(0,H*0.6,0,H);
+  grad.addColorStop(0,'rgba(0,0,0,0)');
+  grad.addColorStop(1,'rgba(0,0,0,0.05)');
+  ctx.fillStyle=grad; ctx.fillRect(0,H*0.6,W,H*0.4);
+
+  const filterRow  = document.getElementById('filter-row').value;
+  const filterLvl  = document.getElementById('filter-level').value;
+
+  ctx.save();
+  ctx.translate(W/2 + _3d.panX, H*0.62 + _3d.panY);
+  ctx.scale(_3d.zoom, _3d.zoom);
+
+  // Draw floor
+  for(let ri=0;ri<ROWS.length;ri++)
+    for(let ci=0;ci<COLS.length;ci++)
+      drawFloor(ctx,ci,ri);
+
+  // Axis labels below floor
+  drawLabels(ctx);
+
+  // Build sorted box list: back to front, bottom to top
+  const boxes=[];
+  for(let ri=0;ri<ROWS.length;ri++){
+    if(filterRow && ROWS[ri]!==filterRow) continue;
+    for(let ci=0;ci<COLS.length;ci++){
+      const row=ROWS[ri], col=COLS[ci];
+      const maxLv=TALL_ROWS.has(row)?7:5;
+      for(let lv=0;lv<maxLv;lv++){
+        const code=row+col+(lv+1);
+        boxes.push({ri,ci,lv,code,sortKey:ri+ci});
+      }
     }
+  }
+  // Sort: larger (ri+ci) first = farther away painted first; within same sortKey, lower levels first
+  boxes.sort((a,b)=> b.sortKey!==a.sortKey ? b.sortKey-a.sortKey : a.lv-b.lv);
+
+  boxes.forEach(({ri,ci,lv,code})=>{
+    const baseC  = getC3D(code);
+    const isSel  = (_selectedBin===code) ||
+                   (_selectedBin&&_selectedBin.length===2&&_selectedBin===ROWS[ri]+COLS[ci]);
+    drawBox(ctx, ci, ri, lv, baseC, isSel, filterLvl);
   });
+
+  // PFRONTAL: floating box in front-right corner
+  if(!filterRow){
+    const pfC = C3D.special;
+    const pfY = -(9*TH/2) - 1.5*LH;
+    ctx.save();
+    ctx.font='bold 8px Inter,sans-serif';
+    ctx.fillStyle='rgba(100,0,150,0.75)';
+    ctx.textAlign='center';
+    const pfP=iso(3.5,-1.5,0);
+    ctx.fillText('PFRONTAL · '+(((_binMap['PFRONTAL']||{}).items||[]).length)+' art.',pfP.x,pfP.y-8);
+    const pfBox=[iso(2,-1.5,0),iso(5,-1.5,0),iso(5,-0.5,0),iso(2,-0.5,0)];
+    poly(ctx,pfBox,rgb(pfC,1.0,0.7),rgb(pfC,0.7,0.9),1);
+    ctx.restore();
+  }
+
+  ctx.restore();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// DIMENSIONES Y VOLUMEN
-// ═══════════════════════════════════════════════════════════════════════════
-let _dimA = {w:120,d:90,h:65};  // mock estándar
-let _dimB = {w:120,d:90,h:55};  // mock alto (C,D)
-
-function applyDims() {
-  _dimA = {
-    w: parseFloat(document.getElementById('dA-w').value)||120,
-    d: parseFloat(document.getElementById('dA-d').value)||90,
-    h: parseFloat(document.getElementById('dA-h').value)||65,
-  };
-  _dimB = {
-    w: parseFloat(document.getElementById('dB-w').value)||120,
-    d: parseFloat(document.getElementById('dB-d').value)||90,
-    h: parseFloat(document.getElementById('dB-h').value)||55,
-  };
-  const vA = (_dimA.w * _dimA.d * _dimA.h / 1e6).toFixed(3);
-  const vB = (_dimB.w * _dimB.d * _dimB.h / 1e6).toFixed(3);
-  document.getElementById('volA').textContent = vA + ' m³';
-  document.getElementById('volB').textContent = vB + ' m³';
-  renderMap();
+function scheduleRender3D(){
+  if(_3d.animReq) cancelAnimationFrame(_3d.animReq);
+  _3d.animReq=requestAnimationFrame(()=>{ _3d.animReq=null; render3D(); });
 }
 
-function getBinDim(binCode) {
-  const m = BIN_PAT.exec(binCode);
-  if (!m) return _dimA;
-  return TALL_ROWS.has(m[1]) ? _dimB : _dimA;
+// ── Canvas resize ──
+function resizeCanvas(){
+  const canvas=document.getElementById('canvas-3d');
+  const cont=document.getElementById('map-container');
+  canvas.width=cont.clientWidth;
+  canvas.height=cont.clientHeight;
+  scheduleRender3D();
 }
 
-function getBinVolume(binCode) {
-  const dim = getBinDim(binCode);
-  return dim.w * dim.d * dim.h; // cm³
-}
+// ── Mouse interactions ──
+function initCanvas3DEvents(){
+  const canvas=document.getElementById('canvas-3d');
+  const tooltip=document.getElementById('iso-tooltip');
 
-function calcBinUtil(binCode) {
-  const bin = _binMap[binCode];
-  if (!bin || !bin.items.length) return {pct:0, hasData:true, itemCount:0, vol:0, volUsed:0};
-  const binVol = getBinVolume(binCode);
-  let volUsed = 0, hasDims = false, noDims = 0;
-  bin.items.forEach(it => {
-    const prod = _prodMap[it.prodId];
-    if (prod && prod.dims) {
-      const itemVol = prod.dims.w * prod.dims.d * prod.dims.h;
-      volUsed += itemVol * it.qty;
-      hasDims = true;
+  // Drag to pan
+  canvas.addEventListener('mousedown',e=>{
+    _3d.dragging=true; _3d.lastMX=e.clientX; _3d.lastMY=e.clientY;
+    canvas.style.cursor='grabbing';
+  });
+  window.addEventListener('mouseup',()=>{ _3d.dragging=false; canvas.style.cursor='grab'; });
+  window.addEventListener('mousemove',e=>{
+    if(_3d.dragging){
+      _3d.panX += e.clientX - _3d.lastMX;
+      _3d.panY += e.clientY - _3d.lastMY;
+      _3d.lastMX=e.clientX; _3d.lastMY=e.clientY;
+      scheduleRender3D();
     } else {
-      noDims++;
+      // Hover tooltip
+      const hit=hitTest3D(e.offsetX, e.offsetY);
+      if(hit){
+        tooltip.style.display='block';
+        tooltip.style.left=(e.offsetX+14)+'px';
+        tooltip.style.top=(e.offsetY-10)+'px';
+        document.getElementById('tip-code').textContent=hit;
+        document.getElementById('tip-util').textContent=getUtilLabel(hit);
+      } else { tooltip.style.display='none'; }
     }
   });
-  if (!hasDims) return {pct:-1, hasData:false, itemCount:bin.items.length, vol:binVol, volUsed:0, noDims};
-  const pct = Math.min(100, volUsed / binVol * 100);
-  return {pct, hasData:true, itemCount:bin.items.length, vol:binVol, volUsed, noDims};
-}
+  canvas.addEventListener('mouseleave',()=>{ tooltip.style.display='none'; });
 
-function utilColor(util) {
-  if (util.itemCount === 0) return {bg:'var(--c-empty)',border:'var(--c-empty-b)'};
-  if (!util.hasData)        return {bg:'var(--c-nodata)',border:'var(--c-nodata-b)'};
-  if (util.pct < 50)        return {bg:'var(--c-low)',border:'var(--c-low-b)'};
-  if (util.pct < 80)        return {bg:'var(--c-mid)',border:'var(--c-mid-b)'};
-  return                          {bg:'var(--c-high)',border:'var(--c-high-b)'};
-}
+  // Wheel to zoom
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const delta=e.deltaY>0?0.9:1.11;
+    _3d.zoom=Math.max(0.35, Math.min(4, _3d.zoom*delta));
+    scheduleRender3D();
+  },{passive:false});
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ESTADÍSTICAS
-// ═══════════════════════════════════════════════════════════════════════════
-function updateStats() {
-  const bins = Object.keys(_binMap).filter(k=>k!=='A-CDP');
-  const occupied = bins.filter(k=>(_binMap[k].items||[]).length>0).length;
-  document.getElementById('st-total').textContent    = bins.length;
-  document.getElementById('st-occupied').textContent = occupied;
-  document.getElementById('st-empty').textContent    = bins.length - occupied;
-  document.getElementById('st-pct').textContent      = Math.round(occupied/bins.length*100)+'%';
-}
-
-function populateFilters() {
-  const sel = document.getElementById('filter-row');
-  sel.innerHTML = '<option value="">Todas las filas</option>';
-  ROWS.forEach(r => sel.innerHTML += `<option value="${r}">Fila ${r}</option>`);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// RENDERING — PLANTA
-// ═══════════════════════════════════════════════════════════════════════════
-function setView(v) {
-  _currentView = v;
-  document.getElementById('btn-view-plant').className = 'view-btn'+(v==='plant'?' active':'');
-  document.getElementById('btn-view-rack').className  = 'view-btn'+(v==='rack'?' active':'');
-  renderMap();
-}
-
-function renderMap() {
-  if (_currentView === 'plant') renderPlantView();
-  else                          renderRackView();
-}
-
-function renderPlantView() {
-  const filterRow   = document.getElementById('filter-row').value;
-  const filterLevel = document.getElementById('filter-level').value;
-  const container   = document.getElementById('map-container');
-
-  // Layout constants
-  const CELL_W = 46, CELL_H = 28, GAP = 4;
-  const LABEL_W = 22, LABEL_H = 20;
-  const AISLE_H = 12; // espacio entre pares de filas
-  const ROWS_SHOWN = filterRow ? [filterRow] : ROWS;
-
-  // Par las filas en grupos de a 2 (A-B, C-D, E-F, G-H, I solo)
-  const PAIRS = [['A','B'],['C','D'],['E','F'],['G','H'],['I']];
-  const pairsShown = filterRow
-    ? PAIRS.filter(p=>p.includes(filterRow))
-    : PAIRS;
-
-  const totalW = LABEL_W + COLS.length*(CELL_W+GAP) + 20;
-  let totalH = LABEL_H;
-  pairsShown.forEach(pair => {
-    totalH += pair.length * (CELL_H+GAP) + AISLE_H;
+  // Click to select
+  canvas.addEventListener('click',e=>{
+    if(Math.abs(e.movementX)+Math.abs(e.movementY)>4) return; // was dragging
+    const hit=hitTest3D(e.offsetX, e.offsetY);
+    if(hit){ _selectedBin=hit; scheduleRender3D(); showBinDetail(hit); }
   });
-  totalH += 30; // PFRONTAL
+}
 
-  let svg = `<svg class="warehouse-svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg">`;
+// Simple hit-test: convert canvas coords → isometric grid, find bin
+function hitTest3D(px,py){
+  const canvas=document.getElementById('canvas-3d');
+  const W=canvas.width, H=canvas.height;
+  const ox=W/2+_3d.panX, oy=H*0.62+_3d.panY;
+  const lx=(px-ox)/_3d.zoom, ly=(py-oy)/_3d.zoom;
 
-  // Column labels
-  COLS.forEach((col,ci) => {
-    const x = LABEL_W + ci*(CELL_W+GAP) + CELL_W/2;
-    svg += `<text x="${x}" y="${LABEL_H-4}" text-anchor="middle" class="aisle-label">${col}</text>`;
-  });
-
-  let y = LABEL_H;
-
-  pairsShown.forEach(pair => {
-    // Row label for pair
-    const midY = y + (pair.length*(CELL_H+GAP))/2 - 2;
-
-    pair.forEach((row,ri) => {
-      // Row identifier on left
-      svg += `<text x="${LABEL_W-4}" y="${y+CELL_H/2+4}" text-anchor="end" class="aisle-label">${row}</text>`;
-
-      COLS.forEach((col,ci) => {
-        const binCode = row+col;
-        const levelsInBin = TALL_ROWS.has(row) ? 7 : 5;
-
-        // Filtro por nivel: calculamos utilización solo del nivel filtrado
-        let util;
-        if (filterLevel) {
-          const specificCode = binCode+filterLevel;
-          util = calcBinUtil(specificCode);
-        } else {
-          // Agregado de todos los niveles del rack
-          let totalItemCount=0, totalVolUsed=0, binVol=getBinVolume(binCode+'1'), anyData=false, anyNoDim=0;
-          for(let lv=1;lv<=levelsInBin;lv++){
-            const u = calcBinUtil(binCode+lv);
-            totalItemCount += u.itemCount;
-            totalVolUsed += u.volUsed||0;
-            if(u.hasData && u.itemCount>0) anyData=true;
-            anyNoDim += u.noDims||0;
-          }
-          const totalBinVol = binVol * levelsInBin;
-          if (totalItemCount===0) util={pct:0,hasData:true,itemCount:0};
-          else if (!anyData)      util={pct:-1,hasData:false,itemCount:totalItemCount,noDims:anyNoDim};
-          else {
-            const pct=Math.min(100,totalVolUsed/(totalBinVol)*100);
-            util={pct,hasData:true,itemCount:totalItemCount,noDims:anyNoDim};
-          }
+  // Test from front (small ri+ci) to back
+  const filterRow=document.getElementById('filter-row').value;
+  const hits=[];
+  for(let ri=0;ri<ROWS.length;ri++){
+    if(filterRow&&ROWS[ri]!==filterRow) continue;
+    for(let ci=0;ci<COLS.length;ci++){
+      const row=ROWS[ri],col=COLS[ci];
+      const maxLv=TALL_ROWS.has(row)?7:5;
+      for(let lv=maxLv-1;lv>=0;lv--){
+        const code=row+col+(lv+1);
+        if(ptInTopFace(lx,ly,ci,ri,lv)){
+          hits.push({code,sort:ri+ci+lv*0.01});
         }
+      }
+    }
+  }
+  if(!hits.length) return null;
+  // Return the closest hit (smallest ri+ci = closest to viewer)
+  hits.sort((a,b)=>a.sort-b.sort);
+  return hits[0].code;
+}
 
-        const col_c = utilColor(util);
-        const x = LABEL_W + ci*(CELL_W+GAP);
-        const isSelected = _selectedBin && (_selectedBin.startsWith(binCode));
-        const pctLabel = util.itemCount===0 ? '' : (!util.hasData ? '?' : Math.round(util.pct)+'%');
+// Point-in-parallelogram test for the top face of an isometric box
+function ptInTopFace(px,py,c,r,l){
+  const pts=[iso(c,r,l+1),iso(c+1,r,l+1),iso(c+1,r+1,l+1),iso(c,r+1,l+1)];
+  return ptInPoly(px,py,pts);
+}
+function ptInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    if(((pts[i].y>py)!==(pts[j].y>py))&&(px<(pts[j].x-pts[i].x)*(py-pts[i].y)/(pts[j].y-pts[i].y)+pts[i].x))
+      inside=!inside;
+  }
+  return inside;
+}
 
-        svg += `<g class="rack-cell${isSelected?' selected':''}" onclick="selectRack('${binCode}')">
-          <rect x="${x}" y="${y}" width="${CELL_W}" height="${CELL_H}" rx="3"
-            fill="${col_c.bg}" stroke="${col_c.border}" stroke-width="${isSelected?2.5:1}"/>
-          <text x="${x+CELL_W/2}" y="${y+CELL_H/2-3}" text-anchor="middle" class="rack-label">${binCode}</text>
-          <text x="${x+CELL_W/2}" y="${y+CELL_H/2+7}" text-anchor="middle" class="level-text">${pctLabel}</text>
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D PLANT VIEW
+// ═══════════════════════════════════════════════════════════════════════════
+function render2DPlant(){
+  const wrap=document.getElementById('canvas-2d-wrap');
+  const filterRow=document.getElementById('filter-row').value;
+  const filterLvl=document.getElementById('filter-level').value;
+  const CW=48,CH=30,GAP=4,LBL=22,LBH=18,AIS=10;
+  const PAIRS=[['A','B'],['C','D'],['E','F'],['G','H'],['I']];
+  const shown=filterRow?PAIRS.filter(p=>p.includes(filterRow)):PAIRS;
+  const totalW=LBL+COLS.length*(CW+GAP)+16;
+  let totalH=LBH; shown.forEach(p=>totalH+=p.length*(CH+GAP)+AIS); totalH+=CH+20;
+  let svg=`<svg class="warehouse-svg" width="${totalW}" height="${totalH}" xmlns="http://www.w3.org/2000/svg">`;
+  COLS.forEach((col,ci)=>{
+    const x=LBL+ci*(CW+GAP)+CW/2;
+    svg+=`<text x="${x}" y="${LBH-4}" text-anchor="middle" font-size="9" fill="#888" font-weight="700">${col}</text>`;
+  });
+  let y=LBH;
+  shown.forEach(pair=>{
+    pair.forEach((row)=>{
+      svg+=`<text x="${LBL-4}" y="${y+CH/2+4}" text-anchor="end" font-size="9" fill="#888" font-weight="700">${row}</text>`;
+      COLS.forEach((col,ci)=>{
+        const binBase=row+col;
+        const lvls=TALL_ROWS.has(row)?7:5;
+        let util;
+        if(filterLvl){ util=calcBinUtil(binBase+filterLvl); }
+        else {
+          let tot=0,vUsed=0,anyDim=false;
+          for(let l=1;l<=lvls;l++){const u=calcBinUtil(binBase+l);tot+=u.itemCount;vUsed+=u.volUsed||0;if(u.hasData&&u.itemCount>0)anyDim=true;}
+          const bv=getBinDim(binBase+'1').w*getBinDim(binBase+'1').d*getBinDim(binBase+'1').h*lvls;
+          util=tot===0?{pct:0,hasData:true,itemCount:0}:(!anyDim?{pct:-1,hasData:false,itemCount:tot}:{pct:Math.min(100,vUsed/bv*100),hasData:true,itemCount:tot});
+        }
+        const cc=util2css(util);
+        const x=LBL+ci*(CW+GAP);
+        const isSel=_selectedBin&&(_selectedBin.startsWith(binBase));
+        const pLabel=util.itemCount===0?'':(util.hasData?Math.round(util.pct)+'%':'?');
+        svg+=`<g class="rack-cell${isSel?' selected':''}" onclick="selectRack('${binBase}')">
+          <rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="3" fill="${cc.bg}" stroke="${cc.bd}" stroke-width="${isSel?2.5:1}"/>
+          <text x="${x+CW/2}" y="${y+CH/2-2}" text-anchor="middle" font-size="7" fill="#222" font-weight="700">${binBase}</text>
+          <text x="${x+CW/2}" y="${y+CH/2+7}" text-anchor="middle" font-size="6" fill="#444">${pLabel}</text>
         </g>`;
       });
-
-      y += CELL_H + GAP;
+      y+=CH+GAP;
     });
-
-    // Aisle separator
-    svg += `<line x1="${LABEL_W}" y1="${y+4}" x2="${totalW-10}" y2="${y+4}" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>`;
-    y += AISLE_H;
+    svg+=`<line x1="${LBL}" y1="${y+4}" x2="${totalW-8}" y2="${y+4}" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>`;
+    y+=AIS;
   });
-
   // PFRONTAL
-  const pfUtil = calcBinUtil('PFRONTAL');
-  const pfColor = utilColor({...pfUtil,hasData:false}); // siempre nodata color
-  svg += `<g class="rack-cell${_selectedBin==='PFRONTAL'?' selected':''}" onclick="selectBin('PFRONTAL')">
-    <rect x="${LABEL_W}" y="${y}" width="${COLS.length*(CELL_W+GAP)-GAP}" height="${CELL_H}" rx="3"
-      fill="var(--c-pfrontal)" stroke="var(--c-pfrontal-b)" stroke-width="${_selectedBin==='PFRONTAL'?2.5:1}"/>
-    <text x="${LABEL_W+(COLS.length*(CELL_W+GAP))/2}" y="${y+CELL_H/2+4}" text-anchor="middle" class="rack-label" style="font-size:9px">
-      PFRONTAL · ${pfUtil.itemCount} artículos
-    </text>
+  const pf=calcBinUtil('PFRONTAL');
+  svg+=`<g class="rack-cell${_selectedBin==='PFRONTAL'?' selected':''}" onclick="selectBin('PFRONTAL')">
+    <rect x="${LBL}" y="${y}" width="${COLS.length*(CW+GAP)-GAP}" height="${CH}" rx="3" fill="#e1bee7" stroke="#7b1fa2" stroke-width="${_selectedBin==='PFRONTAL'?2.5:1}"/>
+    <text x="${LBL+(COLS.length*(CW+GAP))/2}" y="${y+CH/2+3}" text-anchor="middle" font-size="8" fill="#4a148c" font-weight="700">PFRONTAL · ${(((_binMap['PFRONTAL']||{}).items)||[]).length} artículos</text>
   </g>`;
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
 
-  svg += '</svg>';
-  container.innerHTML = svg;
+function util2css(u){
+  if(u.itemCount===0) return{bg:'#c8e6c9',bd:'#4caf50'};
+  if(!u.hasData)      return{bg:'#bbdefb',bd:'#1976d2'};
+  if(u.pct<50)        return{bg:'#fff9c4',bd:'#f9a825'};
+  if(u.pct<80)        return{bg:'#ffe0b2',bd:'#ef6c00'};
+  return                    {bg:'#ffcdd2',bd:'#c62828'};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RENDERING — RACK ELEVATION (vista frontal de un rack)
+// 2D RACK ELEVATION VIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function renderRackView() {
-  const filterRow = document.getElementById('filter-row').value;
-  const container = document.getElementById('map-container');
-
-  // Mostrar elevación del rack seleccionado, o el primero disponible
-  const rackCode = _selectedBin
-    ? (_selectedBin.length===2 ? _selectedBin : _selectedBin.slice(0,2))
-    : (filterRow ? filterRow+'A' : 'AA');
-
-  const isFullRack = rackCode.length===2;
-  if (!isFullRack) return renderPlantView();
-
-  const row = rackCode[0], col = rackCode[1];
-  const levels = TALL_ROWS.has(row) ? 7 : 5;
-  const SLOT_W = 110, SLOT_H_BASE = 58, GAP_S = 4;
-
-  let html = `<div id="rack-elevation" style="display:flex;flex-direction:column;gap:8px">
-    <div class="elev-header">
-      <div>
-        <div class="elev-title">Rack ${rackCode} — Vista Frontal</div>
-        <div class="elev-subtitle">Filas en mapa: ${COLS.map(c=>rackCode[0]+c).join(' · ')}</div>
-      </div>
-      <div style="font-size:11px;color:var(--text-3)">Altura proporcional al contenido</div>
+function render2DRack(){
+  const wrap=document.getElementById('canvas-2d-wrap');
+  const filterRow=document.getElementById('filter-row').value;
+  const rackCode=_selectedBin&&_selectedBin.length>=2?_selectedBin.slice(0,2):(filterRow?filterRow+'A':'AA');
+  const row=rackCode[0],lvls=TALL_ROWS.has(row)?7:5;
+  const SW=108, SH=58, GAP=3;
+  let html=`<div style="display:flex;flex-direction:column;gap:10px;padding:4px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div><div style="font-size:15px;font-weight:800;color:var(--accent)">Rack ${rackCode} — Vista Frontal</div>
+      <div style="font-size:10px;color:var(--text-3)">${COLS.map(c=>rackCode[0]+c).join(' · ')} · ${lvls} niveles</div></div>
     </div>
-    <div style="display:flex;gap:4px;align-items:flex-end;overflow-x:auto;padding-bottom:8px">
-      <div style="display:flex;flex-direction:column-reverse;gap:${GAP_S}px;margin-right:8px;padding-bottom:20px">`;
-
-  for(let lv=1;lv<=levels;lv++){
-    html += `<div style="height:${SLOT_H_BASE}px;display:flex;align-items:center;justify-content:flex-end;font-size:10px;color:var(--text-3);font-weight:600">N${lv}</div>`;
-  }
-  html += `</div>`;
-
-  // Cada columna del rack
-  COLS.forEach(c => {
-    const binCode = row+c;
-    html += `<div style="display:flex;flex-direction:column">
-      <div style="display:flex;flex-direction:column-reverse;gap:${GAP_S}px">`;
-
-    for(let lv=1;lv<=levels;lv++){
-      const slotCode = binCode+lv;
-      const util = calcBinUtil(slotCode);
-      const col_c = utilColor(util);
-      const slotBin = _binMap[slotCode];
-      const items = slotBin ? slotBin.items : [];
-      const pctLabel = util.itemCount===0 ? 'Vacío' : (!util.hasData ? items.length+' art. ?' : Math.round(util.pct)+'%');
-      const fillColor = util.itemCount===0 ? '#4caf50' : (!util.hasData ? '#1976d2' : (util.pct<50?'#f9a825':(util.pct<80?'#ef6c00':'#c62828')));
-      const fillPct = util.itemCount===0 ? 0 : (!util.hasData ? 40 : util.pct);
-      const firstItem = items[0];
-      const firstProd = firstItem ? _prodMap[firstItem.prodId] : null;
-      const isSelected = _selectedBin === slotCode;
-
-      html += `<div class="elev-slot${isSelected?' selected':''}" style="width:${SLOT_W}px;height:${SLOT_H_BASE}px;background:${col_c.bg};border-color:${col_c.border};${isSelected?'border-width:2px;box-shadow:0 0 6px rgba(27,59,111,.4)':''}" onclick="selectBin('${slotCode}')">
-        <div class="elev-slot-inner">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="elev-slot-label">${slotCode}</span>
-            <span style="font-size:8px;font-weight:700;color:${fillColor}">${pctLabel}</span>
+    <div style="display:flex;gap:4px;align-items:flex-end;overflow-x:auto;padding-bottom:6px">
+    <div style="display:flex;flex-direction:column-reverse;gap:${GAP}px;margin-right:6px;padding-bottom:18px">`;
+  for(let l=1;l<=lvls;l++) html+=`<div style="height:${SH}px;display:flex;align-items:center;justify-content:flex-end;font-size:10px;color:var(--text-3);font-weight:600;padding-right:4px">N${l}</div>`;
+  html+='</div>';
+  COLS.forEach(col=>{
+    const bc=rackCode[0]+col;
+    html+=`<div style="display:flex;flex-direction:column">
+      <div style="display:flex;flex-direction:column-reverse;gap:${GAP}px">`;
+    for(let l=1;l<=lvls;l++){
+      const code=bc+l; const u=calcBinUtil(code);
+      const cc=util2css(u);
+      const pct=u.itemCount===0?0:(!u.hasData?35:u.pct);
+      const fc=u.itemCount===0?'#4caf50':(!u.hasData?'#1976d2':(u.pct<50?'#f9a825':(u.pct<80?'#ef6c00':'#c62828')));
+      const isSel=_selectedBin===code;
+      const bin=_binMap[code];
+      const first=bin&&bin.items[0]?_prodMap[bin.items[0].prodId]:null;
+      html+=`<div onclick="selectBin('${code}')" style="width:${SW}px;height:${SH}px;background:${cc.bg};border:${isSel?'2px solid var(--accent)':'1px solid '+cc.bd};border-radius:5px;cursor:pointer;overflow:hidden;position:relative">
+        <div style="padding:4px 6px">
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-size:9px;font-weight:800">${code}</span>
+            <span style="font-size:8px;font-weight:700;color:${fc}">${u.itemCount===0?'Vacío':(!u.hasData?u.itemCount+' ?':Math.round(u.pct)+'%')}</span>
           </div>
-          <div class="elev-slot-items">${firstProd ? firstProd.ref+(items.length>1?' +'+( items.length-1)+' más':'') : (util.itemCount>0 ? util.itemCount+' artículo(s)' : '—')}</div>
-          <div class="elev-slot-bar" style="width:${fillPct}%;background:${fillColor}"></div>
+          <div style="font-size:8px;color:#444;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${first?first.ref+(u.itemCount>1?' +'+(u.itemCount-1)+' más':''):(u.itemCount?u.itemCount+' art.':'—')}</div>
+          <div style="height:3px;border-radius:2px;background:${cc.bd};margin-top:4px;width:${pct}%"></div>
         </div>
       </div>`;
     }
-
-    html += `</div>
-      <div style="text-align:center;font-size:9px;color:var(--text-3);margin-top:4px;font-weight:600">${binCode}</div>
-    </div>`;
+    html+=`</div><div style="text-align:center;font-size:9px;color:var(--text-3);margin-top:3px;font-weight:600">${bc}</div></div>`;
   });
+  html+='</div></div>';
+  wrap.innerHTML=html;
+}
 
-  html += `</div></div>`;
-  container.innerHTML = html;
+// ═══════════════════════════════════════════════════════════════════════════
+// VIEW CONTROL
+// ═══════════════════════════════════════════════════════════════════════════
+function setView(v){
+  _currentView=v;
+  ['plant','rack','3d'].forEach(n=>{
+    document.getElementById('btn-view-'+n).className='view-btn'+(v===n?' active':'');
+  });
+  const c3d=document.getElementById('canvas-3d');
+  const c2d=document.getElementById('canvas-2d-wrap');
+  const hint=document.getElementById('ctrl-hint');
+  if(v==='3d'){
+    c3d.style.display='block'; c2d.style.display='none'; hint.style.display='flex';
+    document.getElementById('map-hint').textContent='Arrastra · Rueda = zoom · Clic = detalle';
+    resizeCanvas();
+  } else {
+    c3d.style.display='none'; c2d.style.display='block'; hint.style.display='none';
+    document.getElementById('map-hint').textContent='Clic en rack para detalle';
+    if(v==='plant') render2DPlant(); else render2DRack();
+  }
+}
+function onFilterChange(){ renderMap(); }
+function renderMap(){
+  if(_currentView==='3d') scheduleRender3D();
+  else if(_currentView==='plant') render2DPlant();
+  else render2DRack();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DETAIL PANEL
 // ═══════════════════════════════════════════════════════════════════════════
-function selectRack(rackCode) {
-  _selectedBin = rackCode;
-  document.getElementById('selected-rack-label').textContent = 'Rack seleccionado: '+rackCode;
-
-  if (_currentView === 'plant') {
-    renderPlantView();
-    showRackDetail(rackCode);
-  } else {
-    renderRackView();
+function selectRack(rc){
+  _selectedBin=rc; renderMap();
+  const row=rc[0],col=rc[1],lvls=TALL_ROWS.has(row)?7:5;
+  let totalItems=0,volUsed=0,binVol=0,hasDims=false,allItems=[];
+  for(let l=1;l<=lvls;l++){
+    const bin=_binMap[rc+l]; if(!bin) continue;
+    totalItems+=bin.items.length;
+    bin.items.forEach(it=>{ allItems.push({...it,slot:rc+l}); const p=_prodMap[it.prodId];
+      if(p&&p.dims){const v=p.dims.w*p.dims.d*p.dims.h*it.qty;volUsed+=v;hasDims=true;}
+    });
+    const dim=getBinDim(rc+l); binVol+=dim.w*dim.d*dim.h;
   }
+  const pct=!hasDims?-1:Math.min(100,volUsed/binVol*100);
+  renderDetail({code:rc,path:'Rack '+rc+' ('+lvls+' niveles)',totalItems,pct,hasDims,volUsed,vol:binVol,items:allItems});
 }
-
-function selectBin(binCode) {
-  _selectedBin = binCode;
-  document.getElementById('selected-rack-label').textContent = 'Bin seleccionado: '+binCode;
-  if (_currentView === 'plant') renderPlantView(); else renderRackView();
-  showBinDetail(binCode);
+function selectBin(code){
+  _selectedBin=code; renderMap();
+  const bin=_binMap[code]; if(!bin) return;
+  const u=calcBinUtil(code);
+  renderDetail({code,path:bin.completeName,totalItems:bin.items.length,pct:u.pct,hasDims:u.hasData,volUsed:u.volUsed,vol:u.vol,items:bin.items.map(it=>({...it,slot:code}))});
 }
-
-function showRackDetail(rackCode) {
-  // Muestra resumen del rack completo en el panel derecho
-  const row = rackCode[0], col = rackCode[1];
-  const levels = TALL_ROWS.has(row) ? 7 : 5;
-  let totalItems=0, allItems=[];
-  for(let lv=1;lv<=levels;lv++){
-    const bin = _binMap[rackCode+lv];
-    if (bin) { totalItems += bin.items.length; allItems.push(...bin.items.map(it=>({...it,level:lv,slot:rackCode+lv}))); }
-  }
-  const util = {pct:0,volUsed:0,vol:getBinVolume(rackCode+'1')*levels};
-  let volUsed=0,hasDims=false;
-  allItems.forEach(it=>{
-    const prod=_prodMap[it.prodId];
-    if(prod&&prod.dims){const v=prod.dims.w*prod.dims.d*prod.dims.h*it.qty;volUsed+=v;hasDims=true;}
-  });
-  const pct = hasDims ? Math.min(100,volUsed/util.vol*100) : -1;
-
-  renderDetailPanel({code:rackCode, completeName:'Rack '+rackCode+' ('+levels+' niveles)', totalItems, pct, hasDims, volUsed, vol:util.vol, items:allItems, isRack:true});
-}
-
-function showBinDetail(binCode) {
-  const bin = _binMap[binCode];
-  if (!bin) return;
-  const util = calcBinUtil(binCode);
-  renderDetailPanel({code:binCode, completeName:bin.completeName, totalItems:bin.items.length, pct:util.pct, hasDims:util.hasData, volUsed:util.volUsed, vol:util.vol, items:bin.items.map(it=>({...it,slot:binCode})), isRack:false});
-}
-
-function renderDetailPanel({code, completeName, totalItems, pct, hasDims, volUsed, vol, items, isRack}) {
-  document.getElementById('detail-placeholder').style.display = 'none';
-  const pctStr = totalItems===0 ? '0%' : (!hasDims ? 'N/D' : Math.round(pct)+'%');
-  const volStr = hasDims && volUsed ? (volUsed/1e6).toFixed(3)+' m³' : '—';
-  const fillColor = totalItems===0?'#4caf50':(!hasDims?'#1976d2':(pct<50?'#f9a825':(pct<80?'#ef6c00':'#c62828')));
-  const fillPct   = totalItems===0?0:(!hasDims?30:pct);
-
-  let itemsHtml = '';
-  items.slice(0,30).forEach(it => {
-    const prod = _prodMap[it.prodId];
-    if (!prod) return;
-    const hasDim = !!prod.dims;
-    const dimStr = hasDim ? `${prod.dims.w}×${prod.dims.d}×${prod.dims.h} cm` : '—';
-    const vol1 = hasDim ? ((prod.dims.w*prod.dims.d*prod.dims.h*it.qty)/1e6).toFixed(4)+' m³' : '';
-    itemsHtml += `<div class="item-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <span class="ref">${prod.ref}</span>
-        <span class="${hasDim?'badge-dims':'badge-nodim'}">${hasDim?'✓ medidas':'sin medidas'}</span>
+function renderDetail({code,path,totalItems,pct,hasDims,volUsed,vol,items}){
+  document.getElementById('detail-placeholder').style.display='none';
+  const pctStr=totalItems===0?'0%':(!hasDims?'N/D':Math.round(pct)+'%');
+  const fc=totalItems===0?'#4caf50':(!hasDims?'#1976d2':(pct<50?'#f9a825':(pct<80?'#ef6c00':'#c62828')));
+  const fp=totalItems===0?0:(!hasDims?28:pct);
+  let itemsHtml='';
+  items.slice(0,25).forEach(it=>{
+    const p=_prodMap[it.prodId]; if(!p) return;
+    const hD=!!p.dims;
+    itemsHtml+=`<div class="item-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
+        <span class="ref">${p.ref}</span>
+        <span class="${hD?'badge-dims':'badge-nodim'}">${hD?'✓ dims':'sin dims'}</span>
       </div>
-      <div class="name">${prod.name.length>50?prod.name.slice(0,48)+'…':prod.name}</div>
-      ${hasDim?`<div class="dims">📐 ${dimStr} · ${vol1}</div>`:''}
-      <div class="qty">Qty: ${it.qty}${it.slot&&it.slot!==code?' · '+it.slot:''}</div>
+      <div class="name">${p.name.length>48?p.name.slice(0,46)+'…':p.name}</div>
+      ${hD?`<div class="dims">📐 ${p.dims.w}×${p.dims.d}×${p.dims.h} cm · ${(p.dims.w*p.dims.d*p.dims.h/1e6).toFixed(4)} m³</div>`:''}
+      <div style="font-size:9px;color:var(--text-3);margin-top:2px">Qty: ${it.qty}${it.slot&&it.slot!==code?' · '+it.slot:''}</div>
     </div>`;
   });
-  if (items.length > 30) itemsHtml += `<div style="text-align:center;font-size:11px;color:var(--text-3);padding:8px">+${items.length-30} artículos más…</div>`;
-  if (items.length===0)  itemsHtml = `<div style="text-align:center;color:var(--text-3);padding:16px;font-size:12px">✅ Bin vacío</div>`;
-
-  document.getElementById('bin-detail').style.display = 'block';
-  document.getElementById('bin-detail').innerHTML = `
-    <div class="bin-detail-header">
-      <div class="bin-code">${code}</div>
-      <div class="bin-path">${completeName}</div>
-    </div>
+  if(!items.length) itemsHtml=`<div style="text-align:center;color:var(--text-3);padding:14px;font-size:11px">✅ Bin vacío</div>`;
+  else if(items.length>25) itemsHtml+=`<div style="text-align:center;font-size:10px;color:var(--text-3);padding:6px">+${items.length-25} más…</div>`;
+  document.getElementById('bin-detail').style.display='block';
+  document.getElementById('bin-detail').innerHTML=`
+    <div class="bin-code">${code}</div>
+    <div class="bin-path">${path}</div>
     <div class="bin-kpis">
       <div class="bin-kpi"><div class="num">${totalItems}</div><div class="lbl">Artículos</div></div>
-      <div class="bin-kpi"><div class="num" style="color:${fillColor}">${pctStr}</div><div class="lbl">Utilización</div></div>
+      <div class="bin-kpi"><div class="num" style="color:${fc}">${pctStr}</div><div class="lbl">Utilización</div></div>
     </div>
-    <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">
-      Volumen usado: ${volStr} / ${(vol/1e6).toFixed(3)} m³ total <span class="mock-badge">DIMS MOCK</span>
-    </div>
-    <div class="utilization-bar">
-      <div class="utilization-fill" style="width:${fillPct}%;background:${fillColor}"></div>
-    </div>
-    <div class="panel-title" style="margin-top:10px;margin-bottom:4px">Contenido ${isRack?'del rack':'del bin'}</div>
+    <div style="font-size:9px;color:var(--text-3);margin-bottom:3px">Vol: ${hasDims&&volUsed?(volUsed/1e6).toFixed(3)+' m³ / ':('')}${(vol/1e6).toFixed(3)} m³ <span class="mock-badge">MOCK</span></div>
+    <div class="util-bar"><div class="util-fill" style="width:${fp}%;background:${fc}"></div></div>
+    <div class="panel-title" style="margin-top:8px;margin-bottom:4px">Contenido</div>
     <div class="item-list">${itemsHtml}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// MISC
+// ═══════════════════════════════════════════════════════════════════════════
+function updateStats(){
+  const bins=Object.keys(_binMap).filter(k=>k!=='A-CDP');
+  const occ=bins.filter(k=>(_binMap[k].items||[]).length>0).length;
+  document.getElementById('st-total').textContent=bins.length;
+  document.getElementById('st-occupied').textContent=occ;
+  document.getElementById('st-empty').textContent=bins.length-occ;
+  document.getElementById('st-pct').textContent=Math.round(occ/bins.length*100)+'%';
+}
+function populateFilters(){
+  const sel=document.getElementById('filter-row');
+  sel.innerHTML='<option value="">Todas las filas</option>';
+  ROWS.forEach(r=>sel.innerHTML+=`<option value="${r}">Fila ${r}</option>`);
+}
+window.addEventListener('resize',()=>{ if(_currentView==='3d') resizeCanvas(); });
+
+// ═══════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  // Calcular volúmenes iniciales
-  const vA = (120*90*65/1e6).toFixed(3);
-  const vB = (120*90*55/1e6).toFixed(3);
-  document.getElementById('volA').textContent = vA+' m³';
-  document.getElementById('volB').textContent = vB+' m³';
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('volA').textContent=(120*90*65/1e6).toFixed(3)+' m³';
+  document.getElementById('volB').textContent=(120*90*55/1e6).toFixed(3)+' m³';
+  initCanvas3DEvents();
+  resizeCanvas();
+  // Default view is 3D
+  setView('3d');
   initMap();
 });
 </script>
