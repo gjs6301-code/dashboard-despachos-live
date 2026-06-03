@@ -3224,6 +3224,9 @@ body{font-family:var(--font);min-height:100dvh}
     <a class="nav-item" id="nav-solicitudes" href="#sec-solicitudes" onclick="navTo('solicitudes');return false;">
       <span class="nav-icon"><i data-lucide="clipboard-check"></i></span>Solicitudes Showroom
     </a>
+    <a class="nav-item" id="nav-almacen-mapa" href="#sec-almacen-mapa" onclick="navTo('almacen-mapa');return false;">
+      <span class="nav-icon"><i data-lucide="warehouse"></i></span>Mapa Almacén
+    </a>
 
     <div class="sidebar-group" id="navg-despachos">Despachos</div>
     <a class="nav-item" id="nav-sin-adjuntos" href="#sec-sin-adjuntos" onclick="navTo('sin-adjuntos');return false;">
@@ -3255,6 +3258,7 @@ body{font-family:var(--font);min-height:100dvh}
     <button class="mob-nav-btn"        id="mob-nav-contenedores"  onclick="navTo('contenedores')"><i data-lucide="ship"></i>Contenedores</button>
     <button class="mob-nav-btn"        id="mob-nav-reposicion"    onclick="navTo('reposicion')"><i data-lucide="store"></i>Reposición</button>
     <button class="mob-nav-btn"        id="mob-nav-solicitudes"   onclick="navTo('solicitudes')"><i data-lucide="clipboard-check"></i>Solicitudes</button>
+    <button class="mob-nav-btn"        id="mob-nav-almacen-mapa"  onclick="navTo('almacen-mapa')"><i data-lucide="warehouse"></i>Mapa Almacén</button>
     <button class="mob-nav-btn"        id="mob-nav-sin-adjuntos"  onclick="navTo('sin-adjuntos')"><i data-lucide="paperclip"></i>Sin Comprobante</button>
     <button class="mob-nav-btn"        id="mob-nav-dev-cdp"        onclick="navTo('dev-cdp')"><i data-lucide="arrow-left-right"></i>Dev→CDP</button>
   </div>
@@ -3636,6 +3640,14 @@ body{font-family:var(--font);min-height:100dvh}
       </div>
     </div>
     </div><!-- /section-solicitudes -->
+
+    <!-- ── MAPA ALMACÉN CDP ────────────────────────────────── -->
+    <div id="section-almacen-mapa" class="page-section" style="display:none">
+    <div id="sec-almacen-mapa" class="divider"><div class="divider-line"></div><span class="divider-label">MAPA DE ALMACÉN — CDP</span><div class="divider-line"></div></div>
+    <div class="card" style="padding:0;overflow:hidden;height:calc(100vh - 120px);min-height:500px">
+      <iframe id="almacen-mapa-iframe" style="width:100%;height:100%;border:none" loading="lazy"></iframe>
+    </div>
+    </div><!-- /section-almacen-mapa -->
 
     <!-- ── DESPACHOS SIN COMPROBANTE ────────────────────────── -->
     <div id="section-sin-adjuntos" class="page-section" style="display:none">
@@ -4849,7 +4861,7 @@ function isHistorialUser(u) {
 function applyNavPerms() {
   var sections = [
     'buscar','devoluciones','contenedores','reposicion','solicitudes',
-    'sin-adjuntos','dev-cdp',
+    'almacen-mapa','sin-adjuntos','dev-cdp',
     'validacion','averias','reportes','wwp'
   ];
   sections.forEach(function(s) {
@@ -4865,7 +4877,7 @@ function applyNavPerms() {
     'navg-reportes':    ['reportes'],
     'navg-analisis':    ['devoluciones','validacion','averias'],
     'navg-plataforma':  ['wwp'],
-    'navg-compras':     ['contenedores','reposicion','solicitudes'],
+    'navg-compras':     ['contenedores','reposicion','solicitudes','almacen-mapa'],
     'navg-despachos':   ['sin-adjuntos','dev-cdp']
   };
   Object.keys(GROUPS).forEach(function(gid) {
@@ -12696,7 +12708,7 @@ async function cargarPendientesOut(){
 // ════════════════════════════════════════════════════
 
 // Todas las secciones de página
-var PAGE_SECTIONS=['buscar','devoluciones','contenedores','reposicion','solicitudes','sin-adjuntos','dev-cdp','validacion','averias','reportes'];
+var PAGE_SECTIONS=['buscar','devoluciones','contenedores','reposicion','solicitudes','almacen-mapa','sin-adjuntos','dev-cdp','validacion','averias','reportes'];
 
 // Mapa: id del nav-item → id de la sección (ordenes comparte contenedor con pendientes)
 var NAV_SECTION_MAP={
@@ -12705,6 +12717,7 @@ var NAV_SECTION_MAP={
   'contenedores':    'contenedores',
   'reposicion':      'reposicion',
   'solicitudes':     'solicitudes',
+  'almacen-mapa':    'almacen-mapa',
   'sin-adjuntos':    'sin-adjuntos',
   'validacion':      'validacion',
   'averias':         'averias',
@@ -12958,6 +12971,10 @@ function navTo(section){
   if(target==='solicitudes') { loadSolicitudes(true); }
   if(target==='reportes') loadAllReports();
   if(target==='dev-cdp') loadDevCdpReport();
+  if(target==='almacen-mapa') {
+    var iframe = document.getElementById('almacen-mapa-iframe');
+    if (iframe && !iframe.src) iframe.src = '/almacen-mapa.html';
+  }
 }
 
 function setNavActive(section){
