@@ -6521,6 +6521,7 @@ function renderTaskCard(t) {
   const typeIcon = `<i data-lucide="${typeEmoji}" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>`;
   const today = new Date().toISOString().slice(0,10);
   const overdue = t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status);
+  const tier = dueTier(t);  // declarado aquí: se usa más abajo en los campos de fecha
   const mgr = t.managerId ? (_authUsers||[]).find(u=>u.id===t.managerId) : null;
   const priorityBadge = t.priority==='high'
     ? '<span class="badge b-high">Alta</span>'
@@ -6542,7 +6543,6 @@ function renderTaskCard(t) {
     fields.push(`<div class="tc-field tc-field-full"><span class="tc-label">Auxiliares</span><span class="tc-value"><i data-lucide="users" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(aNames)}</span></div>`);
   }
 
-  const tier = dueTier(t);
   return `<div class="task-card" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${tier?DUE_CARD_STYLE[tier]:''}">
     <div class="tc-header">
       <div class="tc-title">${esc(t.title)}</div>
