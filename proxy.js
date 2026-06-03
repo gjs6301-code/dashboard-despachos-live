@@ -3955,13 +3955,22 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Helper: construir items desde productIds + lines
+    // Cantidad (unidades) desde la DEMANDA de Odoo con cadena de respaldo:
+    //   product_uom_qty (Demanda — fiable en todo estado/tipo)
+    //   → quantity_done (lo ya hecho)  → reserved_availability  → 1
+    // Reservado/Hecho NO son fiables solos: caen a 0 en picks con existencia cero o ya completados.
+    function resolveDemandQty(l) {
+      const q = l.product_uom_qty || l.quantity_done || l.qty_done || l.reserved_availability || l.quantity || 1;
+      return Math.max(1, Math.round(q));
+    }
     function buildItems(lines, prodMap, stockMap) {
       return lines.filter(l=>l.product_id).map(l=>{
         const prod=prodMap[l.product_id[0]]||{};
         const locations=stockMap[l.product_id[0]]||[];
+        const units = resolveDemandQty(l);
         return { item_id:'oi_'+l.id, odoo_line_id:l.id, odoo_product_id:l.product_id[0],
           sku:prod.barcode||prod.default_code||'', product_name:l.product_id[1]||l.name||'',
-          quantity:l.product_uom_qty||l.qty_done||l.quantity||1,
+          quantity:units, units,                 // units = unidades de la Demanda (editable)
           image:prod.image_128?'data:image/png;base64,'+prod.image_128:null,
           locations, selected_location:locations.length===1?0:null,
           selected:false, evidence_images:[], comments:'', status:'pending' };
@@ -3995,7 +4004,7 @@ const server = http.createServer(async (req, res) => {
         const pick=picks[0];
         const moves = await odooCall('stock.move','search_read',
           [[['picking_id','=',pick.id],['state','!=','cancel']]],
-          {fields:['product_id','product_uom_qty','quantity_done','name'],limit:100});
+          {fields:['product_id','product_uom_qty','quantity_done','reserved_availability','name'],limit:100});
         const productIds=[...new Set(moves.filter(m=>m.product_id).map(m=>m.product_id[0]))];
         const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
         const prodMap={}; products.forEach(p=>{ prodMap[p.id]=p; });
@@ -4054,11 +4063,15 @@ const server = http.createServer(async (req, res) => {
         return { item_id:item.item_id, odoo_line_id:item.odoo_line_id||null, odoo_product_id:item.odoo_product_id||null,
           sku:item.sku||'', product_name:item.product_name||'', quantity:item.quantity||0,
           image:item.image||prev.image||'',   // persistir foto del artículo (Odoo image_128)
+          // Campos de unidad: una línea por unidad. group_ref agrupa las unidades del mismo artículo.
+          units:item.units||1, unit_index:item.unit_index||null, unit_total:item.unit_total||null,
+          group_ref:item.group_ref||item.item_id,
           selected:!!item.selected,
           locations:item.locations||[],
           selected_location:selLocIdx,
           selected_location_name:selLocObj?.location_name||null,
-          evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'', status:prev.status||'pending' };
+          evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'',
+          confirmado:prev.confirmado||false, status:prev.status||'pending' };
       });
       tasks[idx].updatedAt=new Date().toISOString();
       saveWwpTasks(tasks);
@@ -4070,7 +4083,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // POST /api/wwp/tasks/:id/items/:itemId/evidence — evidencia por artículo [cualquier rol]
-  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/oi_\d+\/evidence$/) && req.method === 'POST') {
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/evidence$/) && req.method === 'POST') {
     const _jpItemEv = requireJwt(req, res); if (!_jpItemEv) return;
     const parts=reqPath.split('/');
     const taskId=parts[4], itemId=parts[6];
@@ -4103,7 +4116,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // DELETE /api/wwp/tasks/:id/items/:itemId/evidence/:evId [admin|manager]
-  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/oi_\d+\/evidence\/.+$/) && req.method === 'DELETE') {
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/evidence\/.+$/) && req.method === 'DELETE') {
     const _jpItemEvDel = requireJwt(req, res); if (!_jpItemEvDel) return;
     if (!requireRole(_jpItemEvDel, res, ROLE_PERMISSIONS.edit_task)) return;
     const parts=reqPath.split('/');
@@ -4128,7 +4141,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // PATCH /api/wwp/tasks/:id/items/:itemId/confirmar — confirmar artículo procesado
-  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/oi_\d+\/confirmar$/) && req.method === 'PATCH') {
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/confirmar$/) && req.method === 'PATCH') {
     const _jpItemConf = requireJwt(req, res); if (!_jpItemConf) return;
     try {
       const parts = reqPath.split('/');
