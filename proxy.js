@@ -3401,8 +3401,9 @@ const server = http.createServer(async (req, res) => {
         createdAt: now,
         updatedAt: now
       };
-      // Si es tarea principal y viene con assignedTo → asignar encargado
-      if (!isSubtask && task.assignedTo) {
+      // Si es tarea principal y viene con encargado (assignedTo o managerId) → marcar 'assigned'
+      // (managerId también cuenta porque algunos encargados no tienen odooId para assignedTo)
+      if (!isSubtask && (task.assignedTo || task.managerId)) {
         task.status='assigned';
         task.statusHistory.push({ status:'assigned', date:now, by:d.createdBy||'', note:d.note||'' });
       }
