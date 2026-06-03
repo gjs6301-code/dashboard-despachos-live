@@ -7637,6 +7637,9 @@ async function saveTask() {
     title, type:document.getElementById('mf-type').value,
     priority:document.getElementById('mf-priority').value,
     managerId, managerName:managerUser?.name||null,
+    // Asignar encargado también vía assignedTo (oe_<odooId>) para que el
+    // servidor marque la tarea como 'assigned' y se pueda iniciar sin re-asignar.
+    assignedTo: (managerId && managerUser?.odooId) ? ('oe_'+managerUser.odooId) : undefined,
     location:document.getElementById('mf-location').value.trim(),
     description:document.getElementById('mf-desc').value.trim(),
     actionNote:document.getElementById('mf-accion-note').value.trim()||'',

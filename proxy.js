@@ -3529,6 +3529,13 @@ const server = http.createServer(async (req, res) => {
       if (d.assignedTo!==undefined) tasks[idx].assignedTo=d.assignedTo;
       if (d.managerId!==undefined) tasks[idx].managerId=d.managerId;
       if (d.managerName!==undefined) tasks[idx].managerName=d.managerName;
+      // Auto-transición a 'assigned' si se asigna encargado y la tarea sigue pendiente
+      // (sin que el cliente haya enviado un status explícito). Mantiene consistencia con POST.
+      if (!d.status && tasks[idx].status==='pending' && !tasks[idx].parentId &&
+          (d.assignedTo || d.managerId)) {
+        tasks[idx].status='assigned';
+        tasks[idx].statusHistory.push({ status:'assigned', date:now, by:d.by||'', note:d.note||'' });
+      }
       if (d.executors!==undefined) tasks[idx].executors=Array.isArray(d.executors)?d.executors:[];
       // auxiliaryAssignees: auth user IDs de auxiliares (enviados por el frontend cuando role=manager asigna)
       if (d.auxiliaryAssignees!==undefined) tasks[idx].assignees=Array.isArray(d.auxiliaryAssignees)?d.auxiliaryAssignees:[];
