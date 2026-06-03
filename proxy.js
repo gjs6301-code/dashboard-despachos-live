@@ -94,6 +94,20 @@ function saveInspections(d) { saveJson(WWP_INSPECTIONS_FILE, d); }
 
 function loadWwpTasks() { return loadJson(WWP_TASKS_FILE, []); }
 function saveWwpTasks(list) { saveJson(WWP_TASKS_FILE, list); }
+// Secuencia incremental de tareas (alto agua persistente; no se reutiliza al borrar)
+const WWP_SEQ_FILE = path.join(DATA_DIR, 'wwp-task-seq.json');
+function nextTaskSeq() {
+  let meta = loadJson(WWP_SEQ_FILE, { seq: 0 });
+  // Defensa: si el contador quedó por debajo del máximo existente, lo sube
+  try {
+    const tasks = loadWwpTasks();
+    const maxExisting = tasks.reduce((m,t)=> (typeof t.seq==='number' && t.seq>m)?t.seq:m, 0);
+    if (maxExisting > meta.seq) meta.seq = maxExisting;
+  } catch {}
+  meta.seq += 1;
+  saveJson(WWP_SEQ_FILE, meta);
+  return meta.seq;
+}
 // roles: objeto { "oe_<id>": "admin"|"manager"|"assistant" }
 function loadWwpRoles() { return loadJson(WWP_ROLES_FILE, {}); }
 function saveWwpRoles(obj) { saveJson(WWP_ROLES_FILE, obj); }
@@ -3379,6 +3393,7 @@ const server = http.createServer(async (req, res) => {
       const isSubtask = !!(d.parentId);
       const task = {
         id: wwpId('wt'),
+        seq: isSubtask ? null : nextTaskSeq(),   // número de secuencia (solo tareas principales)
         parentId: d.parentId||null,          // null = tarea principal
         title: d.title.trim(),
         type: d.type,
@@ -3956,11 +3971,12 @@ const server = http.createServer(async (req, res) => {
     try {
       // ── 1. Intentar como ORDEN DE VENTA ────────────────────────────
       const orders = await odooCall('sale.order','search_read',
-        [[['name','ilike',ref]]],{fields:['id','name','order_line','partner_id'],limit:1});
+        [[['name','ilike',ref]]],{fields:['id','name','order_line','partner_id','user_id'],limit:1});
       if (orders && orders.length) {
         const order=orders[0];
+        const salesperson = order.user_id ? order.user_id[1] : '';
         const lineIds=order.order_line||[];
-        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',items:[]})); return; }
+        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,items:[]})); return; }
         const lines = await odooCall('sale.order.line','read',[lineIds],{fields:['product_id','product_uom_qty','name']});
         const productIds=[...new Set(lines.filter(l=>l.product_id).map(l=>l.product_id[0]))];
         const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
@@ -3968,7 +3984,7 @@ const server = http.createServer(async (req, res) => {
         const stockMap = await fetchStockMap(productIds);
         const items = buildItems(lines, prodMap, stockMap);
         res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',items}));
+        res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,items}));
         return;
       }
 

@@ -6382,6 +6382,8 @@ const DUE_DATE_COLOR = {
 };
 
 /* Vista Lista — fila compacta, mismo tamaño de fuente */
+// Etiqueta del número de secuencia de la tarea: #0042
+function seqLabel(t){ return (typeof t.seq==='number' && t.seq>0) ? '#'+String(t.seq).padStart(4,'0') : ''; }
 function renderListRow(t) {
   const today = new Date().toISOString().slice(0,10);
   const overdue = t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status);
@@ -6401,7 +6403,7 @@ function renderListRow(t) {
   return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${rowStyle}">
     <span style="width:8px;height:8px;border-radius:50%;background:${priorityColor};flex-shrink:0;display:inline-block"></span>
     <div class="task-list-main">
-      <span class="task-list-title">${esc(t.title)}</span>
+      <span class="task-list-title">${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:5px">${seqLabel(t)}</span>`:''}${esc(t.title)}</span>
       ${meta.length?`<div class="task-list-meta">${meta.join('<span class="task-list-sep">·</span>')}</div>`:''}
     </div>
     <div class="task-list-badges">
@@ -6545,7 +6547,7 @@ function renderTaskCard(t) {
 
   return `<div class="task-card" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${tier?DUE_CARD_STYLE[tier]:''}">
     <div class="tc-header">
-      <div class="tc-title">${esc(t.title)}</div>
+      <div class="tc-title">${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:6px">${seqLabel(t)}</span>`:''}${esc(t.title)}</div>
       ${overdue ? '<span class="tc-overdue-pill"><i data-lucide="alert-triangle" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>Vencida</span>' : ''}
     </div>
     ${subs.length ? `<div class="tc-progress"><div class="tc-progress-bar" style="width:${progPct}%"></div></div>` : ''}
@@ -6600,7 +6602,7 @@ async function openDrawer(taskId) {
       }
     } catch {}
   }
-  document.getElementById('drawer-title').textContent = t.title;
+  document.getElementById('drawer-title').textContent = (seqLabel(t)?seqLabel(t)+' · ':'') + t.title;
   renderDrawer(t);
   document.getElementById('wwp-drawer-overlay').classList.add('open');
   document.getElementById('wwp-drawer').classList.add('open');
@@ -7392,6 +7394,7 @@ function resetTaskModal() {
   _modalItems=[];
   _modalSearch=[];
   _modalCurrentRef='';
+  _lastAutoTitle='';
   onTypeChange();
 }
 
@@ -7441,6 +7444,7 @@ function taskRemoveFoto(idx, wrapEl) {
 var _modalSearch = [];
 var _modalCurrentRef = ''; // referencia de la búsqueda activa
 
+var _lastAutoTitle = ''; // último título autogenerado desde documento Odoo
 function onTypeChange() {
   document.getElementById('mf-odoo-wrap').style.display='';
 }
@@ -7471,8 +7475,17 @@ async function fetchOrderItems() {
       `<span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:10px;font-weight:700;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--text-2)">${typeIcon}${esc(typeLabel)}</span>
         <span><i data-lucide="user" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(d.client)}</span>
+        ${d.salesperson?'<span style="font-size:11px;color:var(--text-3)">· <i data-lucide="briefcase" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>'+esc(d.salesperson)+'</span>':''}
         ${d.origin?'<span style="font-size:11px;color:var(--text-3)">· '+esc(d.origin)+'</span>':''}
       </span>`;
+    // Auto-poblar título: {documento}-{cliente}-{vendedor}
+    // Solo si el campo está vacío o aún contiene un título autogenerado previo (no pisar edición manual)
+    const titleEl = document.getElementById('mf-title');
+    const autoTitle = [d.ref||ref, d.client||'', d.salesperson||''].filter(Boolean).join('-');
+    if (titleEl && autoTitle && (!titleEl.value.trim() || titleEl.value === _lastAutoTitle)) {
+      titleEl.value = autoTitle;
+      _lastAutoTitle = autoTitle;
+    }
     if(window.lucide) lucide.createIcons();
     const panelTitle = document.getElementById('mf-items-panel-title');
     if (panelTitle) {
