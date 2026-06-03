@@ -4095,14 +4095,23 @@ const server = http.createServer(async (req, res) => {
       const itemIdx=(tasks[idx].items||[]).findIndex(it=>it.item_id===itemId);
       if (itemIdx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Artículo no encontrado'})); return; }
       if (!tasks[idx].items[itemIdx].evidence_images) tasks[idx].items[itemIdx].evidence_images=[];
+      // ── Anti-duplicado: hashes de TODAS las evidencias de la tarea (todos los items)
+      // Evita que se suba la misma foto a varias unidades para simular evidencias.
+      const existingHashes = new Set();
+      (tasks[idx].items||[]).forEach(it => (it.evidence_images||[]).forEach(e => { if (e.hash) existingHashes.add(e.hash); }));
       const saved=[];
       (d.fotos||[]).forEach((f,fi)=>{
         const { b64, ext } = validatePhoto(f);
+        const hash = crypto.createHash('sha256').update(Buffer.from(b64,'base64')).digest('hex');
+        if (existingHashes.has(hash)) {
+          throw new Error('Esta foto ya fue subida en esta tarea. Toma una foto distinta para cada unidad.');
+        }
+        existingHashes.add(hash); // bloquea duplicados dentro del mismo lote
         const ts=Date.now();
         const fname=`${taskId}_${itemId}_${ts}_${fi}.${ext}`;
         const fpath=path.join(WWP_FOTOS_DIR,fname);
         fs.writeFileSync(fpath,Buffer.from(b64,'base64'));
-        const entry={id:`ev_${ts}_${fi}`,url:`/wwp-fotos/${fname}`,caption:f.caption||'',uploaded_by:d.by||'',uploaded_at:new Date().toISOString()};
+        const entry={id:`ev_${ts}_${fi}`,url:`/wwp-fotos/${fname}`,hash,caption:f.caption||'',uploaded_by:d.by||'',uploaded_at:new Date().toISOString()};
         tasks[idx].items[itemIdx].evidence_images.push(entry); saved.push(entry);
       });
       if (tasks[idx].items[itemIdx].evidence_images.length>0) tasks[idx].items[itemIdx].status='evidenced';
