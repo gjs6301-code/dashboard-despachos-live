@@ -4037,6 +4037,7 @@ const server = http.createServer(async (req, res) => {
         const selLocObj = (selLocIdx!==null && Array.isArray(item.locations)) ? (item.locations[selLocIdx]||null) : null;
         return { item_id:item.item_id, odoo_line_id:item.odoo_line_id||null, odoo_product_id:item.odoo_product_id||null,
           sku:item.sku||'', product_name:item.product_name||'', quantity:item.quantity||0,
+          image:item.image||prev.image||'',   // persistir foto del artículo (Odoo image_128)
           selected:!!item.selected,
           locations:item.locations||[],
           selected_location:selLocIdx,
