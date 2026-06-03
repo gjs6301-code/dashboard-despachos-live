@@ -4482,6 +4482,10 @@ body{font-family:var(--font);min-height:100dvh}
       </div>
       <!-- Opciones de cadena (solo subtareas) -->
       <div class="form-group" id="mf-subtask-opts" style="display:none">
+        <label class="perm-check" style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(37,99,235,.06);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:6px">
+          <input type="checkbox" id="mf-inherit-items" checked onchange="inheritSubtaskItemsIfChecked()" style="width:16px;height:16px;accent-color:var(--accent)">
+          <span style="font-size:12px;color:var(--text)"><b>Heredar artículos de la orden madre</b><br><span style="font-size:10px;color:var(--text-3)">Copia artículos, código de barra, foto y cantidades. El equipo de esta subtarea sube su propia evidencia.</span></span>
+        </label>
         <label class="perm-check" style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(37,99,235,.06);border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
           <input type="checkbox" id="mf-depends-prev" style="width:16px;height:16px;accent-color:var(--accent)">
           <span style="font-size:12px;color:var(--text)"><b>Requiere el paso anterior completado</b><br><span style="font-size:10px;color:var(--text-3)">No se podrá iniciar esta subtarea hasta cerrar la anterior de la cadena</span></span>
@@ -6883,6 +6887,38 @@ function renderDrawer(t) {
       </div></div>`).join('')}`;
   }
 
+  // ── Contexto de la orden madre (solo en subtareas) ──
+  // El ejecutor (ej. chofer) ve qué se hizo en el padre sin comunicarse con ese equipo.
+  let parentCtxHtml = '';
+  if (t.parentId) {
+    const parent = (_tasks||[]).find(x => x.id === t.parentId);
+    if (parent) {
+      const pItems = (parent.items||[]).filter(i=>i.selected);
+      const pUnits = pItems.length;
+      const pPhotos = pItems.flatMap(i => (i.evidence_images||[]).map(e => ({url:e.url, name:i.product_name||i.sku})));
+      const pDone = parent.statusHistory ? (parent.statusHistory.find(h=>h.status==='completed')||{}).date : null;
+      const row = (icon,label,val)=> val ? `<div style="display:flex;gap:7px;align-items:flex-start;margin-bottom:5px"><i data-lucide="${icon}" style="width:13px;height:13px;stroke:var(--accent);flex-shrink:0;margin-top:1px"></i><div style="font-size:12px"><span style="color:var(--text-3)">${label}:</span> <b>${esc(val)}</b></div></div>` : '';
+      parentCtxHtml = `<div style="background:rgba(37,99,235,.05);border:1.5px solid var(--accent);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <i data-lucide="package" style="width:14px;height:14px;stroke:var(--accent)"></i>
+          <span style="font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Contexto de la orden</span>
+          <a onclick="openDrawer('${parent.id}')" style="margin-left:auto;font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline">${seqLabel(parent)||''} Ver orden ›</a>
+        </div>
+        ${row('hash', 'Orden', parent.odooRef||parent.title)}
+        ${row('user', 'Cliente', parent.client)}
+        ${row('phone', 'Teléfono', parent.phone)}
+        ${row('map-pin', 'Entrega', parent.deliveryAddress)}
+        ${row('box', 'Recoger en', parent.location)}
+        ${row('users', 'Empacó', parent.managerName ? parent.managerName + (pDone?(' · '+fmtDate(pDone)):'') : '')}
+        ${parent.actionNote?`<div style="display:flex;gap:7px;align-items:flex-start;margin-top:6px;padding:6px 8px;background:var(--amber-bg);border-radius:6px"><i data-lucide="alert-circle" style="width:13px;height:13px;stroke:var(--amber-text);flex-shrink:0;margin-top:1px"></i><div style="font-size:12px;color:var(--amber-text)"><b>Nota:</b> ${esc(parent.actionNote)}</div></div>`:''}
+        ${pUnits?`<div style="margin-top:8px;font-size:11px;color:var(--text-2);font-weight:600">📦 ${pUnits} unidad${pUnits>1?'es':''} empacada${pUnits>1?'s':''}${pPhotos.length?` · ${pPhotos.length} foto${pPhotos.length>1?'s':''} de empaque`:''}</div>`:''}
+        ${pPhotos.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--accent);cursor:pointer">Ver fotos de empaque (referencia)</summary>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${pPhotos.slice(0,12).map(ph=>`<img src="${mediaUrl(ph.url)}" title="${esc(ph.name)}" onclick="openLightbox('${mediaUrl(ph.url)}')" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in" onerror="this.style.display='none'">`).join('')}</div>
+        </details>`:''}
+      </div>`;
+    }
+  }
+
   // Guía visual — fotos de referencia con instrucción, checkbox y evidencias por foto
   const guiaFotos = t.fotos_guia || [];
   const totalGuia = guiaFotos.length;
@@ -6941,6 +6977,7 @@ function renderDrawer(t) {
       ${t.dueDate?`<div class="info-cell"><div class="info-cell-label">Fecha límite</div><div class="info-cell-val">${t.dueDate}</div></div>`:''}
       <div class="info-cell"><div class="info-cell-label">Creado</div><div class="info-cell-val">${fmtDate(t.createdAt)}</div></div>
     </div>
+    ${parentCtxHtml}
     ${guiaHtml}
     ${actionHtml}
     ${itemsHtml}
@@ -7440,7 +7477,7 @@ async function deleteItemEvidence(taskId, itemId, evId) {
 var _subtaskParentId = null; // si está set, la próxima tarea guardada es subtarea de esta madre
 function openNewTaskModal() {
   if (!can('create_task')) return; // RBAC guard
-  _editingTask=null; _subtaskParentId=null; resetTaskModal(); document.getElementById('modal-task-title').textContent='Nueva Tarea';
+  _editingTask=null; _subtaskParentId=null; _subtaskParentItems=[]; resetTaskModal(); document.getElementById('modal-task-title').textContent='Nueva Tarea';
   document.getElementById('mf-subtask-opts').style.display='none';
   applyManagerSelfMode();
   document.getElementById('modal-task').classList.add('open');
@@ -7451,10 +7488,32 @@ function openNewSubtaskModal(parentId) {
   _editingTask=null; _subtaskParentId=parentId; resetTaskModal();
   const parent=(_tasks||[]).find(x=>x.id===parentId);
   document.getElementById('modal-task-title').textContent='Nueva Subtarea' + (parent?(' · '+(seqLabel(parent)||'')+' '+parent.title.slice(0,30)):'');
-  document.getElementById('mf-subtask-opts').style.display=''; // mostrar toggle de dependencia
+  document.getElementById('mf-subtask-opts').style.display=''; // mostrar toggles de cadena
   document.getElementById('mf-depends-prev').checked=false;
+  document.getElementById('mf-inherit-items').checked=true;
+  // Heredar contexto de la orden (cliente, dirección, etc.) y referencia
+  if (parent) {
+    _lastOrderCtx = { client:parent.client||'', salesperson:parent.salesperson||'', deliveryAddress:parent.deliveryAddress||'', phone:parent.phone||'' };
+    if (parent.odooRef) document.getElementById('mf-odoo-ref').value = parent.odooRef;
+    if (parent.location) document.getElementById('mf-location').value = parent.location;
+    // Heredar artículos: copia con evidencia/confirmación reseteadas (el nuevo equipo hace la suya)
+    _subtaskParentItems = (parent.items||[]).filter(i=>i.selected).map(i=>({
+      ...i, evidence_images:[], confirmado:false, status:'pending'
+    }));
+    inheritSubtaskItemsIfChecked();
+  }
   applyManagerSelfMode();
   document.getElementById('modal-task').classList.add('open');
+}
+var _subtaskParentItems = []; // artículos del padre disponibles para heredar
+function inheritSubtaskItemsIfChecked() {
+  const chk = document.getElementById('mf-inherit-items');
+  if (chk && chk.checked && _subtaskParentItems.length) {
+    _modalItems = _subtaskParentItems.map(i=>({...i}));
+  } else {
+    _modalItems = [];
+  }
+  renderCart();
 }
 // Para rol encargado: él es el responsable automático. Oculta el dropdown
 // de encargado y muestra su nombre. Los auxiliares se asignan luego en el drawer.
@@ -7519,6 +7578,7 @@ function resetTaskModal() {
   _modalSearch=[];
   _modalCurrentRef='';
   _lastAutoTitle='';
+  _lastOrderCtx={ client:'', salesperson:'', deliveryAddress:'', phone:'' };
   onTypeChange();
 }
 
@@ -7569,6 +7629,7 @@ var _modalSearch = [];
 var _modalCurrentRef = ''; // referencia de la búsqueda activa
 
 var _lastAutoTitle = ''; // último título autogenerado desde documento Odoo
+var _lastOrderCtx = { client:'', salesperson:'', deliveryAddress:'', phone:'' }; // contexto de la orden Odoo
 function onTypeChange() {
   document.getElementById('mf-odoo-wrap').style.display='';
 }
@@ -7604,6 +7665,8 @@ async function fetchOrderItems() {
       </span>`;
     // Auto-poblar título: {documento}-{cliente}-{vendedor}
     // Solo si el campo está vacío o aún contiene un título autogenerado previo (no pisar edición manual)
+    // Capturar contexto de la orden para guardarlo en la tarea (cliente, vendedor, dirección, teléfono)
+    _lastOrderCtx = { client:d.client||'', salesperson:d.salesperson||'', deliveryAddress:d.deliveryAddress||'', phone:d.phone||'' };
     const titleEl = document.getElementById('mf-title');
     const autoTitle = [d.ref||ref, d.client||'', d.salesperson||''].filter(Boolean).join('-');
     if (titleEl && autoTitle && (!titleEl.value.trim() || titleEl.value === _lastAutoTitle)) {
@@ -7864,6 +7927,11 @@ async function saveTask() {
     // Subtarea de cadena: parentId + dependencia opcional del paso anterior
     parentId: (!_editingTask && _subtaskParentId) ? _subtaskParentId : (_editingTask?.parentId || undefined),
     dependsOnPrev: (!_editingTask && _subtaskParentId) ? !!document.getElementById('mf-depends-prev').checked : undefined,
+    // Contexto de la orden (cliente, vendedor, dirección, teléfono)
+    client: _lastOrderCtx.client||undefined,
+    salesperson: _lastOrderCtx.salesperson||undefined,
+    deliveryAddress: _lastOrderCtx.deliveryAddress||undefined,
+    phone: _lastOrderCtx.phone||undefined,
     createdBy:_user.id, by:_user.name, byUserId:_user.id
   };
   try {
