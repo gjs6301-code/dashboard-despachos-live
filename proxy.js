@@ -3291,15 +3291,23 @@ const server = http.createServer(async (req, res) => {
     // Filtrado por rol: admins ven todo; managers/assistants solo sus tareas
     if (jp.role !== 'admin') {
       const uid = jp.userId;
-      tasks = tasks.filter(t =>
+      const isParticipant = (t) =>
         t.managerId   === uid ||
         t.createdBy   === uid ||
         odooStrToAuthId(t.assignedTo) === uid ||
-        // executors: puede ser oe_XXX (odoo) o auth user ID directo (sin odoo)
         (t.executors||[]).some(e => e === uid || odooStrToAuthId(e) === uid) ||
-        // assignees: auth user IDs de auxiliares (guardados desde auxiliaryAssignees)
-        (t.assignees||[]).includes(uid)
-      );
+        (t.assignees||[]).includes(uid);
+      const direct = tasks.filter(isParticipant);
+      const ids = new Set(direct.map(t => t.id));
+      // Incluir relacionadas para contexto de cadena:
+      //  - el padre de una subtarea visible (el chofer necesita el contexto de la orden)
+      //  - las subtareas de un padre visible
+      tasks.forEach(t => {
+        if (ids.has(t.id)) return;
+        if (direct.some(d => d.parentId === t.id)) ids.add(t.id);          // padre de mi subtarea
+        if (t.parentId && direct.some(d => d.id === t.parentId)) ids.add(t.id); // hija de mi tarea
+      });
+      tasks = tasks.filter(t => ids.has(t.id));
     }
     // Ordenar por fecha límite asc (nulls al final), luego por creación desc
     tasks.sort((a, b) => {
@@ -3406,6 +3414,10 @@ const server = http.createServer(async (req, res) => {
         executors: Array.isArray(d.executors) ? d.executors : [],  // Auxiliares (subtareas)
         assignees: Array.isArray(d.assignees) ? d.assignees : [],  // Múltiples encargados (auth user IDs)
         odooRef: d.odooRef||'',
+        client: d.client||'',                 // cliente (de Odoo) — contexto para la cadena
+        salesperson: d.salesperson||'',       // vendedor
+        deliveryAddress: d.deliveryAddress||'', // dirección de entrega
+        phone: d.phone||'',                   // teléfono del destinatario
         location: d.location||'',
         dueDate: d.dueDate||null,
         actionNote: d.actionNote||'',
@@ -3582,6 +3594,10 @@ const server = http.createServer(async (req, res) => {
       if (d.description!==undefined) tasks[idx].description=d.description;
       if (d.priority!==undefined) tasks[idx].priority=d.priority;
       if (d.odooRef!==undefined) tasks[idx].odooRef=d.odooRef;
+      if (d.client!==undefined) tasks[idx].client=d.client;
+      if (d.salesperson!==undefined) tasks[idx].salesperson=d.salesperson;
+      if (d.deliveryAddress!==undefined) tasks[idx].deliveryAddress=d.deliveryAddress;
+      if (d.phone!==undefined) tasks[idx].phone=d.phone;
       if (d.location!==undefined) tasks[idx].location=d.location;
       if (d.dueDate!==undefined) tasks[idx].dueDate=d.dueDate;
       if (d.actionNote!==undefined) tasks[idx].actionNote=d.actionNote;
@@ -3991,7 +4007,8 @@ const server = http.createServer(async (req, res) => {
         const locations=stockMap[l.product_id[0]]||[];
         const units = resolveDemandQty(l);
         return { item_id:'oi_'+l.id, odoo_line_id:l.id, odoo_product_id:l.product_id[0],
-          sku:prod.barcode||prod.default_code||'', product_name:l.product_id[1]||l.name||'',
+          sku:prod.barcode||prod.default_code||'', barcode:prod.barcode||'',  // barcode explícito para escaneo
+          product_name:l.product_id[1]||l.name||'',
           quantity:units, units,                 // units = unidades de la Demanda (editable)
           image:prod.image_128?'data:image/png;base64,'+prod.image_128:null,
           locations, selected_location:locations.length===1?0:null,
@@ -4002,12 +4019,26 @@ const server = http.createServer(async (req, res) => {
     try {
       // ── 1. Intentar como ORDEN DE VENTA ────────────────────────────
       const orders = await odooCall('sale.order','search_read',
-        [[['name','ilike',ref]]],{fields:['id','name','order_line','partner_id','user_id'],limit:1});
+        [[['name','ilike',ref]]],{fields:['id','name','order_line','partner_id','partner_shipping_id','user_id'],limit:1});
       if (orders && orders.length) {
         const order=orders[0];
         const salesperson = order.user_id ? order.user_id[1] : '';
+        // Dirección de entrega + teléfono del destinatario (partner de envío, o cliente)
+        let deliveryAddress='', phone='';
+        try {
+          const shipId = (order.partner_shipping_id && order.partner_shipping_id[0]) || (order.partner_id && order.partner_id[0]);
+          if (shipId) {
+            const ps = await odooCall('res.partner','read',[[shipId]],{fields:['contact_address','street','street2','city','phone','mobile']});
+            if (ps && ps.length) {
+              const p=ps[0];
+              deliveryAddress = (p.contact_address || [p.street,p.street2,p.city].filter(Boolean).join(', ') || '').replace(/\n+/g,', ').replace(/, ,/g,',').trim();
+              phone = p.phone || p.mobile || '';
+            }
+          }
+        } catch(e) { /* dirección es opcional */ }
         const lineIds=order.order_line||[];
-        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,items:[]})); return; }
+        const baseResp = {ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,deliveryAddress,phone};
+        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({...baseResp,items:[]})); return; }
         const lines = await odooCall('sale.order.line','read',[lineIds],{fields:['product_id','product_uom_qty','name']});
         const productIds=[...new Set(lines.filter(l=>l.product_id).map(l=>l.product_id[0]))];
         const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
@@ -4015,7 +4046,7 @@ const server = http.createServer(async (req, res) => {
         const stockMap = await fetchStockMap(productIds);
         const items = buildItems(lines, prodMap, stockMap);
         res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,items}));
+        res.end(JSON.stringify({...baseResp,items}));
         return;
       }
 
@@ -4083,7 +4114,7 @@ const server = http.createServer(async (req, res) => {
         const selLocIdx = typeof item.selected_location==='number' ? item.selected_location : null;
         const selLocObj = (selLocIdx!==null && Array.isArray(item.locations)) ? (item.locations[selLocIdx]||null) : null;
         return { item_id:item.item_id, odoo_line_id:item.odoo_line_id||null, odoo_product_id:item.odoo_product_id||null,
-          sku:item.sku||'', product_name:item.product_name||'', quantity:item.quantity||0,
+          sku:item.sku||'', barcode:item.barcode||prev.barcode||'', product_name:item.product_name||'', quantity:item.quantity||0,
           image:item.image||prev.image||'',   // persistir foto del artículo (Odoo image_128)
           // Campos de unidad: una línea por unidad. group_ref agrupa las unidades del mismo artículo.
           units:item.units||1, unit_index:item.unit_index||null, unit_total:item.unit_total||null,
