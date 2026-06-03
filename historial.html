@@ -4480,6 +4480,13 @@ body{font-family:var(--font);min-height:100dvh}
           <input id="mf-due" type="date" class="form-select">
         </div>
       </div>
+      <!-- Opciones de cadena (solo subtareas) -->
+      <div class="form-group" id="mf-subtask-opts" style="display:none">
+        <label class="perm-check" style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(37,99,235,.06);border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+          <input type="checkbox" id="mf-depends-prev" style="width:16px;height:16px;accent-color:var(--accent)">
+          <span style="font-size:12px;color:var(--text)"><b>Requiere el paso anterior completado</b><br><span style="font-size:10px;color:var(--text-3)">No se podrá iniciar esta subtarea hasta cerrar la anterior de la cadena</span></span>
+        </label>
+      </div>
       <div class="form-group">
         <label class="form-label">Localidad / Área</label>
         <input id="mf-location" class="form-input" placeholder="CDP, PTN, Showroom…">
@@ -5766,9 +5773,19 @@ function filterTasks() {
   })();
 
   const visible = _tasks.filter(t => {
-    if (t.parentId) return false;
-    if (_user && _user.role !== 'admin') {
-      if (!canViewTaskLocal(t, _user.id)) return false;
+    if (t.parentId) {
+      // Subtarea: se muestra como fila propia SOLO si el usuario participa en ella
+      // pero NO en la madre (ej. equipo de despacho que no tiene la orden completa).
+      // Admin y participantes de la madre la ven dentro del dropdown de la madre.
+      if (_user && _user.role === 'admin') return false;
+      const meInSub = taskParticipantIds(t).has(_user?.id);
+      const parent = _tasks.find(x => x.id === t.parentId);
+      const meInParent = parent && taskParticipantIds(parent).has(_user?.id);
+      if (!(meInSub && !meInParent)) return false;
+    } else {
+      if (_user && _user.role !== 'admin') {
+        if (!canViewTaskLocal(t, _user.id)) return false;
+      }
     }
     if (st && t.status!==st) return false;
     if (ty && t.type!==ty) return false;
@@ -6382,8 +6399,16 @@ const DUE_DATE_COLOR = {
 };
 
 /* Vista Lista — fila compacta, mismo tamaño de fuente */
-// Etiqueta del número de secuencia de la tarea: #0042
-function seqLabel(t){ return (typeof t.seq==='number' && t.seq>0) ? '#'+String(t.seq).padStart(4,'0') : ''; }
+// Etiqueta del número de secuencia: #0042 (madre) o #0042·1 (subtarea/cadena)
+function seqLabel(t){
+  if(!t) return '';
+  if(t.parentId){
+    const p=(_tasks||[]).find(x=>x.id===t.parentId);
+    const pl=(p&&typeof p.seq==='number'&&p.seq>0)?'#'+String(p.seq).padStart(4,'0'):'#----';
+    return pl+'·'+(t.subIndex||'?');
+  }
+  return (typeof t.seq==='number' && t.seq>0) ? '#'+String(t.seq).padStart(4,'0') : '';
+}
 function renderListRow(t) {
   const today = new Date().toISOString().slice(0,10);
   const overdue = t.dueDate && t.dueDate < today && !['completed','validated'].includes(t.status);
@@ -6403,7 +6428,8 @@ function renderListRow(t) {
   return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${rowStyle}">
     <span style="width:8px;height:8px;border-radius:50%;background:${priorityColor};flex-shrink:0;display:inline-block"></span>
     <div class="task-list-main">
-      <span class="task-list-title">${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:5px">${seqLabel(t)}</span>`:''}${esc(t.title)}</span>
+      <span class="task-list-title">${t.parentId?'<i data-lucide="git-branch" style="width:11px;height:11px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>':''}${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:5px">${seqLabel(t)}</span>`:''}${esc(t.title)}</span>
+      ${t.parentId?(()=>{const p=(_tasks||[]).find(x=>x.id===t.parentId);return `<div class="task-list-meta" style="color:var(--accent)">↳ Subtarea de ${p?(seqLabel(p)+' '+esc(p.title.slice(0,30))):'tarea madre'}</div>`;})():''}
       ${meta.length?`<div class="task-list-meta">${meta.join('<span class="task-list-sep">·</span>')}</div>`:''}
     </div>
     <div class="task-list-badges">
@@ -6799,15 +6825,35 @@ function renderDrawer(t) {
     itemsHtml += `<div class="items-alert"><i data-lucide="alert-triangle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Debes subir al menos una foto de evidencia antes de completar la tarea.</div>`;
   }
 
-  // Subtareas
+  // ── CADENA DE ACCIONES (subtareas) — solo en tareas madre ──
   let subsHtml = '';
-  if (subs.length) {
-    subsHtml = `<div class="sec-header">SUBTAREAS</div>${subs.map(s=>`<div class="sub-card" onclick="openDrawer('${s.id}')">
-      <div class="sub-top"><span class="badge ${STATUS_CSS[s.status]||'b-pending'} ">${STATUS_LABELS[s.status]||s.status}</span><span class="sub-title">${esc(s.title)}</span></div>
-      <div class="sub-meta">${(s.executors||[]).map(e=>userName(e)).filter(Boolean).join(', ')||'Sin auxiliar'}</div>
-    </div>`).join('')}`;
-  } else if (!t.parentId) {
-    subsHtml = `<div class="sec-header">SUBTAREAS</div><div style="color:var(--text-3);font-size:13px;padding:8px 0">No hay subtareas aún.</div>`;
+  if (!t.parentId) {
+    const canAddSub = !isClosedTask && (_user.role==='admin' || _user.role==='manager');
+    const ordered = subs.slice().sort((a,b)=>(a.subIndex||0)-(b.subIndex||0));
+    const doneN = ordered.filter(s=>['completed','validated'].includes(s.status)).length;
+    const TYPE_LBL = {dispatch_order:'Despacho',warehouse_move:'Movimiento',packaging:'Empaque',item_pickup:'Recogida',truck_loading:'Carga',general:'General'};
+    const stepsHtml = ordered.map((s,i)=>{
+      const team = [s.managerName, ...taskAuxiliaryIds(s).map(id=>{const u=(_authUsers||[]).find(x=>x.id===id);return u?u.name.split(' ')[0]:null;})].filter(Boolean).join(', ')||'Sin asignar';
+      const sSel = (s.items||[]).filter(x=>x.selected);
+      const sDone = sSel.filter(x=>(x.evidence_images||[]).length>0).length;
+      const prog = sSel.length ? Math.round(sDone/sSel.length*100) : (['completed','validated'].includes(s.status)?100:0);
+      const locked = s.dependsOnPrev && i>0 && !['completed','validated'].includes(ordered[i-1].status) && !['completed','validated'].includes(s.status);
+      return `<div class="chain-step" onclick="openDrawer('${s.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--surface-2);border:1.5px solid ${['completed','validated'].includes(s.status)?'var(--green-dot)':'var(--border)'};border-radius:9px;cursor:pointer;margin-bottom:6px">
+        <span style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${s.subIndex||i+1}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${locked?'<i data-lucide="lock" style="width:11px;height:11px;stroke:var(--amber-dot);display:inline-block;vertical-align:-1px;margin-right:3px"></i>':''}${esc(TYPE_LBL[s.type]||s.type||'')} · ${esc(s.title)}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:1px"><i data-lucide="users" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>${esc(team)}${sSel.length?` · ${sDone}/${sSel.length} fotos`:''}</div>
+          ${sSel.length?`<div style="height:3px;border-radius:2px;background:var(--border);margin-top:4px"><div style="height:3px;border-radius:2px;width:${prog}%;background:var(--green-dot)"></div></div>`:''}
+        </div>
+        <span class="badge ${STATUS_CSS[s.status]||'b-pending'}" style="flex-shrink:0">${STATUS_LABELS[s.status]||s.status}</span>
+      </div>`;
+    }).join('');
+    subsHtml = `<div class="sec-header" style="display:flex;align-items:center;gap:6px">
+        <i data-lucide="git-branch" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px"></i>
+        CADENA DE ACCIONES${ordered.length?` <span style="font-weight:600;color:var(--text-3)">(${doneN}/${ordered.length})</span>`:''}
+        ${canAddSub?`<button class="btn-sm" onclick="event.stopPropagation();openNewSubtaskModal('${t.id}')" style="margin-left:auto;padding:3px 10px"><i data-lucide="plus" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Nueva subtarea</button>`:''}
+      </div>
+      ${ordered.length ? stepsHtml : '<div style="color:var(--text-3);font-size:13px;padding:6px 0 10px">Sin subtareas. Crea una para encadenar acciones de otros equipos (ej. empaque → despacho).</div>'}`;
   }
 
   // Evidence — se oculta si la tarea tiene fotos de guía o artículos (cada uno lleva su evidencia)
@@ -6820,6 +6866,22 @@ function renderDrawer(t) {
 
   // History
   const histHtml = `<div class="sec-header" style="margin-top:20px">HISTORIAL DE ESTADO</div>${(t.statusHistory||[]).map(h=>`<div class="hist-item"><div class="hist-dot"></div><div class="hist-content"><div class="hist-status">${STATUS_LABELS[h.status]||h.status}</div><div class="hist-meta">${fmtDate(h.date)} · ${h.by||'—'}${h.note?' — '+h.note:''}</div></div></div>`).join('')}`;
+
+  // Trazabilidad unificada — combina el historial de la madre + todas las subtareas (cadena), cronológico
+  let traceHtml = '';
+  if (!t.parentId && subs.length) {
+    const ev = [];
+    const pushHist = (task, label) => (task.statusHistory||[]).forEach(h => ev.push({ date:h.date, label, status:h.status, by:h.by, note:h.note }));
+    pushHist(t, seqLabel(t) || 'Madre');
+    subs.slice().sort((a,b)=>(a.subIndex||0)-(b.subIndex||0)).forEach(s => pushHist(s, (seqLabel(s)||('·'+s.subIndex))+' '+s.title.slice(0,24)));
+    ev.sort((a,b)=> new Date(a.date)-new Date(b.date));
+    traceHtml = `<div class="sec-header" style="margin-top:20px;display:flex;align-items:center;gap:6px">
+      <i data-lucide="route" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px"></i>TRAZABILIDAD DE LA CADENA</div>
+      ${ev.map(e=>`<div class="hist-item"><div class="hist-dot" style="background:var(--accent)"></div><div class="hist-content">
+        <div class="hist-status" style="font-size:11px"><span style="color:var(--accent);font-weight:700">${esc(e.label)}</span> → ${STATUS_LABELS[e.status]||e.status}</div>
+        <div class="hist-meta">${fmtDate(e.date)} · ${e.by||'—'}${e.note?' — '+esc(e.note):''}</div>
+      </div></div>`).join('')}`;
+  }
 
   // Guía visual — fotos de referencia con instrucción, checkbox y evidencias por foto
   const guiaFotos = t.fotos_guia || [];
@@ -6885,6 +6947,7 @@ function renderDrawer(t) {
     ${subsHtml}
     ${evHtml}
     ${histHtml}
+    ${traceHtml}
     <div class="chat-section">
       <div class="chat-hdr">
         <span class="chat-hdr-title"><i data-lucide="message-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Chat</span>
@@ -7374,9 +7437,22 @@ async function deleteItemEvidence(taskId, itemId, evId) {
 // ═══════════════════════════════════════════════════════════════════════
 // TASK MODAL
 // ═══════════════════════════════════════════════════════════════════════
+var _subtaskParentId = null; // si está set, la próxima tarea guardada es subtarea de esta madre
 function openNewTaskModal() {
   if (!can('create_task')) return; // RBAC guard
-  _editingTask=null; resetTaskModal(); document.getElementById('modal-task-title').textContent='Nueva Tarea';
+  _editingTask=null; _subtaskParentId=null; resetTaskModal(); document.getElementById('modal-task-title').textContent='Nueva Tarea';
+  document.getElementById('mf-subtask-opts').style.display='none';
+  applyManagerSelfMode();
+  document.getElementById('modal-task').classList.add('open');
+}
+// Crear subtarea (cadena de acciones) dentro de una tarea madre — reusa el mismo modal
+function openNewSubtaskModal(parentId) {
+  if (!can('create_task')) { toast('Sin permiso para crear subtareas'); return; }
+  _editingTask=null; _subtaskParentId=parentId; resetTaskModal();
+  const parent=(_tasks||[]).find(x=>x.id===parentId);
+  document.getElementById('modal-task-title').textContent='Nueva Subtarea' + (parent?(' · '+(seqLabel(parent)||'')+' '+parent.title.slice(0,30)):'');
+  document.getElementById('mf-subtask-opts').style.display=''; // mostrar toggle de dependencia
+  document.getElementById('mf-depends-prev').checked=false;
   applyManagerSelfMode();
   document.getElementById('modal-task').classList.add('open');
 }
@@ -7419,7 +7495,7 @@ function openEditTaskModal() {
   applyManagerSelfMode();
   document.getElementById('modal-task').classList.add('open');
 }
-function closeTaskModal() { document.getElementById('modal-task').classList.remove('open'); _modalItems=[]; _modalSearch=[]; _modalCurrentRef=''; }
+function closeTaskModal() { document.getElementById('modal-task').classList.remove('open'); _modalItems=[]; _modalSearch=[]; _modalCurrentRef=''; _subtaskParentId=null; }
 var _newTaskFotos = []; // [{b64, ext}] — fotos pendientes del formulario nueva tarea
 
 function resetTaskModal() {
@@ -7785,6 +7861,9 @@ async function saveTask() {
     odooRef: _modalItems.length
       ? [...new Set(_modalItems.map(it=>it._sourceRef).filter(Boolean))].join(', ')
       : (document.getElementById('mf-odoo-ref').value.trim()||null),
+    // Subtarea de cadena: parentId + dependencia opcional del paso anterior
+    parentId: (!_editingTask && _subtaskParentId) ? _subtaskParentId : (_editingTask?.parentId || undefined),
+    dependsOnPrev: (!_editingTask && _subtaskParentId) ? !!document.getElementById('mf-depends-prev').checked : undefined,
     createdBy:_user.id, by:_user.name, byUserId:_user.id
   };
   try {

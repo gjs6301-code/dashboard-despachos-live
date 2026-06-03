@@ -3409,6 +3409,8 @@ const server = http.createServer(async (req, res) => {
         location: d.location||'',
         dueDate: d.dueDate||null,
         actionNote: d.actionNote||'',
+        dependsOnPrev: isSubtask ? !!d.dependsOnPrev : false, // cadena: requiere paso anterior completado
+        subIndex: null,                       // posición en la cadena (se asigna abajo)
         evidence: [],
         fotos_guia: [],
         statusHistory: [{ status:'pending', date:now, by:d.createdBy||'', note:'' }],
@@ -3416,18 +3418,17 @@ const server = http.createServer(async (req, res) => {
         createdAt: now,
         updatedAt: now
       };
-      // Si es tarea principal y viene con encargado (assignedTo o managerId) → marcar 'assigned'
-      // (managerId también cuenta porque algunos encargados no tienen odooId para assignedTo)
-      if (!isSubtask && (task.assignedTo || task.managerId)) {
+      const tasks = loadWwpTasks();
+      // Numeración de cadena: posición de la subtarea entre sus hermanas
+      if (isSubtask) {
+        task.subIndex = tasks.filter(x => x.parentId === task.parentId).length + 1;
+      }
+      // Con encargado (assignedTo/managerId) o auxiliares (executors) → marcar 'assigned'.
+      // No saltamos a in_progress: el inicio es explícito (y puede depender del paso anterior).
+      if (task.assignedTo || task.managerId || (isSubtask && task.executors.length > 0)) {
         task.status='assigned';
         task.statusHistory.push({ status:'assigned', date:now, by:d.createdBy||'', note:d.note||'' });
       }
-      // Si es subtarea con ejecutores → pasar a in_progress directamente
-      if (isSubtask && task.executors.length > 0) {
-        task.status='in_progress';
-        task.statusHistory.push({ status:'in_progress', date:now, by:d.createdBy||'', note:'' });
-      }
-      const tasks = loadWwpTasks();
       tasks.push(task);
       // Si es subtarea, marcar tarea padre como in_progress si estaba assigned
       if (isSubtask && d.parentId) {
@@ -3519,6 +3520,26 @@ const server = http.createServer(async (req, res) => {
       const oldTask = {...tasks[idx]}; // snapshot antes de modificar (para comparar en notifs)
       const now = new Date().toISOString();
       if (d.status && d.status!==tasks[idx].status) {
+        // ── Cadena: dependencia del paso anterior al INICIAR una subtarea ──
+        if (d.status==='in_progress' && tasks[idx].parentId && tasks[idx].dependsOnPrev) {
+          const sibs = tasks.filter(x => x.parentId===tasks[idx].parentId);
+          const prev = sibs.find(x => (x.subIndex||0) === ((tasks[idx].subIndex||0) - 1));
+          if (prev && !['completed','validated'].includes(prev.status)) {
+            res.writeHead(409,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({ok:false,error:`No puedes iniciar este paso hasta completar el anterior: "${prev.title}"`}));
+            return;
+          }
+        }
+        // ── Cierre de la madre bloqueado si quedan subtareas abiertas ──
+        if ((d.status==='completed'||d.status==='validated') && !tasks[idx].parentId) {
+          const children = tasks.filter(x => x.parentId===tasks[idx].id);
+          const abiertas = children.filter(c => !['completed','validated'].includes(c.status));
+          if (abiertas.length>0) {
+            res.writeHead(409,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({ok:false,error:`Faltan ${abiertas.length} subtarea(s) por completar en la cadena antes de cerrar.`}));
+            return;
+          }
+        }
         // Validar evidencias de artículos antes de completar/validar
         if (d.status==='completed'||d.status==='validated') {
           const selItems=(tasks[idx].items||[]).filter(it=>it.selected);
@@ -3552,6 +3573,7 @@ const server = http.createServer(async (req, res) => {
         tasks[idx].status='assigned';
         tasks[idx].statusHistory.push({ status:'assigned', date:now, by:d.by||'', note:d.note||'' });
       }
+      if (d.dependsOnPrev!==undefined && tasks[idx].parentId) tasks[idx].dependsOnPrev=!!d.dependsOnPrev;
       if (d.executors!==undefined) tasks[idx].executors=Array.isArray(d.executors)?d.executors:[];
       // auxiliaryAssignees: auth user IDs de auxiliares (enviados por el frontend cuando role=manager asigna)
       if (d.auxiliaryAssignees!==undefined) tasks[idx].assignees=Array.isArray(d.auxiliaryAssignees)?d.auxiliaryAssignees:[];
