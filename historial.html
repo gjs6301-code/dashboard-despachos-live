@@ -6715,6 +6715,14 @@ function renderDrawer(t) {
     t.managerId === _user.id ||
     t.createdBy === _user.id;
 
+  // Flags de permisos — declarados aquí (antes de actionHtml) para evitar TDZ
+  const isClosedTask = t.status === 'validated' || t.status === 'completed';
+  const canParticipate = !isClosedTask && can('update_status') && (
+    _user.role==='admin' || _user.role==='manager' ||
+    (t.managerId===_user.id) ||
+    taskAuxiliaryIds(t).includes(_user.id)
+  );
+
   let actionHtml = '';
   // Asignar encargado/auxiliares: admin asigna responsables; encargado asigna auxiliares.
   if (can('assign_task') && !['validated'].includes(t.status)) {
@@ -6840,14 +6848,6 @@ function renderDrawer(t) {
       </div>`;
     }
   }
-
-  // Flags de permisos — usados en artículos y guía visual
-  const isClosedTask = t.status === 'validated' || t.status === 'completed';
-  const canParticipate = !isClosedTask && can('update_status') && (
-    _user.role==='admin' || _user.role==='manager' ||
-    (t.managerId===_user.id) ||
-    taskAuxiliaryIds(t).includes(_user.id)
-  );
 
   // Items section
   const items = (t.items||[]).filter(i=>i.selected);
