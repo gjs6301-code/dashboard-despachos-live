@@ -2799,6 +2799,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/wwp/auth/users/workload — tareas activas por usuario [admin|manager] ──
+  if (reqPath === '/api/wwp/auth/users/workload' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!['admin','manager'].includes(jp.role)) { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Se requiere rol admin o manager'})); return; }
+    const tasks = loadWwpTasks().filter(t => !['completed','validated','cancelled'].includes(t.status));
+    const workload = {};
+    const bump = id => { if (id) workload[id] = (workload[id]||0)+1; };
+    tasks.forEach(t => {
+      const ids = new Set();
+      if (t.managerId) ids.add(t.managerId);
+      const a = odooStrToAuthId(t.assignedTo); if (a) ids.add(a);
+      (t.executors||[]).forEach(e => { const id = (e+'').startsWith('oe_') ? odooStrToAuthId(e) : e; if (id) ids.add(id); });
+      (t.assignees||[]).forEach(id => { if (id) ids.add(id); });
+      ids.forEach(bump);
+    });
+    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, workload}));
+    return;
+  }
+
   // ── GET /api/wwp/role-defs — listar definiciones de roles ─────────────────
   if (reqPath === '/api/wwp/role-defs' && req.method === 'GET') {
     const _jpRd = requireJwt(req, res); if (!_jpRd) return;

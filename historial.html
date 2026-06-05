@@ -4782,7 +4782,7 @@ function _iosPrompt(msg, defaultVal) {
 // STATE (wwp)
 // ═══════════════════════════════════════════════════════════════════════
 var _tasks = [], _allUsers = [], _editingTask = null, _editingUser = null;
-var _drawerTask = null, _modalItems = [], _resetToken = null, _drawerStockMap = {};
+var _drawerTask = null, _modalItems = [], _resetToken = null, _drawerStockMap = {}, _workloadMap = {};
 var _authUsers = []; // wwp auth users (for manager dropdown)
 var _roleDefs = [];
 var _notifications = [];     // notificaciones en memoria
@@ -6607,6 +6607,14 @@ async function openDrawer(taskId) {
     const r = await authFetch('/api/wwp/tasks');
     _tasks = await r.json();
   } catch {}
+  // Carga de trabajo (tareas activas por usuario) para mostrar al asignar auxiliares
+  if (_user && (_user.role==='admin' || _user.role==='manager')) {
+    try {
+      const wr = await authFetch('/api/wwp/auth/users/workload');
+      const wd = await wr.json();
+      if (wd.ok) _workloadMap = wd.workload || {};
+    } catch {}
+  }
   const t = _tasks.find(x=>x.id===taskId);
   if (!t) return;
   _drawerTask = t;
@@ -6742,10 +6750,13 @@ function renderDrawer(t) {
       const checked   = currentAssignees.includes(u.id) || (!assigningAssistants && u.id===currentManagerId);
       const checkedAttr = checked ? 'checked' : '';
       const checkedCls  = checked ? ' checked' : '';
+      const wl = (_workloadMap||{})[u.id] || 0;
+      const wlTxt = wl>0 ? (wl+' '+(wl===1?'tarea activa':'tareas activas')) : 'Sin tareas activas';
+      const wlColor = wl===0 ? 'var(--green-text)' : (wl>=4 ? 'var(--red-text)' : (wl>=2?'var(--amber-text)':'var(--text-3)'));
       return `<label class="assign-multi-row${checkedCls}" onclick="toggleAssignRow(this)">
         <input type="checkbox" value="${u.id}" data-odoo="${u.odooId||''}" data-name="${esc(u.name)}" ${checkedAttr} onclick="event.stopPropagation()">
         <span class="assign-multi-avatar" style="background:${aColor(u.name)}">${aInit(u.name)}</span>
-        <span class="assign-multi-name">${esc(u.name)}</span>
+        <span class="assign-multi-name">${esc(u.name)}<span style="display:block;font-size:10px;font-weight:600;color:${wlColor}">${wlTxt}</span></span>
         <span class="assign-multi-badge ${roleCss}">${roleLabel}</span>
       </label>`;
     }).join('');
