@@ -4246,6 +4246,8 @@ const server = http.createServer(async (req, res) => {
           // Info de kit (componente de un set). kitInstance agrupa unidades del mismo kit armado.
           kitId: item.kitId||prev.kitId||null, kitRef: item.kitRef||prev.kitRef||'',
           kitName: item.kitName||prev.kitName||'', kitImage: item.kitImage||prev.kitImage||'',
+          // Tarjeta-kit sintética (cuando el kit está armado)
+          ...(item.isKit||prev.isKit ? { isKit:true, armado:!!(item.armado??prev.armado), kitInstance:item.kitInstance||prev.kitInstance||1 } : {}),
           selected:!!item.selected,
           locations:item.locations||[],
           selected_location:selLocIdx,
@@ -4284,8 +4286,12 @@ const server = http.createServer(async (req, res) => {
           { pid:it.odoo_product_id, bin:sBin(bin), sku:it.sku, barcode:it.barcode, name:it.product_name, image:it.image,
             kitId:it.kitId||null, kitRef:it.kitRef||'', kitName:it.kitName||'', kitImage:it.kitImage||'' });
       }); });
-      // Unidades actuales (selected) por producto
-      const current = (t.items||[]).filter(i => i.selected);
+      // Kits ARMADOS actuales: se preservan tal cual (con su foto/condición). Sus
+      // componentes quedan ocultos (selected:false) bajo el kit.
+      const armadoKitItems = (t.items||[]).filter(i => i.isKit && i.selected);
+      const armadoSet = new Set(armadoKitItems.map(k => (k.kitId||'')+'#'+(k.kitInstance||1)));
+      // Unidades actuales (selected) por producto (excluye tarjetas-kit sintéticas)
+      const current = (t.items||[]).filter(i => i.selected && !i.isKit);
       const curByPid = {};
       current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
       const merged = []; let added=0, kept=0, relocated=0, retagged=0; const usedIds = new Set();
@@ -4311,9 +4317,13 @@ const server = http.createServer(async (req, res) => {
             if ((reuse.kitId||'') !== (u.kitId||'')) retagged++;            // info de kit faltante/cambiada
           }
           else { row.evidence_images=[]; row.confirmado=false; row.status='pending'; added++; }
+          // Si la instancia del kit está armada, el componente queda oculto bajo la tarjeta-kit
+          if (row.kitId && armadoSet.has(row.kitId+'#'+row.unit_index)) row.selected = false;
           merged.push(row);
         });
       });
+      // Conservar las tarjetas-kit armadas tal cual (foto/condición intactas)
+      armadoKitItems.forEach(k => { merged.push(k); usedIds.add(k.item_id); });
       const removed = current.filter(i => !usedIds.has(i.item_id));
       const removedWithPhotos = removed.filter(i => (i.evidence_images||[]).length>0).length;
       const hasChanges = added>0 || removed.length>0 || relocated>0 || retagged>0;
