@@ -5669,9 +5669,10 @@ function enterApp() {
   if (validatedOpt) validatedOpt.style.display = can('validate_task') ? '' : 'none';
 
   renderPresenceBtn();
-  // Show/hide back-to-historial button based on role
+  // Botón "← Historial": visible para cualquier usuario que tenga acceso a historial
+  // (admin o quien tenga secciones asignadas, ej. encargados). Los usuarios solo-WWP no lo ven.
   var backBtn = document.getElementById('btn-back-historial');
-  if (backBtn) backBtn.style.display = (_user && _user.role === 'admin') ? '' : 'none';
+  if (backBtn) backBtn.style.display = isHistorialUser(_user) ? '' : 'none';
   loadTasks();
   loadAuthUsersForDropdown();
   // Notifications
