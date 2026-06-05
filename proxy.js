@@ -94,6 +94,47 @@ function saveInspections(d) { saveJson(WWP_INSPECTIONS_FILE, d); }
 
 function loadWwpTasks() { return loadJson(WWP_TASKS_FILE, []); }
 function saveWwpTasks(list) { saveJson(WWP_TASKS_FILE, list); }
+
+// Construye items desde las LÍNEAS DE OPERACIÓN (stock.move.line) de los picks
+// 'assigned' (preparado) de una orden. Cada move.line = (bin real, cantidad reservada).
+// → un bin por unidad (unitBins), cantidad = total reservado en el pick.
+async function buildItemsFromPicks(orderName) {
+  const picksAll = await odooCall('stock.picking','search_read',
+    [[['origin','=',orderName],['state','=','assigned']]],
+    {fields:['id','name','picking_type_id'],limit:30});
+  const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name)); // tipo "Pick"
+  if (!pickList.length) return { noPick:true, items:[], pickNames:[] };
+  const pickIds = pickList.map(p=>p.id);
+  const pickNameById = {}; pickList.forEach(p=>{ pickNameById[p.id]=p.name; });
+  const mls = await odooCall('stock.move.line','search_read',
+    [[['picking_id','in',pickIds]]],
+    {fields:['product_id','location_id','product_uom_qty','qty_done','picking_id'],limit:3000});
+  const byProd = {};
+  mls.forEach(ml=>{
+    if(!ml.product_id) return;
+    const qty = Math.max(0, Math.round(ml.product_uom_qty||ml.qty_done||0));
+    if(qty<=0) return;
+    const pid = ml.product_id[0];
+    const bin = ml.location_id ? ml.location_id[1] : '';
+    if(!byProd[pid]) byProd[pid]={ pid, name:ml.product_id[1], pickName:pickNameById[ml.picking_id&&ml.picking_id[0]]||'', unitBins:[] };
+    for(let i=0;i<qty;i++) byProd[pid].unitBins.push(bin);
+  });
+  const pids = Object.keys(byProd).map(Number);
+  if(!pids.length) return { noPick:false, items:[], pickNames:pickList.map(p=>p.name) };
+  const prods = await odooCall('product.product','read',[pids],{fields:['id','barcode','default_code','image_128']});
+  const pm={}; prods.forEach(p=>{ pm[p.id]=p; });
+  const items = pids.map(pid=>{
+    const g=byProd[pid], prod=pm[pid]||{}, units=g.unitBins.length;
+    return { item_id:'oi_'+pid, odoo_product_id:pid, odoo_line_id:null,
+      sku:prod.barcode||prod.default_code||'', barcode:prod.barcode||'',
+      product_name:g.name||'', quantity:units, units,
+      image:prod.image_128?'data:image/png;base64,'+prod.image_128:null,
+      unitBins:g.unitBins, pickName:g.pickName, fromPick:true,  // bin por unidad desde el pick
+      locations:[], selected_location:null,
+      selected:false, evidence_images:[], comments:'', status:'pending' };
+  });
+  return { noPick:false, items, pickNames:pickList.map(p=>p.name) };
+}
 // Secuencia incremental de tareas (alto agua persistente; no se reutiliza al borrar)
 const WWP_SEQ_FILE = path.join(DATA_DIR, 'wwp-task-seq.json');
 function nextTaskSeq() {
@@ -4036,9 +4077,17 @@ const server = http.createServer(async (req, res) => {
             }
           }
         } catch(e) { /* dirección es opcional */ }
-        const lineIds=order.order_line||[];
         const baseResp = {ok:true,type:'order',ref:order.name,client:order.partner_id?order.partner_id[1]:'',salesperson,deliveryAddress,phone};
-        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({...baseResp,items:[]})); return; }
+        // Ubicación desde el PICK preparado (assigned). Si no hay pick → fallback a líneas de la orden.
+        const pickRes = await buildItemsFromPicks(order.name);
+        if (!pickRes.noPick) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({...baseResp, noPick:false, pickNames:pickRes.pickNames, items:pickRes.items}));
+          return;
+        }
+        // Sin pick preparado → devolver artículos de la orden (Demanda) marcando noPick
+        const lineIds=order.order_line||[];
+        if (!lineIds.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({...baseResp,noPick:true,items:[]})); return; }
         const lines = await odooCall('sale.order.line','read',[lineIds],{fields:['product_id','product_uom_qty','name']});
         const productIds=[...new Set(lines.filter(l=>l.product_id).map(l=>l.product_id[0]))];
         const products = productIds.length ? await odooCall('product.product','read',[productIds],{fields:['id','barcode','default_code','image_128']}) : [];
@@ -4046,7 +4095,7 @@ const server = http.createServer(async (req, res) => {
         const stockMap = await fetchStockMap(productIds);
         const items = buildItems(lines, prodMap, stockMap);
         res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({...baseResp,items}));
+        res.end(JSON.stringify({...baseResp,noPick:true,items}));
         return;
       }
 
@@ -4087,7 +4136,7 @@ const server = http.createServer(async (req, res) => {
         };
         const totalStock=locations.reduce((s,l)=>s+l.available,0);
         res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:true,type:'article',ref:p.default_code||p.name,client:p.name+(totalStock?' · '+totalStock+' en stock':''),items:[item]}));
+        res.end(JSON.stringify({ok:true,type:'article',needsTransfer:true,ref:p.default_code||p.name,client:p.name+(totalStock?' · '+totalStock+' en stock':''),items:[item]}));
         return;
       }
 
@@ -4119,10 +4168,13 @@ const server = http.createServer(async (req, res) => {
           // Campos de unidad: una línea por unidad. group_ref agrupa las unidades del mismo artículo.
           units:item.units||1, unit_index:item.unit_index||null, unit_total:item.unit_total||null,
           group_ref:item.group_ref||item.item_id,
+          // Ubicación desde el pick (bin por unidad). fromPick = ubicación fija del pick.
+          fromPick: !!item.fromPick, pickName: item.pickName||prev.pickName||'',
           selected:!!item.selected,
           locations:item.locations||[],
           selected_location:selLocIdx,
-          selected_location_name:selLocObj?.location_name||null,
+          // bin explícito del pick tiene prioridad; si no, el seleccionado de locations
+          selected_location_name: item.selected_location_name || selLocObj?.location_name || null,
           evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'',
           confirmado:prev.confirmado||false, status:prev.status||'pending' };
       });
@@ -4132,6 +4184,60 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ok:true,items:tasks[idx].items}));
     } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/wwp/tasks/:id/pick-diff — compara items de la tarea vs el pick actual de Odoo
+  // Devuelve un resumen de cambios + la lista fusionada (preservando evidencias).
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/pick-diff$/) && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const id = reqPath.split('/')[4];
+    try {
+      const t = loadWwpTasks().find(x => x.id === id);
+      if (!t) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      if (!t.odooRef) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,hasChanges:false,reason:'sin orden'})); return; }
+      const pr = await buildItemsFromPicks(t.odooRef);
+      if (pr.noPick) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,hasChanges:false,noPick:true})); return; }
+      const sBin = b => (b||'').replace(/^ALVEN\/Stock\//i,'').replace(/^WH\/Stock\//i,'');
+      // Unidades objetivo del pick agrupadas por producto
+      const targByPid = {};
+      pr.items.forEach(it => { (it.unitBins||[]).forEach(bin => {
+        (targByPid[it.odoo_product_id] = targByPid[it.odoo_product_id] || []).push(
+          { pid:it.odoo_product_id, bin:sBin(bin), sku:it.sku, barcode:it.barcode, name:it.product_name, image:it.image });
+      }); });
+      // Unidades actuales (selected) por producto
+      const current = (t.items||[]).filter(i => i.selected);
+      const curByPid = {};
+      current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
+      const merged = []; let added=0, kept=0; const usedIds = new Set();
+      Object.keys(targByPid).forEach(pidKey => {
+        const arr = targByPid[pidKey]; const n = arr.length;
+        const pool = (curByPid[pidKey] || []).slice(); // candidatos a reutilizar (mismo producto)
+        arr.forEach((u, i) => {
+          // Fase 1: match exacto producto+bin; Fase 2: mismo producto (cambió bin) → preserva foto
+          let ri = pool.findIndex(c => (c.selected_location_name||'') === u.bin && !usedIds.has(c.item_id));
+          if (ri < 0) ri = pool.findIndex(c => !usedIds.has(c.item_id));
+          const reuse = ri >= 0 ? pool[ri] : null;
+          const row = { item_id: n===1 ? ('oi_'+pidKey) : ('oi_'+pidKey+'_u'+(i+1)),
+            odoo_product_id:Number(pidKey), odoo_line_id:null,
+            sku:u.sku, barcode:u.barcode, product_name:u.name, image:u.image,
+            quantity:1, units:n, unit_index:i+1, unit_total:n, group_ref:'oi_'+pidKey,
+            fromPick:true, pickName:(pr.pickNames[0]||''),
+            selected:true, locations:[], selected_location:null, selected_location_name:u.bin };
+          if (reuse) { row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending'; usedIds.add(reuse.item_id); kept++; }
+          else { row.evidence_images=[]; row.confirmado=false; row.status='pending'; added++; }
+          merged.push(row);
+        });
+      });
+      const removed = current.filter(i => !usedIds.has(i.item_id));
+      const removedWithPhotos = removed.filter(i => (i.evidence_images||[]).length>0).length;
+      const hasChanges = added>0 || removed.length>0;
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok:true, hasChanges, pickNames:pr.pickNames,
+        summary:{ added, removed:removed.length, removedWithPhotos, kept },
+        removedItems: removed.map(i=>({name:i.product_name, bin:i.selected_location_name, hasPhoto:(i.evidence_images||[]).length>0})),
+        merged }));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;
   }
 

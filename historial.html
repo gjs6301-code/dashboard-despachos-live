@@ -6636,6 +6636,50 @@ async function openDrawer(taskId) {
   renderDrawer(t);
   document.getElementById('wwp-drawer-overlay').classList.add('open');
   document.getElementById('wwp-drawer').classList.add('open');
+  // Chequeo async de cambios en el pick (no bloquea el render)
+  if (t.odooRef && (_user.role==='admin'||_user.role==='manager')) checkPickSync(taskId);
+}
+
+// Detecta diferencias entre la tarea y el pick actual; muestra banner (no aplica nada).
+async function checkPickSync(taskId) {
+  const box = document.getElementById('dr-pick-sync');
+  if (!box) return;
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/pick-diff');
+    const d = await r.json();
+    if (!d.ok || !d.hasChanges) { box.innerHTML=''; return; }
+    const s = d.summary||{};
+    const parts = [];
+    if (s.added) parts.push('+'+s.added+' nuevo'+(s.added>1?'s':''));
+    if (s.removed) parts.push('−'+s.removed+' quitado'+(s.removed>1?'s':''));
+    box.innerHTML = `<div style="background:var(--amber-bg);border:1.5px solid var(--amber-dot);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <i data-lucide="refresh-cw" style="width:16px;height:16px;stroke:var(--amber-text);flex-shrink:0"></i>
+      <div style="flex:1;min-width:0;font-size:12px;color:var(--amber-text)"><b>El pick cambió:</b> ${parts.join(' · ')}${s.removedWithPhotos?` · <b>${s.removedWithPhotos} con foto</b>`:''}</div>
+      <button class="btn-sm" onclick="syncPickNow('${taskId}')" style="flex-shrink:0;background:var(--amber-dot);color:#fff;border:none">Sincronizar</button>
+    </div>`;
+    if(window.lucide) lucide.createIcons();
+  } catch(e){ box.innerHTML=''; }
+}
+
+// Aplica la sincronización: PUT de la lista fusionada (protege fotos).
+async function syncPickNow(taskId) {
+  if (!(_user.role==='admin'||_user.role==='manager')) { toast('Solo admin o encargado'); return; }
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/pick-diff');
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    if (!d.hasChanges) { toast('Sin cambios'); return; }
+    if (d.summary.removedWithPhotos > 0) {
+      const lst = (d.removedItems||[]).filter(x=>x.hasPhoto).map(x=>'· '+x.name+(x.bin?' ('+shortBin(x.bin)+')':'')).join('\n');
+      const ok = await _iosConfirm('⚠ Se quitarán '+d.summary.removedWithPhotos+' unidad(es) que YA tienen foto:\n\n'+lst+'\n\nLas fotos se perderán. ¿Continuar?');
+      if (!ok) return;
+    }
+    const pr = await authFetch('/api/wwp/tasks/'+taskId+'/items',{method:'PUT',body:JSON.stringify({items:d.merged})});
+    const pd = await pr.json();
+    if (!pd.ok) { toast(pd.error||'Error al sincronizar'); return; }
+    toast('Sincronizado con el pick');
+    openDrawer(taskId);
+  } catch(e){ toast('Error: '+e.message); }
 }
 function closeDrawer() {
   document.getElementById('wwp-drawer-overlay').classList.remove('open');
@@ -6978,6 +7022,7 @@ function renderDrawer(t) {
       <div class="info-cell"><div class="info-cell-label">Creado</div><div class="info-cell-val">${fmtDate(t.createdAt)}</div></div>
     </div>
     ${parentCtxHtml}
+    <div id="dr-pick-sync"></div>
     ${guiaHtml}
     ${actionHtml}
     ${itemsHtml}
@@ -7653,6 +7698,24 @@ async function fetchOrderItems() {
       document.getElementById('mf-odoo-client').innerHTML='<span style="color:var(--red)"><i data-lucide="x-circle" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>'+esc(d.error)+'</span>';
       if(window.lucide) lucide.createIcons(); return;
     }
+    // Orden sin pick preparado → avisar y preguntar si procede con los artículos de la orden
+    if (d.type==='order' && d.noPick) {
+      const proceed = await _iosConfirm('⚠ Orden '+esc(d.ref)+' sin pick preparado.\n\nLas ubicaciones se tomarán del pick cuando se prepare. ¿Deseas continuar mostrando los artículos de la orden (sin ubicación de pick)?');
+      if (!proceed) {
+        document.getElementById('mf-odoo-client').innerHTML='<span style="color:var(--amber-text)"><i data-lucide="alert-triangle" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Orden sin pick preparado — cancelado</span>';
+        document.getElementById('mf-items-panel').style.display='none';
+        if(window.lucide) lucide.createIcons(); return;
+      }
+    }
+    // Artículo suelto → requiere transferencia interna
+    if (d.type==='article' && d.needsTransfer) {
+      const proceed = await _iosConfirm('⚠ "'+esc(d.ref)+'" es un artículo suelto.\n\nPara despacho/movimiento se recomienda crear una TRANSFERENCIA INTERNA en Odoo y buscarla por su número. ¿Continuar de todos modos con el artículo suelto?');
+      if (!proceed) {
+        document.getElementById('mf-odoo-client').innerHTML='<span style="color:var(--amber-text)"><i data-lucide="alert-triangle" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Requiere transferencia interna</span>';
+        document.getElementById('mf-items-panel').style.display='none';
+        if(window.lucide) lucide.createIcons(); return;
+      }
+    }
     const _tIconMap = {order:'clipboard-list',transfer:'refresh-cw',article:'box'};
     const typeIcon = `<i data-lucide="${_tIconMap[d.type]||'package'}" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>`;
     const typeLabel = d.type==='order'?'Orden de Venta':d.type==='transfer'?'Transferencia'+(d.transferType?' · '+d.transferType:''):d.type==='article'?'Artículo':'—';
@@ -7800,27 +7863,33 @@ function addCheckedToCart() {
 
 // Expande artículos del carrito en líneas por unidad (1 foto por unidad).
 // Un artículo con units=3 → 3 filas ×1 con item_id único y unit_index 1..3.
+// Acorta el nombre del bin para mostrar: "ALVEN/Stock/A-CDP/PFRONTAL" → "A-CDP/PFRONTAL"
+function shortBin(b){ return (b||'').replace(/^ALVEN\/Stock\//i,'').replace(/^WH\/Stock\//i,''); }
 function expandUnitRows(items) {
   const out = [];
   items.forEach(it => {
     // Idempotente: si ya es una fila-unidad materializada (tiene unit_index), pasarla tal cual.
     // Esto preserva item_id (y por ende sus evidencias en el server) al editar una tarea existente.
     if (it.unit_index && it.unit_total) { out.push({ ...it, quantity:1 }); return; }
-    const n = Math.max(1, parseInt(it.units, 10) || it.quantity || 1);
+    const bins = Array.isArray(it.unitBins) ? it.unitBins : null; // bin por unidad (del pick)
+    const n = bins ? bins.length : Math.max(1, parseInt(it.units, 10) || it.quantity || 1);
     const baseId = it.group_ref || it.item_id;
-    if (n === 1) {
-      out.push({ ...it, quantity:1, units:1, unit_index:1, unit_total:1, group_ref:baseId, item_id:baseId });
-    } else {
-      for (let k = 1; k <= n; k++) {
-        out.push({ ...it, item_id:baseId+'_u'+k, quantity:1, units:n, unit_index:k, unit_total:n, group_ref:baseId });
-      }
-    }
+    const mk = (k) => {
+      const row = { ...it, quantity:1, units:n, unit_index:k, unit_total:n, group_ref:baseId,
+        item_id: n===1 ? baseId : baseId+'_u'+k };
+      if (bins) { row.selected_location_name = shortBin(bins[k-1]); row.fromPick = true; delete row.unitBins; }
+      return row;
+    };
+    for (let k = 1; k <= n; k++) out.push(mk(k));
   });
   return out;
 }
-// Ubicación legible de un item (bin seleccionado)
+// Ubicación legible de un item (bin seleccionado o bins del pick)
 function itemLocName(it) {
-  if (it.selected_location_name) return it.selected_location_name;
+  if (Array.isArray(it.unitBins) && it.unitBins.length) {
+    return [...new Set(it.unitBins.map(shortBin))].join(' · ');
+  }
+  if (it.selected_location_name) return shortBin(it.selected_location_name);
   const locs = it.locations || [];
   if (typeof it.selected_location === 'number' && locs[it.selected_location]) return locs[it.selected_location].location_name;
   if (locs.length === 1) return locs[0].location_name;
@@ -7858,6 +7927,10 @@ function renderCart() {
         </div>
         ${it.unit_index ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
           <span style="font-size:9px;color:var(--accent);font-weight:700">Unidad ${it.unit_index}/${it.unit_total}</span>
+        </div>` : (it.fromPick || Array.isArray(it.unitBins)) ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+          <span style="font-size:9px;color:var(--text-3);font-weight:600">Del pick</span>
+          <span style="font-size:14px;font-weight:800;color:var(--accent)">${u}</span>
+          <span style="font-size:9px;color:var(--text-3)">${u} foto${u>1?'s':''}</span>
         </div>` : `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
           <span style="font-size:9px;color:var(--text-3);font-weight:600">Unidades</span>
           <input type="number" min="1" value="${u}" onchange="setCartUnits(${it._cartIdx}, this.value)" onclick="event.stopPropagation()" style="width:48px;text-align:center;border:1.5px solid var(--border);border-radius:5px;padding:3px;font-size:12px;font-weight:700">
