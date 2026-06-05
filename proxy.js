@@ -4312,6 +4312,48 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // PATCH /api/wwp/tasks/:id/kit-toggle — armar/desarmar un kit (instancia) [cualquier rol participante]
+  // Armado: oculta las piezas (selected:false) y activa una tarjeta-kit (1 foto del conjunto).
+  // Desarmado: reactiva las piezas (selected:true) y desactiva la tarjeta-kit.
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/kit-toggle$/) && req.method === 'PATCH') {
+    const _jpK = requireJwt(req, res); if (!_jpK) return;
+    const id = reqPath.split('/')[4];
+    try {
+      const d = await readBody(req);
+      const { kitId, instance, armado } = d;
+      if (!kitId || !instance) throw new Error('Faltan kitId/instance');
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t=>t.id===id);
+      if (idx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      const items = tasks[idx].items||[];
+      const comps = items.filter(it => it.kitId===kitId && (it.unit_index||1)===Number(instance) && !it.isKit);
+      if (!comps.length) throw new Error('Kit/instancia sin componentes');
+      const kf = comps[0];
+      const kitItemId = 'kit_'+kitId.replace(/[^A-Za-z0-9_]/g,'')+'_'+instance;
+      let kitItem = items.find(it => it.item_id===kitItemId);
+      if (armado) {
+        comps.forEach(c => { c.selected = false; });
+        if (!kitItem) {
+          kitItem = { item_id:kitItemId, isKit:true, kitId, kitInstance:Number(instance),
+            product_name:(kf.kitName||kf.kitRef||'Kit')+' (armado)', sku:kf.kitRef||'', barcode:'',
+            image:kf.kitImage||'', quantity:1, units:1, unit_index:Number(instance), unit_total:1, group_ref:kitItemId,
+            selected:true, armado:true, evidence_images:[], condition:'good', damageType:'', confirmado:false, status:'pending', locations:[] };
+          items.push(kitItem);
+        } else { kitItem.selected=true; kitItem.armado=true; }
+      } else {
+        comps.forEach(c => { c.selected = true; });
+        if (kitItem) { kitItem.selected=false; kitItem.armado=false; }
+      }
+      tasks[idx].items = items;
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('items_updated', tasks[idx], { taskId:id });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, armado:!!armado}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // PATCH /api/wwp/tasks/:id/items/:itemId/condition — condición del artículo [cualquier rol participante]
   if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/condition$/) && req.method === 'PATCH') {
     const _jpC = requireJwt(req, res); if (!_jpC) return;
