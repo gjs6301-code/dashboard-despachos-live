@@ -4240,6 +4240,8 @@ const server = http.createServer(async (req, res) => {
           selected_location:selLocIdx,
           // bin explícito del pick tiene prioridad; si no, el seleccionado de locations
           selected_location_name: item.selected_location_name || selLocObj?.location_name || null,
+          // Condición del artículo: 'good' (buen estado) | 'damaged' (avería) + tipo de avería
+          condition: item.condition||prev.condition||'good', damageType: item.damageType||prev.damageType||'',
           evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'',
           confirmado:prev.confirmado||false, status:prev.status||'pending' };
       });
@@ -4307,6 +4309,31 @@ const server = http.createServer(async (req, res) => {
         removedItems: removed.map(i=>({name:i.product_name, bin:i.selected_location_name, hasPhoto:(i.evidence_images||[]).length>0})),
         merged }));
     } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // PATCH /api/wwp/tasks/:id/items/:itemId/condition — condición del artículo [cualquier rol participante]
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/condition$/) && req.method === 'PATCH') {
+    const _jpC = requireJwt(req, res); if (!_jpC) return;
+    const parts=reqPath.split('/'); const taskId=parts[4], itemId=parts[6];
+    try {
+      const d=await readBody(req);
+      const VALID_DMG = ['Rayado','Con golpe','Desperfecto de pintura','Defecto de fábrica'];
+      const condition = d.condition==='damaged' ? 'damaged' : 'good';
+      const damageType = condition==='damaged' ? (VALID_DMG.includes(d.damageType)?d.damageType:(d.damageType||'')) : '';
+      const tasks=loadWwpTasks();
+      const idx=tasks.findIndex(t=>t.id===taskId);
+      if (idx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      const itemIdx=(tasks[idx].items||[]).findIndex(it=>it.item_id===itemId);
+      if (itemIdx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Artículo no encontrado'})); return; }
+      tasks[idx].items[itemIdx].condition = condition;
+      tasks[idx].items[itemIdx].damageType = damageType;
+      tasks[idx].updatedAt=new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('items_updated', tasks[idx], { taskId, itemId });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, condition, damageType}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;
   }
 

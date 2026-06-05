@@ -6865,6 +6865,18 @@ function renderDrawer(t) {
           </div>
           <span class="${evs.length?'item-badge-ok':'item-badge-pend'}">${evs.length?'✓ '+evs.length+' foto'+(evs.length>1?'s':''):'Sin fotos'}</span>
         </div>
+        ${(()=>{ const dmg=it.condition==='damaged'; const DMG=['Rayado','Con golpe','Desperfecto de pintura','Defecto de fábrica'];
+          return `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text-3);font-weight:600">Condición:</span>
+          <select ${canUpload?'':'disabled'} onchange="setItemCondition('${t.id}','${it.item_id}',this.value)" style="font-size:11px;padding:3px 6px;border:1.5px solid ${dmg?'var(--red-dot)':'var(--border)'};border-radius:6px;background:var(--surface);color:${dmg?'var(--red-text)':'var(--text)'};font-weight:600">
+            <option value="good" ${dmg?'':'selected'}>✓ Buen estado</option>
+            <option value="damaged" ${dmg?'selected':''}>⚠ Avería</option>
+          </select>
+          ${dmg?`<select ${canUpload?'':'disabled'} onchange="setItemDamage('${t.id}','${it.item_id}',this.value)" style="font-size:11px;padding:3px 6px;border:1.5px solid var(--red-dot);border-radius:6px;background:var(--red-bg);color:var(--red-text);font-weight:600">
+            <option value="" ${!it.damageType?'selected':''} disabled>Tipo de avería…</option>
+            ${DMG.map(d=>`<option value="${d}" ${it.damageType===d?'selected':''}>${d}</option>`).join('')}
+          </select>`:''}
+        </div>`; })()}
         ${evs.length?`<div class="ev-grid">${evs.map(e=>`<div class="ev-wrap"><img class="ev-img" src="${mediaUrl(e.url)}" onerror="this.src='data:image/svg+xml,<svg/>'">
           ${canUpload?`<button class="ev-del" onclick="deleteItemEvidence('${t.id}','${it.item_id}','${e.id}')">✕</button>`:''}
         </div>`).join('')}</div>`:''}
@@ -7425,6 +7437,26 @@ async function toggleItemConfirm(taskId, itemId, checked) {
     if (!d.ok) { toast(d.error||'Error'); openDrawer(taskId); return; }
     openDrawer(taskId);
   } catch(e) { toast(e.message); openDrawer(taskId); }
+}
+
+// Condición del artículo: buen estado / avería + tipo
+async function setItemCondition(taskId, itemId, condition) {
+  try {
+    const cur = (_drawerTask?.items||[]).find(i=>i.item_id===itemId) || {};
+    const body = { condition, damageType: condition==='damaged' ? (cur.damageType||'') : '' };
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/items/'+itemId+'/condition',{method:'PATCH',body:JSON.stringify(body)});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
+async function setItemDamage(taskId, itemId, damageType) {
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/items/'+itemId+'/condition',{method:'PATCH',body:JSON.stringify({condition:'damaged', damageType})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
 }
 
 async function toggleGuiaConfirm(taskId, fotoId, checked) {
