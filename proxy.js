@@ -1269,10 +1269,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── /api/odoo/auth — verificar conexión (solo admin autenticado) ────────────
+  // ── /api/odoo/auth — verificar conexión (cualquier usuario autenticado) ──────
+  // Los encargados/auxiliares también necesitan saber si Odoo está en línea
+  // (crean tareas con datos de Odoo). No expone datos: solo dice si conecta.
   if (reqPath === '/api/odoo/auth' && req.method === 'GET') {
     const _jpOdoo = requireJwt(req, res); if (!_jpOdoo) return;
-    if (!requireRole(_jpOdoo, res, ['admin'])) return;
     try {
       if (!odooUid) await authenticate();
       res.writeHead(200, {'Content-Type': 'application/json'});
