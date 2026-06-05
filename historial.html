@@ -6652,6 +6652,7 @@ async function checkPickSync(taskId) {
     const parts = [];
     if (s.added) parts.push('+'+s.added+' nuevo'+(s.added>1?'s':''));
     if (s.removed) parts.push('−'+s.removed+' quitado'+(s.removed>1?'s':''));
+    if (s.relocated) parts.push(s.relocated+' cambió de ubicación');
     box.innerHTML = `<div style="background:var(--amber-bg);border:1.5px solid var(--amber-dot);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
       <i data-lucide="refresh-cw" style="width:16px;height:16px;stroke:var(--amber-text);flex-shrink:0"></i>
       <div style="flex:1;min-width:0;font-size:12px;color:var(--amber-text)"><b>El pick cambió:</b> ${parts.join(' · ')}${s.removedWithPhotos?` · <b>${s.removedWithPhotos} con foto</b>`:''}</div>
@@ -6807,10 +6808,17 @@ function renderDrawer(t) {
     const missing    = items.filter(i=>!i.evidence_images||!i.evidence_images.length).length;
     const sinConfirm = items.filter(i=>!i.confirmado).length;
     const canConfirmItem = !isClosedTask && canParticipate;
+    const _pickName = (items.find(i=>i.pickName)||{}).pickName || '';
+    const _canSyncPick = !isClosedTask && (_user.role==='admin'||_user.role==='manager') && t.odooRef;
     itemsHtml = `<div class="sec-header">ARTÍCULOS
       <span style="color:${sinConfirm?'#d97706':'#059669'};float:right;font-size:10px">${sinConfirm?sinConfirm+' SIN CONFIRMAR':'Todos confirmados'}</span>
       <span style="float:right;margin-right:8px;font-size:10px">${items.length-sinConfirm}/${items.length}</span>
     </div>
+    ${(_pickName||t.odooRef)?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">
+      <i data-lucide="clipboard-list" style="width:13px;height:13px;stroke:var(--accent);flex-shrink:0"></i>
+      <span style="font-size:11px;color:var(--text-2);flex:1;min-width:0">Surtido desde pick: <b>${esc(_pickName||'—')}</b>${t.odooRef?` · Orden ${esc(t.odooRef)}`:''}</span>
+      ${_canSyncPick?`<button class="btn-sm" onclick="syncPickNow('${t.id}')" title="Re-consultar el pick y actualizar artículos/ubicaciones" style="flex-shrink:0;padding:3px 9px"><i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Actualizar desde pick</button>`:''}
+    </div>`:''}
     ${(missing>0&&!isClosedTask)?`<div class="items-alert"><i data-lucide="alert-triangle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Faltan fotos de evidencia en ${missing} artículo(s). La tarea no puede cerrarse hasta completar todas las evidencias.</div>`:''}
     ${(()=>{
       // Agrupar unidades por artículo (group_ref). Encabezado con editor de unidades (admin/encargado).
@@ -7716,6 +7724,8 @@ async function fetchOrderItems() {
         if(window.lucide) lucide.createIcons(); return;
       }
     }
+    // Usar el ref REAL resuelto por Odoo (ej. "7647" → "S07647") para guardar y sincronizar
+    if (d.ref) _modalCurrentRef = d.ref;
     const _tIconMap = {order:'clipboard-list',transfer:'refresh-cw',article:'box'};
     const typeIcon = `<i data-lucide="${_tIconMap[d.type]||'package'}" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>`;
     const typeLabel = d.type==='order'?'Orden de Venta':d.type==='transfer'?'Transferencia'+(d.transferType?' · '+d.transferType:''):d.type==='article'?'Artículo':'—';

@@ -99,8 +99,14 @@ function saveWwpTasks(list) { saveJson(WWP_TASKS_FILE, list); }
 // 'assigned' (preparado) de una orden. Cada move.line = (bin real, cantidad reservada).
 // → un bin por unidad (unitBins), cantidad = total reservado en el pick.
 async function buildItemsFromPicks(orderName) {
+  // Resolver nombre real de la orden (tolera ref sin prefijo, ej. "7647" → "S07647")
+  let realName = orderName;
+  try {
+    const so = await odooCall('sale.order','search_read',[[['name','ilike',orderName]]],{fields:['name'],limit:1});
+    if (so && so.length) realName = so[0].name;
+  } catch {}
   const picksAll = await odooCall('stock.picking','search_read',
-    [[['origin','=',orderName],['state','=','assigned']]],
+    [[['origin','=',realName],['state','=','assigned']]],
     {fields:['id','name','picking_type_id'],limit:30});
   const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name)); // tipo "Pick"
   if (!pickList.length) return { noPick:true, items:[], pickNames:[] };
@@ -4209,7 +4215,7 @@ const server = http.createServer(async (req, res) => {
       const current = (t.items||[]).filter(i => i.selected);
       const curByPid = {};
       current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
-      const merged = []; let added=0, kept=0; const usedIds = new Set();
+      const merged = []; let added=0, kept=0, relocated=0; const usedIds = new Set();
       Object.keys(targByPid).forEach(pidKey => {
         const arr = targByPid[pidKey]; const n = arr.length;
         const pool = (curByPid[pidKey] || []).slice(); // candidatos a reutilizar (mismo producto)
@@ -4224,17 +4230,21 @@ const server = http.createServer(async (req, res) => {
             quantity:1, units:n, unit_index:i+1, unit_total:n, group_ref:'oi_'+pidKey,
             fromPick:true, pickName:(pr.pickNames[0]||''),
             selected:true, locations:[], selected_location:null, selected_location_name:u.bin };
-          if (reuse) { row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending'; usedIds.add(reuse.item_id); kept++; }
+          if (reuse) {
+            row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending';
+            usedIds.add(reuse.item_id); kept++;
+            if ((reuse.selected_location_name||'') !== u.bin) relocated++; // cambió de bin
+          }
           else { row.evidence_images=[]; row.confirmado=false; row.status='pending'; added++; }
           merged.push(row);
         });
       });
       const removed = current.filter(i => !usedIds.has(i.item_id));
       const removedWithPhotos = removed.filter(i => (i.evidence_images||[]).length>0).length;
-      const hasChanges = added>0 || removed.length>0;
+      const hasChanges = added>0 || removed.length>0 || relocated>0;
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ ok:true, hasChanges, pickNames:pr.pickNames,
-        summary:{ added, removed:removed.length, removedWithPhotos, kept },
+        summary:{ added, removed:removed.length, removedWithPhotos, kept, relocated },
         removedItems: removed.map(i=>({name:i.product_name, bin:i.selected_location_name, hasPhoto:(i.evidence_images||[]).length>0})),
         merged }));
     } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
