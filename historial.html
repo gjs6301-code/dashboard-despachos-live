@@ -2041,6 +2041,7 @@ body{font-family:var(--font);min-height:100dvh}
 .b-inprogress{background:#fef3c7;color:#92400e}
 .b-completed{background:#d1fae5;color:#065f46}
 .b-validated{background:#ede9fe;color:#5b21b6}
+.b-cancelled{background:#f3f4f6;color:#6b7280;text-decoration:line-through}
 .b-high {background:#fee2e2;color:#991b1b}
 .b-medium{background:#fef9c3;color:#713f12}
 .b-low  {background:#f0fdf4;color:#14532d}
@@ -4945,8 +4946,8 @@ function updateAvatarPreview() {
   el.style.background = name ? avatarColor(name) : 'var(--brand-light)';
 }
 const TYPE_LABELS = {dispatch_order:'Orden de Despacho',packaging:'Embalaje',item_pickup:'Recogida de Artículos',truck_loading:'Carga en Camión',warehouse_move:'Movimiento de Almacén',general:'General'};
-const STATUS_LABELS = {pending:'Pendiente',assigned:'Asignado',in_progress:'En Progreso',completed:'Completado',validated:'Validado'};
-const STATUS_CSS = {pending:'b-pending',assigned:'b-assigned',in_progress:'b-inprogress',completed:'b-completed',validated:'b-validated'};
+const STATUS_LABELS = {pending:'Pendiente',assigned:'Asignado',in_progress:'En Progreso',completed:'Completado',validated:'Validado',cancelled:'Cancelado'};
+const STATUS_CSS = {pending:'b-pending',assigned:'b-assigned',in_progress:'b-inprogress',completed:'b-completed',validated:'b-validated',cancelled:'b-cancelled'};
 const ROLE_LABELS = {admin:'Admin',manager:'Encargado',assistant:'Auxiliar'};
 
 function uiMotionReduced() {
@@ -6824,6 +6825,10 @@ function renderDrawer(t) {
     if (canDevolver)      rowBtns += `<button class="btn-danger" onclick="showDevolverModal('${t.id}')">↩ Devolver</button>`;
     if (rowBtns) actionHtml += `<div class="action-row">${rowBtns}</div>`;
   }
+  // Cancelar tarea/subtarea (admin o encargado responsable) — libera la orden/pick para reasignar
+  if (isResponsibleCloser && !['validated','cancelled'].includes(t.status)) {
+    actionHtml += `<div class="action-row"><button class="btn-danger" onclick="cancelTask('${t.id}')" style="background:transparent;color:var(--red-text);border:1.5px solid var(--red-dot)"><i data-lucide="x-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Cancelar ${t.parentId?'subtarea':'tarea'}</button></div>`;
+  }
   // Auxiliar: botón "Terminé mi parte" (handoff al encargado). Habilitado solo con fotos completas.
   if (_user.role==='assistant' && t.status==='in_progress' && isTaskParticipant(t)) {
     const _sel = (t.items||[]).filter(i=>i.selected);
@@ -7549,6 +7554,24 @@ async function toggleItemConfirm(taskId, itemId, checked) {
   } catch(e) { toast(e.message); openDrawer(taskId); }
 }
 
+// Cancelar tarea/subtarea (libera la orden/pick). Al cancelar la madre, cascada a subtareas.
+async function cancelTask(taskId) {
+  const t = (_tasks||[]).find(x=>x.id===taskId) || _drawerTask;
+  const esSub = t && t.parentId;
+  const subs = (!esSub && t) ? _tasks.filter(s=>s.parentId===t.id && !['completed','validated','cancelled'].includes(s.status)) : [];
+  let msg = `¿Cancelar esta ${esSub?'subtarea':'tarea'}?`;
+  if (subs.length) msg += `\n\nSe cancelarán también ${subs.length} subtarea(s) de la cadena.`;
+  msg += '\n\nLa tarea quedará como "Cancelado" (no se borra) y la orden/pick quedará libre para reasignar.';
+  if (!await _iosConfirm(msg)) return;
+  const note = (typeof prompt==='function') ? (prompt('Motivo de la cancelación (opcional):','')||'') : '';
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId,{method:'PATCH',body:JSON.stringify({status:'cancelled', by:_user.name, byUserId:_user.id, note})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error al cancelar'); return; }
+    toast('Tarea cancelada');
+    openDrawer(taskId);
+  } catch(e){ toast('Error: '+e.message); }
+}
 // Reasignar la tarea a otro encargado (transfiere la responsabilidad)
 async function reassignManagerTo(taskId) {
   const sel = document.getElementById('dr-reassign-mgr');
@@ -7964,9 +7987,18 @@ async function fetchOrderItems() {
       if(window.lucide) lucide.createIcons();
     }
     // Marcar como ya-en-carrito los que coincidan por SKU + ref
+    // Artículos ya reclamados por otra tarea activa de la misma orden (no reasignables sin cancelar)
+    let _claims = {};
+    try {
+      const exRoot = _subtaskParentId || (_editingTask ? (_editingTask.parentId||_editingTask.id) : '');
+      const cr = await authFetch('/api/wwp/order-claims/'+encodeURIComponent(d.ref||ref)+(exRoot?('?excludeRoot='+encodeURIComponent(exRoot)):''));
+      const cd = await cr.json();
+      if (cd.ok) _claims = cd.claims||{};
+    } catch {}
     _modalSearch = (d.items||[]).map(it => ({
       ...it,
       selected: false,
+      _claimed: _claims[it.odoo_product_id] || null,   // {seq,title} si ya está asignado
       _inCart: _modalItems.some(c => c.sku===it.sku && c._sourceRef===ref)
     }));
     renderModalItems();
@@ -8020,6 +8052,21 @@ function renderModalItems() {
 
     const inCartLabel = it._inCart
       ? `<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:4px">✓ Ya agregado</span>` : '';
+    // Artículo ya asignado a otra tarea activa → bloqueado (no reasignable sin cancelar)
+    if (it._claimed) {
+      const cl = it._claimed; const tag = cl.seq?('#'+String(cl.seq).padStart(4,'0')):'';
+      return `<div class="item-row-modal" style="opacity:.65;background:var(--surface-2)">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          ${it.image?`<img class="item-thumb-sm" src="${it.image}" onerror="this.style.display='none'">`:`<div class="item-ph-sm"><i data-lucide="package" style="width:18px;height:18px;stroke:currentColor;opacity:.4"></i></div>`}
+          <div class="item-info-sm" style="flex:1;min-width:0">
+            <div class="item-name-sm">${esc(it.product_name||it.sku)}</div>
+            <div class="item-sku-sm">SKU: ${esc(it.sku||'')}</div>
+            <div style="font-size:10px;color:var(--red-text);font-weight:700;margin-top:2px"><i data-lucide="lock" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Ya asignado a ${tag} ${esc((cl.title||'').slice(0,28))}</div>
+          </div>
+          <span class="item-qty">×${it.quantity||1}</span>
+        </div>
+      </div>`;
+    }
     return `<div class="item-row-modal ${it.selected?'sel':''} ${it._inCart?'':''}${it._inCart?'opacity:.6':''}">
       <div onclick="toggleItem(${i})" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer">
         ${it.image?`<img class="item-thumb-sm" src="${it.image}" onerror="this.style.display='none'">`:`<div class="item-ph-sm"><i data-lucide="package" style="width:18px;height:18px;stroke:currentColor;opacity:.4"></i></div>`}
@@ -8043,6 +8090,7 @@ function selectItemLocation(itemIdx, locIdx) {
 }
 
 function toggleItem(i) {
+  if (_modalSearch[i] && _modalSearch[i]._claimed) { toast('Ese artículo ya está asignado a otra tarea activa'); return; }
   _modalSearch[i].selected = !_modalSearch[i].selected;
   if (_modalSearch[i].selected && (_modalSearch[i].locations||[]).length === 1) {
     _modalSearch[i].selected_location = 0;
@@ -8052,9 +8100,10 @@ function toggleItem(i) {
   renderModalItems();
 }
 function toggleAllItems() {
-  const allSel = _modalSearch.filter(i=>!i._inCart).every(i=>i.selected);
+  const selectable = _modalSearch.filter(i=>!i._inCart && !i._claimed);
+  const allSel = selectable.every(i=>i.selected);
   _modalSearch.forEach(it=>{
-    if (it._inCart) return; // no tocar los ya agregados
+    if (it._inCart || it._claimed) return; // no tocar agregados ni reclamados por otra tarea
     it.selected = !allSel;
     if (it.selected && (it.locations||[]).length===1) it.selected_location=0;
   });

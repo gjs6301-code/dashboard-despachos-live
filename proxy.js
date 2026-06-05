@@ -197,6 +197,33 @@ async function tagKitInfo(items) {
   return items;
 }
 
+// Normaliza una referencia de orden a su número (S06031 / 6031 / 06031 → "6031")
+function normRef(ref){ const m=(ref||'').match(/\d+/); return m?String(parseInt(m[0],10)):''; }
+// Artículos (productos) ya reclamados por tareas ACTIVAS de la misma orden, fuera de la
+// cadena indicada. Permite que artículos distintos del mismo pick vayan a tareas distintas,
+// pero impide asignar el MISMO artículo a dos cadenas a la vez.
+function getOrderClaims(orderRef, excludeRootId) {
+  const key = normRef(orderRef);
+  if (!key) return {};
+  const tasks = loadWwpTasks();
+  const byId = {}; tasks.forEach(t=>{ byId[t.id]=t; });
+  const rootOf = t => t.parentId || t.id;
+  const claims = {};
+  tasks.forEach(t => {
+    if (['cancelled','validated'].includes(t.status)) return;
+    if (normRef(t.odooRef) !== key) return;
+    const root = rootOf(t);
+    if (excludeRootId && root === excludeRootId) return; // misma cadena → no bloquea
+    (t.items||[]).filter(i=>i.selected && i.odoo_product_id && !i.isKit).forEach(i => {
+      if (!claims[i.odoo_product_id]) {
+        const rt = byId[root] || t;
+        claims[i.odoo_product_id] = { taskId:t.id, seq:rt.seq||null, title:rt.title||t.title, productName:i.product_name||'' };
+      }
+    });
+  });
+  return claims;
+}
+
 // Secuencia incremental de tareas (alto agua persistente; no se reutiliza al borrar)
 const WWP_SEQ_FILE = path.join(DATA_DIR, 'wwp-task-seq.json');
 function nextTaskSeq() {
@@ -2818,6 +2845,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/wwp/order-claims/:ref — artículos ya asignados de una orden [admin|manager] ──
+  if (reqPath.match(/^\/api\/wwp\/order-claims\/[^/]+$/) && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!['admin','manager'].includes(jp.role)) { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Rol no permitido'})); return; }
+    const ref = decodeURIComponent(reqPath.split('/')[4]).trim();
+    const excludeRoot = (parsed.query||{}).excludeRoot || null;
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true, claims:getOrderClaims(ref, excludeRoot)}));
+    return;
+  }
+
   // ── GET /api/wwp/role-defs — listar definiciones de roles ─────────────────
   if (reqPath === '/api/wwp/role-defs' && req.method === 'GET') {
     const _jpRd = requireJwt(req, res); if (!_jpRd) return;
@@ -3711,8 +3749,19 @@ const server = http.createServer(async (req, res) => {
         tasks[idx].status=d.status;
         tasks[idx].statusHistory.push({ status:d.status, date:now, by:d.by||'', note:d.note||'' });
         // Audit log para estados críticos
-        if (d.status==='validated'||d.status==='in_progress') {
+        if (d.status==='validated'||d.status==='in_progress'||d.status==='cancelled') {
           appendAuditLog('task_status_change', { taskId:tasks[idx].id, taskTitle:tasks[idx].title, prevStatus:oldTask.status, newStatus:d.status, by:jp.userId, note:d.note||'' });
+        }
+        // Cancelar en cascada: al cancelar la madre, cancelar subtareas no cerradas
+        if (d.status==='cancelled' && !tasks[idx].parentId) {
+          tasks.forEach(s => {
+            if (s.parentId===tasks[idx].id && !['completed','validated','cancelled'].includes(s.status)) {
+              s.status='cancelled';
+              s.statusHistory = s.statusHistory||[];
+              s.statusHistory.push({ status:'cancelled', date:now, by:d.by||'', note:'Cancelada con la tarea madre' });
+              s.updatedAt=now;
+            }
+          });
         }
       }
       if (d.assignedTo!==undefined) tasks[idx].assignedTo=d.assignedTo;
@@ -4276,6 +4325,17 @@ const server = http.createServer(async (req, res) => {
       const tasks=loadWwpTasks();
       const idx=tasks.findIndex(t=>t.id===id);
       if (idx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      // ── Bloqueo de duplicados: ningún artículo (producto) puede estar en dos cadenas
+      // activas de la misma orden. Artículos distintos del mismo pick sí pueden separarse.
+      const _root = tasks[idx].parentId || tasks[idx].id;
+      const _claims = getOrderClaims(tasks[idx].odooRef, _root);
+      const _conflicts = (d.items||[]).filter(it => it.selected && it.odoo_product_id && !it.isKit && _claims[it.odoo_product_id]);
+      if (_conflicts.length) {
+        const c = _conflicts[0]; const info = _claims[c.odoo_product_id];
+        res.writeHead(409,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, error:`"${c.product_name||'Artículo'}" ya está asignado en la tarea ${info.seq?('#'+String(info.seq).padStart(4,'0')):''} "${info.title}". Cancélala para reasignar.`, conflicts:_conflicts.map(x=>x.odoo_product_id)}));
+        return;
+      }
       const existMap={}; (tasks[idx].items||[]).forEach(e=>{ existMap[e.item_id]=e; });
       tasks[idx].items=(d.items||[]).map(item=>{
         const prev=existMap[item.item_id]||{};
