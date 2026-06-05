@@ -7740,6 +7740,12 @@ function openNewSubtaskModal(parentId) {
     _lastOrderCtx = { client:parent.client||'', salesperson:parent.salesperson||'', deliveryAddress:parent.deliveryAddress||'', phone:parent.phone||'' };
     if (parent.odooRef) document.getElementById('mf-odoo-ref').value = parent.odooRef;
     if (parent.location) document.getElementById('mf-location').value = parent.location;
+    // Título auto-rellenado con el mismo formato del padre (documento-cliente-vendedor).
+    // Se reconstruye desde el contexto; si no hay, usa el título del padre. Editable y se
+    // re-genera si se busca otra orden (igual que en la tarea padre).
+    const _autoT = (parent.title && parent.title.trim()) || [parent.odooRef||'', parent.client||'', parent.salesperson||''].filter(Boolean).join('-');
+    document.getElementById('mf-title').value = _autoT;
+    _lastAutoTitle = _autoT;
     // Heredar artículos: copia con evidencia/confirmación reseteadas (el nuevo equipo hace la suya)
     _subtaskParentItems = (parent.items||[]).filter(i=>i.selected).map(i=>({
       ...i, evidence_images:[], confirmado:false, status:'pending'
