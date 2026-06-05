@@ -4378,6 +4378,43 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // PATCH /api/wwp/tasks/:id/aux-done — auxiliar marca su parte como terminada [participante]
+  if (reqPath.match(/^\/api\/wwp\/tasks\/wt_[a-z0-9]+\/aux-done$/) && req.method === 'PATCH') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const id = reqPath.split('/')[4];
+    try {
+      const d = await readBody(req);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t=>t.id===id);
+      if (idx===-1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      const task = tasks[idx];
+      if (!task.auxDone) task.auxDone = {};
+      if (d.done) {
+        // Requiere fotos completas (igual que la compuerta de completar, sin confirmaciones)
+        const sel = (task.items||[]).filter(it=>it.selected);
+        const faltan = sel.filter(it=>!it.evidence_images||it.evidence_images.length===0);
+        const genEv = !sel.length && !(task.evidence||[]).length && !(task.fotos_guia||[]).some(fg=>(fg.evidencias||[]).length>0);
+        if (faltan.length>0 || genEv) { res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Sube todas las fotos antes de marcar terminado'})); return; }
+        task.auxDone[jp.userId] = { name: jp.name, at: new Date().toISOString() };
+        // Notificar al encargado / creador
+        const recipients = new Set([task.managerId, task.createdBy, odooStrToAuthId(task.assignedTo)].filter(Boolean));
+        recipients.delete(jp.userId);
+        recipients.forEach(uid => createNotification(uid, {
+          type:'task_assigned', title:'✅ Auxiliar terminó',
+          message:`${jp.name} terminó su parte en "${task.title}"${task.seq?(' (#'+String(task.seq).padStart(4,'0')+')'):''}`,
+          relatedTaskId:id, by:jp.name }));
+      } else {
+        delete task.auxDone[jp.userId];
+      }
+      task.updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('items_updated', task, { taskId:id });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, auxDone:task.auxDone}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // PATCH /api/wwp/tasks/:id/items/:itemId/condition — condición del artículo [cualquier rol participante]
   if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/condition$/) && req.method === 'PATCH') {
     const _jpC = requireJwt(req, res); if (!_jpC) return;

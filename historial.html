@@ -6790,9 +6790,41 @@ function renderDrawer(t) {
     if (canDevolver)      rowBtns += `<button class="btn-danger" onclick="showDevolverModal('${t.id}')">↩ Devolver</button>`;
     if (rowBtns) actionHtml += `<div class="action-row">${rowBtns}</div>`;
   }
-  // Auxiliar: evidencia y chat, sin cierre.
+  // Auxiliar: botón "Terminé mi parte" (handoff al encargado). Habilitado solo con fotos completas.
   if (_user.role==='assistant' && t.status==='in_progress' && isTaskParticipant(t)) {
-    actionHtml += `<div class="items-alert">Tu parte queda registrada con evidencias y chat. El encargado responsable cierra la tarea.</div>`;
+    const _sel = (t.items||[]).filter(i=>i.selected);
+    const _faltanFotos = _sel.filter(i=>!i.evidence_images||!i.evidence_images.length).length;
+    const _genEv = !_sel.length && !(t.evidence||[]).length && !(t.fotos_guia||[]).some(fg=>(fg.evidencias||[]).length>0);
+    const _yaTermine = !!((t.auxDone||{})[_user.id]);
+    if (_yaTermine) {
+      actionHtml += `<div class="action-row"><button class="btn-primary" style="background:var(--surface-2);color:var(--green-text);border:1.5px solid var(--green-dot)" onclick="setAuxDone('${t.id}',false)"><i data-lucide="check-circle" style="width:14px;height:14px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Marcaste terminado · deshacer</button></div>`;
+    } else if (_faltanFotos>0 || _genEv) {
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="background:var(--surface-3);color:var(--text-muted);cursor:not-allowed"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Terminé mi parte (faltan ${_faltanFotos||1} foto${(_faltanFotos||1)>1?'s':''})</button></div>`;
+    } else {
+      actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="setAuxDone('${t.id}',true)"><i data-lucide="check-circle" style="width:14px;height:14px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>Terminé mi parte</button></div>`;
+    }
+  }
+  // Encargado/admin: panel de estado de auxiliares (quién terminó)
+  if (isResponsibleCloser && !isClosedTask) {
+    const auxIds = taskAuxiliaryIds(t);
+    if (auxIds.length) {
+      const done = t.auxDone||{};
+      const doneN = auxIds.filter(id=>done[id]).length;
+      const rows = auxIds.map(id=>{
+        const u=(_authUsers||[]).find(x=>x.id===id); const nm=u?u.name.split(' ').slice(0,2).join(' '):'Auxiliar';
+        const d=done[id];
+        return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0">
+          <i data-lucide="${d?'check-circle':'clock'}" style="width:12px;height:12px;stroke:${d?'var(--green-dot)':'var(--text-3)'};flex-shrink:0"></i>
+          <span style="color:var(--text-2)">${esc(nm)}</span>
+          <span style="margin-left:auto;color:${d?'var(--green-text)':'var(--text-3)'};font-weight:600">${d?'✓ Terminó'+(d.at?' · '+fmtDate(d.at):''):'Pendiente'}</span>
+        </div>`;
+      }).join('');
+      actionHtml += `<div style="margin-top:10px;padding:9px 11px;background:var(--surface-2);border:1.5px solid ${doneN===auxIds.length?'var(--green-dot)':'var(--border)'};border-radius:9px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Auxiliares (${doneN}/${auxIds.length} terminaron)</div>
+        ${rows}
+        ${doneN===auxIds.length?`<div style="margin-top:5px;font-size:11px;color:var(--green-text);font-weight:700"><i data-lucide="check-check" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Todos terminaron — listo para completar</div>`:''}
+      </div>`;
+    }
   }
 
   // Flags de permisos — usados en artículos y guía visual
@@ -7489,6 +7521,16 @@ async function toggleItemConfirm(taskId, itemId, checked) {
   } catch(e) { toast(e.message); openDrawer(taskId); }
 }
 
+// Auxiliar marca su parte como terminada (handoff al encargado)
+async function setAuxDone(taskId, done) {
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/aux-done',{method:'PATCH',body:JSON.stringify({done})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    toast(done?'Marcado como terminado — el encargado fue notificado':'Marca de terminado deshecha');
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
 // Kit armado/desarmado por instancia
 async function setKitArmado(taskId, kitId, instance, armado) {
   try {
