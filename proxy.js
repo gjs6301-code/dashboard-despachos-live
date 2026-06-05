@@ -4270,7 +4270,8 @@ const server = http.createServer(async (req, res) => {
       const targByPid = {};
       pr.items.forEach(it => { (it.unitBins||[]).forEach(bin => {
         (targByPid[it.odoo_product_id] = targByPid[it.odoo_product_id] || []).push(
-          { pid:it.odoo_product_id, bin:sBin(bin), sku:it.sku, barcode:it.barcode, name:it.product_name, image:it.image });
+          { pid:it.odoo_product_id, bin:sBin(bin), sku:it.sku, barcode:it.barcode, name:it.product_name, image:it.image,
+            kitId:it.kitId||null, kitRef:it.kitRef||'', kitName:it.kitName||'', kitImage:it.kitImage||'' });
       }); });
       // Unidades actuales (selected) por producto
       const current = (t.items||[]).filter(i => i.selected);
@@ -4290,6 +4291,7 @@ const server = http.createServer(async (req, res) => {
             sku:u.sku, barcode:u.barcode, product_name:u.name, image:u.image,
             quantity:1, units:n, unit_index:i+1, unit_total:n, group_ref:'oi_'+pidKey,
             fromPick:true, pickName:(pr.pickNames[0]||''),
+            kitId:u.kitId||null, kitRef:u.kitRef||'', kitName:u.kitName||'', kitImage:u.kitImage||'',
             selected:true, locations:[], selected_location:null, selected_location_name:u.bin };
           if (reuse) {
             row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending';
