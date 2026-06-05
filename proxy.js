@@ -3447,12 +3447,25 @@ const server = http.createServer(async (req, res) => {
     const idx = tasks.findIndex(t => t.id === taskId);
     if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
     const d = await readBody(req);
-    if (!d.text||!d.text.trim()) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Mensaje vacío'})); return; }
+    const _txt = (d.text||'').trim();
+    // Imagen opcional en el mensaje
+    let _imgUrl = null;
+    if (d.image) {
+      try {
+        const { b64, ext } = validatePhoto({ data:d.image, ext:d.ext||'jpg' });
+        const ts = Date.now();
+        const fname = `${taskId}_chat_${ts}.${ext}`;
+        fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64,'base64'));
+        _imgUrl = `/wwp-fotos/${fname}`;
+      } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); return; }
+    }
+    if (!_txt && !_imgUrl) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Mensaje vacío'})); return; }
     const msg = {
       id: wwpId('msg'),
       fromId: jp.userId,
       fromName: jp.name,
-      text: d.text.trim(),
+      text: _txt,
+      imageUrl: _imgUrl,
       createdAt: new Date().toISOString()
     };
     if (!tasks[idx].messages) tasks[idx].messages = [];
@@ -3469,7 +3482,7 @@ const server = http.createServer(async (req, res) => {
     recipients.forEach(uid => createNotification(uid, {
       type: 'comment_new',
       title: '💬 Mensaje nuevo',
-      message: `${jp.name}: "${msg.text.length>60?msg.text.slice(0,57)+'…':msg.text}"`,
+      message: msg.text ? `${jp.name}: "${msg.text.length>60?msg.text.slice(0,57)+'…':msg.text}"` : `${jp.name} envió una foto 📷`,
       relatedTaskId: taskId,
       by: jp.name
     }));
@@ -4277,7 +4290,7 @@ const server = http.createServer(async (req, res) => {
       const current = (t.items||[]).filter(i => i.selected);
       const curByPid = {};
       current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
-      const merged = []; let added=0, kept=0, relocated=0; const usedIds = new Set();
+      const merged = []; let added=0, kept=0, relocated=0, retagged=0; const usedIds = new Set();
       Object.keys(targByPid).forEach(pidKey => {
         const arr = targByPid[pidKey]; const n = arr.length;
         const pool = (curByPid[pidKey] || []).slice(); // candidatos a reutilizar (mismo producto)
@@ -4297,6 +4310,7 @@ const server = http.createServer(async (req, res) => {
             row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending';
             usedIds.add(reuse.item_id); kept++;
             if ((reuse.selected_location_name||'') !== u.bin) relocated++; // cambió de bin
+            if ((reuse.kitId||'') !== (u.kitId||'')) retagged++;            // info de kit faltante/cambiada
           }
           else { row.evidence_images=[]; row.confirmado=false; row.status='pending'; added++; }
           merged.push(row);
@@ -4304,10 +4318,10 @@ const server = http.createServer(async (req, res) => {
       });
       const removed = current.filter(i => !usedIds.has(i.item_id));
       const removedWithPhotos = removed.filter(i => (i.evidence_images||[]).length>0).length;
-      const hasChanges = added>0 || removed.length>0 || relocated>0;
+      const hasChanges = added>0 || removed.length>0 || relocated>0 || retagged>0;
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ ok:true, hasChanges, pickNames:pr.pickNames,
-        summary:{ added, removed:removed.length, removedWithPhotos, kept, relocated },
+        summary:{ added, removed:removed.length, removedWithPhotos, kept, relocated, retagged },
         removedItems: removed.map(i=>({name:i.product_name, bin:i.selected_location_name, hasPhoto:(i.evidence_images||[]).length>0})),
         merged }));
     } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
