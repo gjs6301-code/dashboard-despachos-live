@@ -6826,10 +6826,12 @@ function renderDrawer(t) {
       // Render de un conjunto de grupos (group_ref) — reutilizado dentro y fuera de kits
       const renderGroups = (groupsObj) => Object.entries(groupsObj).map(([gref, units])=>{
       const _first = units[0];
-      const _grpHdr = (units.length>1 || _canEditUnits) ? `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px;padding:6px 10px;background:var(--surface-2);border-radius:7px">
+      // El editor de "Unidades" no aplica a artículos del pick ni componentes de kit (cantidad fija de Odoo)
+      const _editableUnits = _canEditUnits && !_first.fromPick && !_first.kitId && !_first.isKit;
+      const _grpHdr = (units.length>1 || _editableUnits) ? `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px;padding:6px 10px;background:var(--surface-2);border-radius:7px">
         <span style="font-size:11px;font-weight:700;color:var(--text-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_first.product_name||_first.sku||'')}</span>
         <span style="font-size:10px;color:var(--text-3);white-space:nowrap">${units.length} unidad${units.length>1?'es':''} · ${units.length} foto${units.length>1?'s':''}</span>
-        ${_canEditUnits?`<button class="btn-sm" onclick="changeUnitsPrompt('${t.id}','${gref}')" title="Editar cantidad de unidades" style="padding:2px 9px"><i data-lucide="pencil" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Unidades</button>`:''}
+        ${_editableUnits?`<button class="btn-sm" onclick="changeUnitsPrompt('${t.id}','${gref}')" title="Editar cantidad de unidades" style="padding:2px 9px"><i data-lucide="pencil" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Unidades</button>`:''}
       </div>` : '';
       return _grpHdr + units.map(it=>{
       const evs = it.evidence_images||[];
@@ -6891,22 +6893,44 @@ function renderDrawer(t) {
         if (it.kitId) { (_kitG[it.kitId]=_kitG[it.kitId]||[]).push(it); }
         else { const k=it.group_ref||it.item_id; (_nonKit[k]=_nonKit[k]||[]).push(it); }
       });
+      const _canKit = !isClosedTask && canParticipate;
       let _html = '';
       Object.entries(_kitG).forEach(([kitId, kitItems]) => {
-        const kf = kitItems[0];
+        // Usar TODOS los items del kit (incl. no seleccionados) para conocer instancias y estado armado
+        const allKit = (t.items||[]).filter(i=>i.kitId===kitId);
+        const kf = allKit.find(i=>!i.isKit) || kitItems[0];
         const kImg = kf.kitImage
           ? `<img src="${kf.kitImage}" style="width:42px;height:42px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#fff;flex-shrink:0" onerror="this.style.display='none'">`
           : `<div style="width:42px;height:42px;border-radius:6px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="package" style="width:20px;height:20px;stroke:var(--purple-dot)"></i></div>`;
-        const _sub = {}; kitItems.forEach(it=>{ const k=it.group_ref||it.item_id; (_sub[k]=_sub[k]||[]).push(it); });
+        const instances = [...new Set(allKit.filter(i=>!i.isKit).map(i=>i.unit_index||1))].sort((a,b)=>a-b);
+        let _inner = '';
+        instances.forEach(inst => {
+          const kitCard = (t.items||[]).find(i=>i.isKit && i.kitId===kitId && i.kitInstance===inst && i.selected);
+          const armado = !!kitCard;
+          const toggle = _canKit ? `<div style="display:flex;align-items:center;gap:6px;margin:8px 0 6px">
+              <span style="font-size:10px;color:var(--text-3);font-weight:600">Kit ${instances.length>1?('#'+inst):''}:</span>
+              <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:6px;overflow:hidden">
+                <button onclick="setKitArmado('${t.id}','${kitId}',${inst},false)" style="padding:3px 10px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${armado?'transparent':'var(--accent)'};color:${armado?'var(--text-2)':'#fff'}">📦 Desarmado</button>
+                <button onclick="setKitArmado('${t.id}','${kitId}',${inst},true)" style="padding:3px 10px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${armado?'var(--accent)':'transparent'};color:${armado?'#fff':'var(--text-2)'}">🛠 Armado</button>
+              </div>
+            </div>` : `<div style="font-size:10px;color:var(--text-3);margin:6px 0">${armado?'🛠 Kit armado':'📦 Kit desarmado'}${instances.length>1?(' · #'+inst):''}</div>`;
+          if (armado) {
+            _inner += toggle + renderGroups({ [kitCard.item_id]:[kitCard] });
+          } else {
+            const compUnits = kitItems.filter(i=>!i.isKit && (i.unit_index||1)===inst);
+            const sub={}; compUnits.forEach(it=>{ const k=it.group_ref||it.item_id; (sub[k]=sub[k]||[]).push(it); });
+            _inner += toggle + renderGroups(sub);
+          }
+        });
         _html += `<div style="border:1.5px solid var(--purple-dot);border-radius:10px;padding:10px;margin:12px 0;background:rgba(124,58,237,.03)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             ${kImg}
             <div style="flex:1;min-width:0">
-              <div style="font-size:9px;color:var(--purple-text);font-weight:700;text-transform:uppercase;letter-spacing:.5px">🧩 Kit / Set · ${kitItems.length} pieza${kitItems.length>1?'s':''}</div>
+              <div style="font-size:9px;color:var(--purple-text);font-weight:700;text-transform:uppercase;letter-spacing:.5px">🧩 Kit / Set · ${instances.length} ${instances.length>1?'unidades':'unidad'}</div>
               <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.3">${esc(kf.kitName||kf.kitRef||'Kit')}</div>
             </div>
           </div>
-          ${renderGroups(_sub)}
+          ${_inner}
         </div>`;
       });
       _html += renderGroups(_nonKit);
@@ -7439,6 +7463,16 @@ async function toggleItemConfirm(taskId, itemId, checked) {
   } catch(e) { toast(e.message); openDrawer(taskId); }
 }
 
+// Kit armado/desarmado por instancia
+async function setKitArmado(taskId, kitId, instance, armado) {
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/kit-toggle',{method:'PATCH',body:JSON.stringify({kitId, instance, armado})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    toast(armado?'Kit marcado como armado':'Kit marcado como desarmado');
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
 // Condición del artículo: buen estado / avería + tipo
 async function setItemCondition(taskId, itemId, condition) {
   try {
