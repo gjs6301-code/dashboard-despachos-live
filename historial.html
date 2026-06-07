@@ -5784,32 +5784,15 @@ window.addEventListener('message', function(e) {
   var d = e.data || {};
   if (d.action === 'openNewTask') {
     var payload = d.data || {};
-    // Ir a la pestaña de tareas
     if (_currentTab !== 'tasks') switchTab('tasks');
-    // Verificar permiso
-    if (!can('create_task')) return;
-    // Abrir modal limpio
-    _editingTask = null;
-    resetTaskModal();
-    document.getElementById('modal-task-title').textContent = 'Nueva Tarea';
-    // Pre-llenar tipo (dispatch_order por defecto)
-    var taskType = payload.type || 'dispatch_order';
-    document.getElementById('mf-type').value = taskType;
-    onTypeChange();
-    // Pre-llenar referencia Odoo y disparar búsqueda automática
-    if (payload.odooRef) {
-      document.getElementById('mf-odoo-ref').value = payload.odooRef;
-      fetchOrderItems();
-    }
-    // Pre-llenar título sugerido
-    if (payload.title) document.getElementById('mf-title').value = payload.title;
-    // Pre-llenar localidad si viene
-    if (payload.location) document.getElementById('mf-location').value = payload.location;
-    // Abrir modal
-    document.getElementById('modal-task').classList.add('open');
-    // Scroll al tope del modal
-    var mc = document.querySelector('#modal-task .modal-card');
-    if (mc) mc.scrollTop = 0;
+    openTaskWizard({
+      odooRef:     payload.odooRef    || '',
+      title:       payload.title      || '',
+      location:    payload.location   || '',
+      type:        payload.type       || '',
+      description: payload.description|| '',
+      actionNote:  payload.actionNote || ''
+    });
   }
 });
 
@@ -8434,24 +8417,30 @@ var _WAC=['#2563eb','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777']
 var _wac=n=>_WAC[[...n].reduce((s,c)=>s+c.charCodeAt(0),0)%_WAC.length];
 var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
 
-// opts = { odooRef, title, location, type } — opcional, desde abrirNuevaTareaWWP
+// opts = { odooRef, title, location, type, description, actionNote } — opcional, desde contexto
 async function openTaskWizard(opts) {
   if (!can('create_task')) return;
-  // Mapear type → concept del wizard
+  // Mapear type Odoo → concept del wizard
   const _typeConceptMap = {
     packaging:'pack', dispatch_order:'pack_dispatch',
     warehouse_move:'pack_store', general:'free', item_pickup:'free', truck_loading:'free'
   };
   const preConcept = (opts&&opts.type) ? (_typeConceptMap[opts.type]||null) : null;
-  _wizState={concept:preConcept,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:'',description:'',actionNote:''};
+  _wizState={
+    concept:preConcept, step:1,
+    packers:[], dispatchMgr:null, storeMgr:null, freeMgr:null,
+    duePack:'', dueSub:'',
+    description: (opts&&opts.description) ? opts.description : '',
+    actionNote:  (opts&&opts.actionNote)  ? opts.actionNote  : ''
+  };
   _wizItems=[];_wizSearch=[];
-  _wizRef     = (opts&&opts.odooRef)  ? opts.odooRef  : '';
-  _wizAutoTitle=(opts&&opts.title)    ? opts.title    : '';
+  _wizRef      = (opts&&opts.odooRef)      ? opts.odooRef      : '';
+  _wizAutoTitle= (opts&&opts.title)        ? opts.title        : '';
   _wizFotos=[];_wizPicks=[];_wizPickSel={};
   _wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
   try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
   document.getElementById('modal-task-wizard').classList.add('open');
-  // Si ya viene con concepto pre-seleccionado, saltar directo al paso 2
+  // Si ya viene con concepto pre-seleccionado, saltar al paso 2
   wizGoTo(preConcept ? 2 : 1);
 }
 function closeTaskWizard(){
@@ -8633,16 +8622,17 @@ function _wizS3(body){
       <div id="wiz-clist" style="border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)"></div>
     </div>
     <div id="wiz-add-another-wrap"></div>
-    ${_wizState.concept==='free'?`
-    <!-- Tarea libre: descripción + fotos de guía (sin orden Odoo obligatoria) -->
+    <!-- Descripción: disponible para TODOS los conceptos -->
     <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
       <div class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:5px">
         <i data-lucide="file-text" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
         Descripción / Instrucciones <span style="font-size:9px;color:var(--text-3);font-weight:400;margin-left:2px">opcional</span>
       </div>
-      <textarea id="wiz-desc" class="form-textarea" rows="3"
-        placeholder="Describe qué hacer, dónde ir, qué materiales usar, a quién contactar…"
+      <textarea id="wiz-desc" class="form-textarea" rows="2"
+        placeholder="Instrucciones adicionales, notas al encargado…"
         oninput="_wizState.description=this.value" style="font-size:13px">${esc(_wizState.description||'')}</textarea>
+      ${_wizState.concept==='free'?`
+      <!-- Solo Tarea Libre: fotos de guía -->
       <div class="form-label" style="margin-top:14px;margin-bottom:6px;display:flex;align-items:center;gap:5px">
         <i data-lucide="camera" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
         Fotos de guía <span style="font-size:9px;color:var(--text-3);font-weight:400;margin-left:2px">opcional</span>
@@ -8663,8 +8653,8 @@ function _wizS3(body){
             oninput="_wizFotos[${i}].instruccion=this.value" value="${esc(f.instruccion||'')}"
             style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>`).join('')}
-      </div>
-    </div>`:''}
+      </div>`:''}
+    </div>
   </div>`;
   if(window.lucide)lucide.createIcons();
   if(_wizSearch.length){document.getElementById('wiz-rpanel').style.display='';_wizRenderItems();}
@@ -9100,7 +9090,22 @@ function wizRemoveFoto(idx,wrapEl){
 
 // ── Navegación ───────────────────────────────────────────────────────
 function wizBack(){if(_wizState.step>1)wizGoTo(_wizState.step-1);}
-function wizNext(){const s=_wizState.step;if(s===4){_wizSave();return;}wizGoTo(s+1);}
+function wizNext(){
+  const s=_wizState.step;
+  if(s===4){_wizSave();return;}
+  // Validación suave paso 2: advertir si no hay encargado
+  if(s===2){
+    const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
+    const hasPackers=_wizState.packers.length>0||(!!_wizState.freeMgr);
+    const hasSub=!isCompound||(!!_wizState.dispatchMgr||!!_wizState.storeMgr);
+    if(!hasPackers){
+      toast('⚠ Sin encargado asignado — puedes continuar y asignar después desde el drawer');
+    } else if(!hasSub&&isCompound){
+      toast('⚠ No hay encargado de '+(s==='pack_dispatch'?'despacho':'almacenamiento')+' — puedes asignar después');
+    }
+  }
+  wizGoTo(s+1);
+}
 
 // ── Guardar ──────────────────────────────────────────────────────────
 async function _wizSave(){
@@ -14419,20 +14424,13 @@ function devCdpCrearTarea(selKey) {
                'Cantidad: ' + (row.qty||0).toFixed(0);
   goToWWP();
   setTimeout(function() {
-    if (!can('create_task')) return;
-    _editingTask = null;
-    resetTaskModal();
-    document.getElementById('modal-task-title').textContent = 'Nueva Tarea';
-    document.getElementById('mf-type').value = 'warehouse_move';
-    onTypeChange();
-    document.getElementById('mf-title').value = titulo;
-    document.getElementById('mf-desc').value  = desc;
-    document.getElementById('mf-location').value = 'CDP → ' + dest;
-    if (row.outRef) document.getElementById('mf-odoo-ref').value = row.outRef;
-    document.getElementById('mf-accion-note').value = 'Trasladar de A-CDP/DEVOLUCION a ' + dest + '/DEVOLUCION';
-    document.getElementById('modal-task').classList.add('open');
-    var mc = document.querySelector('#modal-task .modal-card');
-    if (mc) mc.scrollTop = 0;
+    openTaskWizard({
+      odooRef: row.outRef||'',
+      title:   titulo,
+      type:    'warehouse_move',
+      description: desc,
+      actionNote: 'Trasladar de A-CDP/DEVOLUCION a ' + dest + '/DEVOLUCION'
+    });
   }, 350);
 }
 
@@ -14441,7 +14439,6 @@ function devCdpCrearTareaSeleccion() {
   var rows  = Array.from(_devCdpSel).map(_devCdpRowByKey).filter(Boolean);
   var refs  = [...new Set(rows.map(function(r){ return r.retRef||r.outRef; }))].slice(0,5).join(', ');
   var items = rows.map(function(r){ return (r.productRef||'') + ' ' + r.productName + ' ×' + (r.qty||0).toFixed(0); }).join('\n');
-  // Detectar tiendas únicas en la selección
   var stores = [...new Set(rows.map(function(r){ return r.store; }).filter(Boolean))];
   var destLabel = stores.length === 1 ? stores[0] : (stores.length ? stores.join('/') : 'Tienda');
   var titulo = 'Devolver a ' + destLabel + ' (' + rows.length + ' artículo' + (rows.length!==1?'s':'') + ')';
@@ -14450,19 +14447,13 @@ function devCdpCrearTareaSeleccion() {
                'Referencias: ' + refs + '\n\n' + items;
   goToWWP();
   setTimeout(function() {
-    if (!can('create_task')) return;
-    _editingTask = null;
-    resetTaskModal();
-    document.getElementById('modal-task-title').textContent = 'Nueva Tarea';
-    document.getElementById('mf-type').value = 'warehouse_move';
-    onTypeChange();
-    document.getElementById('mf-title').value = titulo;
-    document.getElementById('mf-desc').value  = desc;
-    document.getElementById('mf-location').value = 'CDP → ' + destLabel;
-    document.getElementById('mf-accion-note').value = 'Trasladar artículos de A-CDP/DEVOLUCION a ' + destLabel + '/DEVOLUCION';
-    document.getElementById('modal-task').classList.add('open');
-    var mc = document.querySelector('#modal-task .modal-card');
-    if (mc) mc.scrollTop = 0;
+    openTaskWizard({
+      odooRef: refs,
+      title:   titulo,
+      type:    'warehouse_move',
+      description: desc,
+      actionNote: 'Trasladar artículos de A-CDP/DEVOLUCION a ' + destLabel + '/DEVOLUCION'
+    });
   }, 350);
 }
 
