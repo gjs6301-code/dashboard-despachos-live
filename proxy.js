@@ -105,43 +105,68 @@ async function buildItemsFromPicks(orderName) {
     const so = await odooCall('sale.order','search_read',[[['name','ilike',orderName]]],{fields:['name'],limit:1});
     if (so && so.length) realName = so[0].name;
   } catch {}
+
+  // Buscar todos los pickings ligados a esta orden: PICK + RET (assigned)
   const picksAll = await odooCall('stock.picking','search_read',
-    [[['origin','=',realName],['state','=','assigned']]],
-    {fields:['id','name','picking_type_id'],limit:30});
-  const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name)); // tipo "Pick"
-  if (!pickList.length) return { noPick:true, items:[], pickNames:[] };
-  const pickIds = pickList.map(p=>p.id);
-  const pickNameById = {}; pickList.forEach(p=>{ pickNameById[p.id]=p.name; });
+    [[['origin','=',realName],['state','in',['assigned','done']]]],
+    {fields:['id','name','picking_type_id','state'],limit:50});
+
+  const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name));
+  const retList  = (picksAll||[]).filter(p => /\/RET\//i.test(p.name)
+    || /return|devoluci/i.test((p.picking_type_id&&p.picking_type_id[1])||''));
+
+  if (!pickList.length && !retList.length) return { noPick:true, items:[], picks:[], pickNames:[] };
+
+  // Agrupar move lines por (pickId × productId) para mantener picks separados
+  const allIds = [...pickList, ...retList].map(p=>p.id);
+  const pickInfoById = {}; [...pickList,...retList].forEach(p=>{ pickInfoById[p.id]=p; });
+
   const mls = await odooCall('stock.move.line','search_read',
-    [[['picking_id','in',pickIds]]],
+    [[['picking_id','in',allIds]]],
     {fields:['product_id','location_id','product_uom_qty','qty_done','picking_id'],limit:3000});
-  const byProd = {};
+
+  // Clave única: pickId_productId → permite el mismo producto en picks distintos
+  const byKey = {};
   mls.forEach(ml=>{
     if(!ml.product_id) return;
     const qty = Math.max(0, Math.round(ml.product_uom_qty||ml.qty_done||0));
     if(qty<=0) return;
-    const pid = ml.product_id[0];
-    const bin = ml.location_id ? ml.location_id[1] : '';
-    if(!byProd[pid]) byProd[pid]={ pid, name:ml.product_id[1], pickName:pickNameById[ml.picking_id&&ml.picking_id[0]]||'', unitBins:[] };
-    for(let i=0;i<qty;i++) byProd[pid].unitBins.push(bin);
+    const pid    = ml.product_id[0];
+    const pickId = ml.picking_id && ml.picking_id[0];
+    const pickName = (pickInfoById[pickId]||{}).name||'';
+    const isRet    = /\/RET\//i.test(pickName);
+    const bin  = ml.location_id ? ml.location_id[1] : '';
+    const key  = `${pickId}_${pid}`;
+    if(!byKey[key]) byKey[key]={ pid, name:ml.product_id[1], pickName, isRet, unitBins:[] };
+    for(let i=0;i<qty;i++) byKey[key].unitBins.push(bin);
   });
-  const pids = Object.keys(byProd).map(Number);
-  if(!pids.length) return { noPick:false, items:[], pickNames:pickList.map(p=>p.name) };
-  const prods = await odooCall('product.product','read',[pids],{fields:['id','barcode','default_code','image_128']});
+
+  const pids = [...new Set(Object.values(byKey).map(g=>g.pid))];
+  const picks = [
+    ...pickList.map(p=>({ name:p.name, type:'pick', state:p.state })),
+    ...retList.map(p=>({ name:p.name, type:'return', state:p.state }))
+  ];
+  if(!pids.length) return { noPick:false, items:[], picks, pickNames:pickList.map(p=>p.name) };
+
+  const prods  = await odooCall('product.product','read',[pids],{fields:['id','barcode','default_code','image_128']});
   const pm={}; prods.forEach(p=>{ pm[p.id]=p; });
-  const kitMap = await resolveKitInfo(prods); // componente → info del kit (BOM phantom)
-  const items = pids.map(pid=>{
-    const g=byProd[pid], prod=pm[pid]||{}, units=g.unitBins.length, kit=kitMap[pid];
-    return { item_id:'oi_'+pid, odoo_product_id:pid, odoo_line_id:null,
+  const kitMap = await resolveKitInfo(prods);
+
+  const items = Object.values(byKey).map(g=>{
+    const prod=pm[g.pid]||{}, units=g.unitBins.length, kit=kitMap[g.pid];
+    // item_id incluye el pick para que el mismo producto en dos picks sea item distinto
+    const pickSuffix = g.pickName.replace(/[^A-Za-z0-9]/g,'_');
+    return { item_id:'oi_'+g.pid+'_'+pickSuffix, odoo_product_id:g.pid, odoo_line_id:null,
       sku:prod.barcode||prod.default_code||'', barcode:prod.barcode||'',
       product_name:g.name||'', quantity:units, units,
       image:prod.image_128?'data:image/png;base64,'+prod.image_128:null,
-      unitBins:g.unitBins, pickName:g.pickName, fromPick:true,  // bin por unidad desde el pick
+      unitBins:g.unitBins, pickName:g.pickName, isRet:g.isRet||false, fromPick:true,
       ...(kit ? { kitId:kit.kitId, kitRef:kit.kitRef, kitName:kit.kitName, kitImage:kit.kitImage } : {}),
       locations:[], selected_location:null,
       selected:false, evidence_images:[], comments:'', status:'pending' };
   });
-  return { noPick:false, items, pickNames:pickList.map(p=>p.name) };
+
+  return { noPick:false, items, picks, pickNames:pickList.map(p=>p.name) };
 }
 
 // Detecta componentes de kit (.Cn) y devuelve map productId → {kitId,kitRef,kitName,kitImage}
@@ -4240,7 +4265,7 @@ const server = http.createServer(async (req, res) => {
         const pickRes = await buildItemsFromPicks(order.name);
         if (!pickRes.noPick) {
           res.writeHead(200,{'Content-Type':'application/json'});
-          res.end(JSON.stringify({...baseResp, noPick:false, pickNames:pickRes.pickNames, items:pickRes.items}));
+          res.end(JSON.stringify({...baseResp, noPick:false, picks:pickRes.picks||[], pickNames:pickRes.pickNames, items:pickRes.items}));
           return;
         }
         // Sin pick preparado → devolver artículos de la orden (Demanda) marcando noPick

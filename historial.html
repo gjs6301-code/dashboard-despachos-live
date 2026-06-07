@@ -8421,6 +8421,8 @@ var _wizState = {
 var _wizItems = [], _wizSearch = [], _wizRef = '', _wizAutoTitle = '';
 var _wizCtx   = { client:'', salesperson:'', deliveryAddress:'', phone:'' };
 var _wizFotos = []; // [{b64, ext, instruccion}] para tarea libre
+var _wizPicks = []; // [{name, type:'pick'|'return', state}] picks disponibles de la orden
+var _wizPickSel = {}; // {pickName: true/false} — picks seleccionados en el selector
 
 var _WIZ_DEF = {
   pack:          { label:'Empaque',                  icon:'package',    desc:'1 tarea de embalaje',           color:'#7c3aed' },
@@ -8435,7 +8437,7 @@ var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCa
 async function openTaskWizard() {
   if (!can('create_task')) return;
   _wizState={concept:null,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:'',description:'',actionNote:''};
-  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizFotos=[];_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
+  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizFotos=[];_wizPicks=[];_wizPickSel={};_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
   try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
   document.getElementById('modal-task-wizard').classList.add('open');
   wizGoTo(1);
@@ -8682,17 +8684,38 @@ async function wizFetch(){
       ${d.salesperson?`<span style="font-size:11px;color:var(--text-3)">· ${esc(d.salesperson)}</span>`:''}
     </span>`;
     if(window.lucide)lucide.createIcons();
+
+    // — Picks / devoluciones: si la orden tiene varios, mostrar selector primero —
+    _wizPicks = d.picks||[];
+    if(_wizPicks.length>1){
+      // Inicializar selección: todos seleccionados por defecto
+      if(Object.keys(_wizPickSel).length===0 || !_wizPicks.every(p=>_wizPickSel[p.name]!==undefined)){
+        _wizPickSel={};
+        _wizPicks.forEach(p=>{ _wizPickSel[p.name]=true; });
+      }
+    } else {
+      _wizPickSel={};
+      _wizPicks.forEach(p=>{ _wizPickSel[p.name]=true; });
+    }
+
     let claims={};
     try{const cr=await authFetch('/api/wwp/order-claims/'+encodeURIComponent(d.ref||ref));const cd=await cr.json();if(cd.ok)claims=cd.claims||{};}catch{}
     _wizSearch=(d.items||[]).map(it=>{
-      const row={...it,selected:false,_inCart:_wizItems.some(c=>c.sku===it.sku&&c._sourceRef===_wizRef)};
+      const row={...it,selected:false,_inCart:_wizItems.some(c=>c.item_id===it.item_id&&c._sourceRef===_wizRef)};
       const cl=claims[it.odoo_product_id];
       if(Array.isArray(it.unitBins)&&it.unitBins.length){const N=it.unitBins.length,taken=(cl&&cl.idxs)?cl.idxs:{};const avail=[];for(let k=1;k<=N;k++)if(!taken[k])avail.push(k);row.availIdx=avail;row.units=avail.length;row._claimedCount=N-avail.length;if(avail.length===0)row._claimed=cl;}
       else if(cl)row._claimed=cl;
       return row;
     });
-    _wizRenderItems();
-    if(pEl)pEl.style.display=_wizSearch.length?'':'none';
+
+    // Si hay múltiples picks, mostrar selector antes de los artículos
+    if(_wizPicks.length>1){
+      _wizRenderPickSelector();
+      if(pEl)pEl.style.display='none'; // items ocultos hasta que aplique filtro
+    } else {
+      _wizRenderItems();
+      if(pEl)pEl.style.display=_wizSearch.length?'':'none';
+    }
   }catch(e){if(cEl)cEl.innerHTML=`<span style="color:var(--red)">Error: ${esc(e.message)}</span>`;}
 }
 
@@ -8940,6 +8963,76 @@ function _wizS4(body){
         </div>`}
     ${tHtml}`;
   if(window.lucide)lucide.createIcons();
+}
+
+// ── Pick / RET selector ────────────────────────────────────────────────
+function _wizRenderPickSelector(){
+  const pEl=document.getElementById('wiz-rpanel');
+  if(!pEl)return;
+  const pickCount=_wizPicks.filter(p=>p.type==='pick').length;
+  const retCount=_wizPicks.filter(p=>p.type==='return').length;
+  const anyRet=retCount>0;
+
+  const rows=_wizPicks.map(p=>{
+    const sel=_wizPickSel[p.name]!==false;
+    const isRet=p.type==='return';
+    const icon=isRet?'rotate-ccw':'package';
+    const color=isRet?'var(--amber-dot)':'var(--accent)';
+    const lbl=isRet?'Devolución':'Pick';
+    const lblCss=isRet?'background:rgba(245,158,11,.12);color:var(--amber-text);border:1px solid var(--amber-dot)':'background:rgba(37,99,235,.1);color:var(--accent);border:1px solid var(--accent)';
+    const items=_wizSearch.filter(it=>it.pickName===p.name);
+    return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ${sel?color:'var(--border)'};border-radius:8px;cursor:pointer;background:${sel?'rgba(37,99,235,.04)':'var(--surface-2)'};transition:all .15s;margin-bottom:6px">
+      <input type="checkbox" ${sel?'checked':''} onchange="_wizPickSel['${p.name}']=this.checked" style="width:16px;height:16px;accent-color:${color};flex-shrink:0">
+      <i data-lucide="${icon}" style="width:14px;height:14px;stroke:${color};display:inline-block;flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(p.name)}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:1px">${items.length} artículo${items.length!==1?'s':''} · estado: ${p.state==='done'?'Hecho':'Listo para procesar'}</div>
+      </div>
+      <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;flex-shrink:0;${lblCss}">${lbl}</span>
+    </label>`;
+  }).join('');
+
+  pEl.style.display='';
+  pEl.innerHTML=`<div class="items-panel-hdr">
+    <span class="items-panel-title">
+      <i data-lucide="layers" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>
+      ${pickCount} pick${pickCount!==1?'s':''}${anyRet?' · '+retCount+' devolución'+(retCount!==1?'es':''):''}  — selecciona cuáles incluir
+    </span>
+    <button class="sel-all-btn" onclick="_wizPicks.forEach(p=>{_wizPickSel[p.name]=true});_wizRenderPickSelector()">Todos</button>
+  </div>
+  <div style="padding:8px 10px 4px">${rows}</div>
+  <div style="display:flex;justify-content:flex-end;padding:4px 10px 10px">
+    <button class="btn-primary" style="font-size:12px;padding:7px 16px" onclick="wizApplyPickFilter()">
+      <i data-lucide="filter" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>Ver artículos de picks seleccionados
+    </button>
+  </div>`;
+  if(window.lucide)lucide.createIcons();
+}
+
+function wizApplyPickFilter(){
+  // Filtrar _wizSearch por los picks seleccionados
+  const selectedPicks=new Set(_wizPicks.filter(p=>_wizPickSel[p.name]!==false).map(p=>p.name));
+  // Si hay items con pickName, filtrar; si no, mostrar todos
+  const filtered=_wizSearch.filter(it=>!it.pickName||selectedPicks.has(it.pickName));
+  // Reemplazar temporalmente _wizSearch con filtrado y renderizar
+  const fullSearch=_wizSearch;
+  _wizSearch=filtered;
+  _wizRenderItems();
+  _wizSearch=fullSearch;
+  const pEl=document.getElementById('wiz-rpanel');
+  if(pEl){
+    // Reemplazar panel selector con panel de resultados
+    const titleEl=document.getElementById('wiz-rpanel-title');
+    if(titleEl){
+      const cnt=selectedPicks.size;
+      titleEl.innerHTML=`<i data-lucide="package" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>${filtered.length} artículos (${cnt} pick${cnt!==1?'s':''} seleccionado${cnt!==1?'s':''})
+        <button onclick="_wizRenderPickSelector()" style="margin-left:8px;font-size:10px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);cursor:pointer;color:var(--text-3);font-weight:600">Cambiar picks</button>`;
+      if(window.lucide)lucide.createIcons();
+    }
+    pEl.style.display=filtered.length?'':'none';
+  }
+  // Actualizar búsquedas futuras de Sel.todos al filtro activo
+  _wizSearch=_wizSearch.filter(it=>!it.pickName||selectedPicks.has(it.pickName));
 }
 
 // ── Fotos de guía (Tarea Libre) ───────────────────────────────────────
