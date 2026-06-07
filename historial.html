@@ -8599,6 +8599,7 @@ function _wizS3(body){
       <button class="btn-search" onclick="wizFetch()"><i data-lucide="search"></i>Buscar</button>
     </div>
     <div id="wiz-client" class="odoo-client"></div>
+    <div id="wiz-conflict-wrap"></div>
     <div id="wiz-rpanel" class="items-panel" style="display:none">
       <div class="items-panel-hdr">
         <span class="items-panel-title" id="wiz-rpanel-title"><i data-lucide="package"></i>Resultados</span>
@@ -8669,7 +8670,13 @@ function _wizS3(body){
     if(window.lucide)lucide.createIcons();
   }
 }
-function wizRefInput(){_wizSearch=[];const p=document.getElementById('wiz-rpanel');if(p)p.style.display='none';const c=document.getElementById('wiz-client');if(c)c.innerHTML='';}
+function wizRefInput(){
+  _wizSearch=[];_wizPicks=[];_wizPickSel={};
+  const p=document.getElementById('wiz-rpanel');if(p)p.style.display='none';
+  const c=document.getElementById('wiz-client');if(c)c.innerHTML='';
+  const cw=document.getElementById('wiz-conflict-wrap');if(cw)cw.innerHTML='';
+  const btnN=document.getElementById('wiz-btn-next');if(btnN){btnN.disabled=false;btnN.title='';}
+}
 
 async function wizFetch(){
   const refEl=document.getElementById('wiz-ref');if(!refEl)return;
@@ -8728,6 +8735,8 @@ async function wizFetch(){
       _wizRenderItems();
       if(pEl)pEl.style.display=_wizSearch.length?'':'none';
     }
+    // Verificar conflictos de concepto y cobertura de artículos
+    _wizCheckOrderConflicts();
   }catch(e){if(cEl)cEl.innerHTML=`<span style="color:var(--red)">Error: ${esc(e.message)}</span>`;}
 }
 
@@ -8975,6 +8984,107 @@ function _wizS4(body){
         </div>`}
     ${tHtml}`;
   if(window.lucide)lucide.createIcons();
+}
+
+// ── Conflictos de concepto por orden ─────────────────────────────────
+function _wizCheckOrderConflicts(){
+  const wrap=document.getElementById('wiz-conflict-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  if(!_wizRef||!_wizState.concept)return;
+
+  // Normalizar ref para comparar (extraer número)
+  const normR=r=>r.replace(/\D/g,'')||r.trim();
+  const refN=normR(_wizRef);
+
+  // Tareas activas (no canceladas/validadas) que tocan esta orden
+  const related=(_tasks||[]).filter(t=>{
+    if(['cancelled','validated'].includes(t.status))return false;
+    if(!t.odooRef)return false;
+    return t.odooRef.split(',').some(r=>normR(r)===refN);
+  });
+
+  if(!related.length)return; // sin conflictos
+
+  // Conceptos compuestos bloquean entre sí en la misma orden
+  const COMPOUND=['pack_dispatch','pack_store'];
+  const CONCEPT_LABEL={'pack':'Empaque','pack_dispatch':'Empaque y Despacho','pack_store':'Empaque y Almacenamiento','free':'Tarea Libre'};
+  const STATUS_L={'pending':'Pendiente','assigned':'Asignado','in_progress':'En Progreso','completed':'Completado'};
+  const STATUS_C={'pending':'var(--text-3)','assigned':'var(--accent)','in_progress':'var(--amber-text)','completed':'var(--green-text)'};
+
+  const isCurrentCompound=COMPOUND.includes(_wizState.concept);
+  // Bloqueantes: tareas compuestas activas de la misma orden (solo bloquean si estoy en concepto compuesto)
+  const blockers=isCurrentCompound
+    ? related.filter(t=>COMPOUND.includes(t.taskConcept||'') && !['completed','validated'].includes(t.status))
+    : [];
+
+  // ¿Quedan artículos libres? — si todos los items del search están claimed → sin stock libre
+  const totalItems=_wizSearch.length;
+  const claimedAll=totalItems>0 && _wizSearch.every(it=>!!it._claimed);
+
+  if(!blockers.length && !claimedAll && related.length===0)return;
+
+  const isHardBlock=blockers.length>0||claimedAll;
+  const bgColor=isHardBlock?'rgba(220,38,38,.06)':'rgba(245,158,11,.06)';
+  const bdColor=isHardBlock?'var(--red-dot)':'var(--amber-dot)';
+  const txtColor=isHardBlock?'var(--red-text)':'var(--amber-text)';
+  const icon=isHardBlock?'x-circle':'alert-triangle';
+
+  // Generar filas de tareas relacionadas
+  const taskRows=related.map(t=>{
+    const seq=t.seq?`#${String(t.seq).padStart(4,'0')} · `:'';
+    const concept=CONCEPT_LABEL[t.taskConcept||'']||t.taskConcept||'—';
+    const mgr=t.managerName||t.managerId||'—';
+    const st=t.status;
+    const stLbl=STATUS_L[st]||st;
+    const stCol=STATUS_C[st]||'var(--text-3)';
+    const isBlocker=blockers.includes(t);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-radius:7px;margin-top:5px;border:1px solid ${isBlocker?bdColor:'var(--border)'}">
+      <i data-lucide="${isBlocker?'lock':'info'}" style="width:13px;height:13px;stroke:${isBlocker?txtColor:'var(--text-3)'};flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${seq}${esc(t.title.slice(0,45))}${t.title.length>45?'…':''}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:1px">
+          <span style="color:${isBlocker?txtColor:'var(--accent)'}">⬡ ${concept}</span>
+          · <span style="color:${stCol}">● ${stLbl}</span>
+          · ${esc(mgr)}
+        </div>
+      </div>
+      <button onclick="closeTaskWizard();openDrawer('${t.id}')" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;color:var(--text-3);font-weight:600;flex-shrink:0">Ver →</button>
+    </div>`;
+  }).join('');
+
+  let msg='';
+  if(claimedAll){
+    msg=`<div style="font-size:12px;font-weight:600;color:${txtColor};margin-bottom:6px">
+      <i data-lucide="x-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>
+      Todos los artículos de esta orden ya están asignados a otras tareas activas. No quedan unidades libres.
+    </div>`;
+  } else if(blockers.length){
+    msg=`<div style="font-size:12px;font-weight:600;color:${txtColor};margin-bottom:6px">
+      <i data-lucide="x-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>
+      Ya existe un <strong>${CONCEPT_LABEL[blockers[0].taskConcept]||blockers[0].taskConcept}</strong> activo para esta orden. Cambia el concepto o cancela la tarea existente para continuar.
+    </div>`;
+  } else {
+    msg=`<div style="font-size:12px;font-weight:600;color:${txtColor};margin-bottom:6px">
+      <i data-lucide="alert-triangle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>
+      Esta orden ya tiene tareas activas. Solo puedes agregar los artículos que aún no estén asignados.
+    </div>`;
+  }
+
+  wrap.innerHTML=`<div style="background:${bgColor};border:1.5px solid ${bdColor};border-radius:9px;padding:11px 13px;margin-top:10px">
+    ${msg}${taskRows}
+  </div>`;
+  if(window.lucide)lucide.createIcons();
+
+  // Bloquear botón Siguiente si es conflicto duro
+  const btnN=document.getElementById('wiz-btn-next');
+  if(btnN&&isHardBlock){
+    btnN.disabled=true;
+    btnN.title=claimedAll?'Sin artículos libres en esta orden':'Conflicto de concepto — cancela la tarea existente';
+  } else if(btnN){
+    btnN.disabled=false;
+    btnN.title='';
+  }
 }
 
 // ── Pick / RET selector ────────────────────────────────────────────────
