@@ -202,24 +202,34 @@ function normRef(ref){ const m=(ref||'').match(/\d+/); return m?String(parseInt(
 // Artículos (productos) ya reclamados por tareas ACTIVAS de la misma orden, fuera de la
 // cadena indicada. Permite que artículos distintos del mismo pick vayan a tareas distintas,
 // pero impide asignar el MISMO artículo a dos cadenas a la vez.
+// Devuelve, por producto, las UNIDADES (unit_index) ya reclamadas por tareas activas de la
+// misma orden fuera de la cadena indicada. Permite repartir unidades de un mismo artículo
+// entre encargados distintos (ej. 2 unidades a uno y 1 a otro).
 function getOrderClaims(orderRef, excludeRootId) {
   const key = normRef(orderRef);
   if (!key) return {};
   const tasks = loadWwpTasks();
   const byId = {}; tasks.forEach(t=>{ byId[t.id]=t; });
   const rootOf = t => t.parentId || t.id;
-  const claims = {};
+  const claims = {}; // pid → { idxs:{idx:{seq,title,taskId}}, productName }
   tasks.forEach(t => {
     if (['cancelled','validated'].includes(t.status)) return;
     if (normRef(t.odooRef) !== key) return;
     const root = rootOf(t);
     if (excludeRootId && root === excludeRootId) return; // misma cadena → no bloquea
+    const rt = byId[root] || t;
     (t.items||[]).filter(i=>i.selected && i.odoo_product_id && !i.isKit).forEach(i => {
-      if (!claims[i.odoo_product_id]) {
-        const rt = byId[root] || t;
-        claims[i.odoo_product_id] = { taskId:t.id, seq:rt.seq||null, title:rt.title||t.title, productName:i.product_name||'' };
-      }
+      const pid = i.odoo_product_id;
+      if (!claims[pid]) claims[pid] = { idxs:{}, productName:i.product_name||'' };
+      claims[pid].idxs[i.unit_index||1] = { seq:rt.seq||null, title:rt.title||t.title, taskId:t.id };
     });
+  });
+  // Resumen: lista de índices reclamados + un ejemplo de tarea (para el mensaje)
+  Object.values(claims).forEach(c => {
+    c.idxList = Object.keys(c.idxs).map(Number).sort((a,b)=>a-b);
+    c.count = c.idxList.length;
+    const first = c.idxs[c.idxList[0]] || {};
+    c.seq = first.seq; c.title = first.title; c.taskId = first.taskId;
   });
   return claims;
 }
@@ -4329,11 +4339,12 @@ const server = http.createServer(async (req, res) => {
       // activas de la misma orden. Artículos distintos del mismo pick sí pueden separarse.
       const _root = tasks[idx].parentId || tasks[idx].id;
       const _claims = getOrderClaims(tasks[idx].odooRef, _root);
-      const _conflicts = (d.items||[]).filter(it => it.selected && it.odoo_product_id && !it.isKit && _claims[it.odoo_product_id]);
+      const _conflicts = (d.items||[]).filter(it => it.selected && it.odoo_product_id && !it.isKit
+        && _claims[it.odoo_product_id] && _claims[it.odoo_product_id].idxs[it.unit_index||1]);
       if (_conflicts.length) {
-        const c = _conflicts[0]; const info = _claims[c.odoo_product_id];
+        const c = _conflicts[0]; const info = _claims[c.odoo_product_id].idxs[c.unit_index||1];
         res.writeHead(409,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false, error:`"${c.product_name||'Artículo'}" ya está asignado en la tarea ${info.seq?('#'+String(info.seq).padStart(4,'0')):''} "${info.title}". Cancélala para reasignar.`, conflicts:_conflicts.map(x=>x.odoo_product_id)}));
+        res.end(JSON.stringify({ok:false, error:`Una unidad de "${c.product_name||'Artículo'}" ya está asignada en la tarea ${info.seq?('#'+String(info.seq).padStart(4,'0')):''} "${info.title}". Elige otra unidad o cancela esa tarea.`, conflicts:_conflicts.map(x=>x.item_id)}));
         return;
       }
       const existMap={}; (tasks[idx].items||[]).forEach(e=>{ existMap[e.item_id]=e; });

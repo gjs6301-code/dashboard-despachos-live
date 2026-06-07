@@ -3047,6 +3047,78 @@ body{font-family:var(--font);min-height:100dvh}
   font-family:inherit;
 }
 .pss-cancel:hover{color:var(--text-primary)}
+
+/* ═══ TASK WIZARD ═══════════════════════════════════════════════════════ */
+.wiz-card{max-width:600px}
+.wiz-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--surface-2);color:var(--text-3);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.wiz-dot.wiz-active{border-color:var(--accent);background:var(--accent);color:#fff}
+.wiz-dot.wiz-done{border-color:var(--green-dot);background:var(--green-dot);color:#fff}
+.wiz-line{flex:1;height:2px;background:var(--border);transition:background .3s}
+.wiz-line.wiz-done{background:var(--green-dot)}
+.wiz-body{padding:20px 24px;min-height:200px}
+.wiz-stitle{font-size:17px;font-weight:700;color:var(--text);margin-bottom:18px;text-align:center}
+.wiz-concepts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wiz-ccard{display:flex;flex-direction:column;align-items:center;gap:7px;padding:18px 12px;background:var(--surface-2);border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;font-family:inherit;width:100%;text-align:center}
+.wiz-ccard:hover{border-color:var(--accent);background:rgba(37,99,235,.06)}
+.wiz-ccard.wiz-sel{border-color:var(--accent);background:rgba(37,99,235,.1)}
+.wiz-ccard-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+.wiz-ccard-desc{font-size:10px;color:var(--text-3)}
+.wiz-role-lbl{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.wiz-ulist{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto}
+.wiz-urow{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .15s,background .15s;background:var(--surface-2);min-width:0}
+.wiz-urow:hover{border-color:var(--accent)}
+.wiz-urow.wiz-sel{border-color:var(--accent);background:rgba(37,99,235,.08)}
+.wiz-uavatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.wiz-uname{font-size:12px;font-weight:600;color:var(--text);line-height:1.2}
+.wiz-uwl{font-size:10px;font-weight:500;margin-top:1px}
+.wiz-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.wiz-footer{justify-content:space-between!important;align-items:center}
+.wiz-slabel{font-size:11px;color:var(--text-3);font-weight:600;white-space:nowrap}
+.wiz-sblock{background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:8px}
+.wiz-srole{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.wiz-sname{font-size:15px;font-weight:700;color:var(--text)}
+.wiz-arrow{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text-3);margin:4px 0}
+.wiz-dep{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;background:rgba(245,158,11,.1);color:var(--amber-text);border:1px solid var(--amber-dot);border-radius:5px}
+@media(max-width:600px){
+  /* ── Wizard mobile ─────────────────────────────────────── */
+  .wiz-2col{grid-template-columns:1fr}
+  .wiz-card{max-width:100%}
+
+  /* Body: scroll suave iOS/Android */
+  .wiz-body{
+    padding:14px 14px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    max-height:calc(92dvh - 120px); /* header + footer */
+  }
+
+  /* Step indicator más compacto */
+  .wiz-dot{width:22px;height:22px;font-size:10px}
+  .wiz-line{flex:1;height:2px}
+
+  /* Tarjetas de concepto: 2×2 compactas */
+  .wiz-concepts{grid-template-columns:1fr 1fr;gap:8px}
+  .wiz-ccard{padding:14px 8px;gap:5px;min-height:96px}
+  .wiz-ccard-name{font-size:12px}
+  .wiz-ccard-desc{font-size:9px}
+
+  /* Filas de usuario: touch target mínimo 44px */
+  .wiz-urow{min-height:52px;padding:10px 11px;gap:8px}
+  .wiz-uavatar{width:34px;height:34px;font-size:11px}
+  .wiz-uname{font-size:13px}
+  .wiz-uwl{font-size:10px}
+
+  /* Lista de usuarios: más alta en móvil (más contenido visible) */
+  .wiz-ulist{max-height:200px}
+
+  /* Footer: botones full-tap */
+  .wiz-footer .btn-primary{min-height:44px;padding:10px 16px}
+
+  /* Bloque de resumen: texto algo más grande */
+  .wiz-sname{font-size:14px}
+  .wiz-srole{font-size:9px}
+}
 </style>
 <script>
 (function(){
@@ -4519,6 +4591,22 @@ body{font-family:var(--font);min-height:100dvh}
     <div class="modal-footer">
       <button class="btn-primary" style="background:#6b7280" onclick="closeTaskModal()">Cancelar</button>
       <button class="btn-primary" onclick="saveTask()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TASK WIZARD (nueva tarea guiada) ══════════════════ -->
+<div class="modal-overlay" id="modal-task-wizard">
+  <div class="modal-card wiz-card">
+    <div class="modal-header">
+      <div id="wiz-step-bar" style="display:flex;align-items:center;flex:1;gap:0;padding-right:12px"></div>
+      <button class="modal-close" onclick="closeTaskWizard()">✕</button>
+    </div>
+    <div class="wiz-body" id="wiz-body"></div>
+    <div class="modal-footer wiz-footer">
+      <button class="btn-primary" id="wiz-btn-back" style="background:#6b7280;min-width:80px;visibility:hidden" onclick="wizBack()">Atrás</button>
+      <span class="wiz-slabel" id="wiz-step-label">Paso 1 de 4</span>
+      <button class="btn-primary" id="wiz-btn-next" style="min-width:100px;display:none" onclick="wizNext()">Siguiente</button>
     </div>
   </div>
 </div>
@@ -7756,13 +7844,7 @@ async function deleteItemEvidence(taskId, itemId, evId) {
 // TASK MODAL
 // ═══════════════════════════════════════════════════════════════════════
 var _subtaskParentId = null; // si está set, la próxima tarea guardada es subtarea de esta madre
-function openNewTaskModal() {
-  if (!can('create_task')) return; // RBAC guard
-  _editingTask=null; _subtaskParentId=null; _subtaskParentItems=[]; resetTaskModal(); document.getElementById('modal-task-title').textContent='Nueva Tarea';
-  document.getElementById('mf-subtask-opts').style.display='none';
-  applyManagerSelfMode();
-  document.getElementById('modal-task').classList.add('open');
-}
+function openNewTaskModal() { openTaskWizard(); }
 // Crear subtarea (cadena de acciones) dentro de una tarea madre — reusa el mismo modal
 function openNewSubtaskModal(parentId) {
   if (!can('create_task')) { toast('Sin permiso para crear subtareas'); return; }
@@ -7995,12 +8077,22 @@ async function fetchOrderItems() {
       const cd = await cr.json();
       if (cd.ok) _claims = cd.claims||{};
     } catch {}
-    _modalSearch = (d.items||[]).map(it => ({
-      ...it,
-      selected: false,
-      _claimed: _claims[it.odoo_product_id] || null,   // {seq,title} si ya está asignado
-      _inCart: _modalItems.some(c => c.sku===it.sku && c._sourceRef===ref)
-    }));
+    _modalSearch = (d.items||[]).map(it => {
+      const row = { ...it, selected:false, _inCart: _modalItems.some(c => c.sku===it.sku && c._sourceRef===ref) };
+      const cl = _claims[it.odoo_product_id];
+      if (Array.isArray(it.unitBins) && it.unitBins.length) {
+        // Pick: calcular unidades disponibles (total − unidades ya reclamadas por otras tareas)
+        const N = it.unitBins.length, taken = (cl && cl.idxs) ? cl.idxs : {};
+        const avail = []; for (let k=1;k<=N;k++) if(!taken[k]) avail.push(k);
+        row.availIdx = avail;
+        row.units = avail.length;            // por defecto tomar todas las disponibles
+        row._claimedCount = N - avail.length;
+        if (avail.length === 0) row._claimed = cl;  // todas reclamadas → bloqueado
+      } else if (cl) {
+        row._claimed = cl;                   // artículo simple ya asignado
+      }
+      return row;
+    });
     renderModalItems();
     document.getElementById('mf-items-panel').style.display=_modalSearch.length?'':'none';
   } catch(e) {
@@ -8310,6 +8402,582 @@ async function saveTask() {
     await loadTasks();
     if (taskId) openDrawer(taskId);
   } catch(e) { toast('Error: '+e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TASK WIZARD — creación guiada de tareas
+// ═══════════════════════════════════════════════════════════════════════
+var _wizState = {
+  concept:null, step:1,
+  packers:[],         // [{id,name}] — multi-select empaque
+  dispatchMgr:null,   // {id,name}
+  storeMgr:null,      // {id,name}
+  freeMgr:null,       // {id,name}
+  duePack:'',         // fecha límite empaque
+  dueSub:''           // fecha límite despacho/almacenamiento
+};
+var _wizItems = [], _wizSearch = [], _wizRef = '', _wizAutoTitle = '';
+var _wizCtx   = { client:'', salesperson:'', deliveryAddress:'', phone:'' };
+
+var _WIZ_DEF = {
+  pack:          { label:'Empaque',                  icon:'package',    desc:'1 tarea de embalaje',           color:'#7c3aed' },
+  pack_dispatch: { label:'Empaque y Despacho',       icon:'truck',      desc:'Embalaje → Despacho en cadena', color:'#2563eb' },
+  pack_store:    { label:'Empaque y Almacenamiento', icon:'warehouse',  desc:'Embalaje → Almacén en cadena',  color:'#059669' },
+  free:          { label:'Tarea Libre',              icon:'circle-dot', desc:'Sin estructura definida',       color:'#6b7280' }
+};
+var _WAC=['#2563eb','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777'];
+var _wac=n=>_WAC[[...n].reduce((s,c)=>s+c.charCodeAt(0),0)%_WAC.length];
+var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+
+async function openTaskWizard() {
+  if (!can('create_task')) return;
+  _wizState={concept:null,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:''};
+  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
+  try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
+  document.getElementById('modal-task-wizard').classList.add('open');
+  wizGoTo(1);
+}
+function closeTaskWizard(){
+  document.getElementById('modal-task-wizard').classList.remove('open');
+  _wizItems=[];_wizSearch=[];
+}
+
+function wizGoTo(step){
+  _wizState.step=step;
+  // Barra de pasos
+  const bar=document.getElementById('wiz-step-bar');
+  if(bar){
+    bar.innerHTML=[1,2,3,4].map((n,i)=>{
+      const done=step>n,active=step===n;
+      const cls=done?'wiz-dot wiz-done':active?'wiz-dot wiz-active':'wiz-dot';
+      const lbl=done?`<i data-lucide="check" style="width:12px;height:12px;stroke:#fff;display:block"></i>`:n;
+      const line=i<3?`<div class="wiz-line${step>n?' wiz-done':''}"></div>`:'';
+      return `<div class="${cls}">${lbl}</div>${line}`;
+    }).join('');
+    if(window.lucide)lucide.createIcons();
+  }
+  const btnB=document.getElementById('wiz-btn-back');
+  const btnN=document.getElementById('wiz-btn-next');
+  const lbl=document.getElementById('wiz-step-label');
+  if(btnB)btnB.style.visibility=step===1?'hidden':'visible';
+  if(btnN){btnN.style.display=step===1?'none':'';btnN.textContent=step===4?'Crear':'Siguiente';btnN.disabled=false;}
+  if(lbl)lbl.textContent=`Paso ${step} de 4`;
+  const body=document.getElementById('wiz-body');if(!body)return;
+  if(step===1)_wizS1(body);
+  else if(step===2)_wizS2(body);
+  else if(step===3)_wizS3(body);
+  else if(step===4)_wizS4(body);
+}
+
+// ── Paso 1: concepto ─────────────────────────────────────────────────
+function _wizS1(body){
+  body.innerHTML=`<div class="wiz-stitle">¿Qué quieres hacer?</div>
+  <div class="wiz-concepts">
+    ${Object.entries(_WIZ_DEF).map(([k,d])=>`
+      <button class="wiz-ccard${_wizState.concept===k?' wiz-sel':''}" onclick="wizPickConcept('${k}')">
+        <i data-lucide="${d.icon}" style="width:32px;height:32px;stroke:${d.color};display:block"></i>
+        <span class="wiz-ccard-name">${d.label}</span>
+        <span class="wiz-ccard-desc">${d.desc}</span>
+      </button>`).join('')}
+  </div>`;
+  if(window.lucide)lucide.createIcons();
+}
+function wizPickConcept(c){_wizState.concept=c;wizGoTo(2);}
+
+// ── Paso 2: encargados + fechas ──────────────────────────────────────
+function _wizS2(body){
+  // Solo encargados (managers) — los admins no se asignan como responsables de tarea
+  const users=(_authUsers||[]).filter(u=>u.active!==false&&u.role==='manager');
+  const wl=_workloadMap||{};
+
+  const uRowMulti=(u)=>{
+    const sel=_wizState.packers.some(p=>p.id===u.id);
+    const wv=wl[u.id]||0;
+    const wc=wv===0?'var(--green-text)':wv>=4?'var(--red-text)':'var(--amber-text)';
+    const wt=wv===0?'Sin tareas activas':`${wv} tarea${wv!==1?'s':''} activa${wv!==1?'s':''}`;
+    return `<div class="wiz-urow${sel?' wiz-sel':''}" onclick="wizTogglePacker('${u.id}')">
+      <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
+      <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:${wc}">${wt}</div></div>
+      ${sel?`<i data-lucide="check-circle" style="width:16px;height:16px;stroke:var(--accent);flex-shrink:0"></i>`:'<div style="width:16px"></div>'}
+    </div>`;
+  };
+  const uRowSingle=(role,u)=>{
+    const cur=_wizState[role];
+    const sel=cur&&cur.id===u.id;
+    const wv=wl[u.id]||0;
+    const wc=wv===0?'var(--green-text)':wv>=4?'var(--red-text)':'var(--amber-text)';
+    const wt=wv===0?'Sin tareas activas':`${wv} tarea${wv!==1?'s':''} activa${wv!==1?'s':''}`;
+    return `<div class="wiz-urow${sel?' wiz-sel':''}" onclick="wizPickSingle('${role}','${u.id}')">
+      <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
+      <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:${wc}">${wt}</div></div>
+      ${sel?`<i data-lucide="check-circle" style="width:16px;height:16px;stroke:var(--accent);flex-shrink:0"></i>`:'<div style="width:16px"></div>'}
+    </div>`;
+  };
+  const dateField=(elId,val,label)=>`<div style="margin-top:12px">
+    <label class="form-label" style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+      <i data-lucide="calendar" style="width:11px;height:11px;stroke:var(--accent);display:inline-block"></i>${label}
+      <span style="font-size:9px;color:var(--text-3);font-weight:400">opcional</span>
+    </label>
+    <input type="date" id="${elId}" class="form-select" style="font-size:12px;padding:7px 9px" value="${val}"
+      onchange="_wizState.${elId==='wiz-due-pack'?'duePack':'dueSub'}=this.value">
+  </div>`;
+
+  let inner='';
+  if(_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store'){
+    const sRole=_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr';
+    const sIcon=_wizState.concept==='pack_dispatch'?'truck':'warehouse';
+    const sLbl=_wizState.concept==='pack_dispatch'?'¿Quién despachará?':'¿Quién almacenará?';
+    const sDateLbl=_wizState.concept==='pack_dispatch'?'Fecha límite despacho':'Fecha límite almacenamiento';
+    inner=`<div class="wiz-2col">
+      <div>
+        <div class="wiz-role-lbl"><i data-lucide="package" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+          ¿Quién empacará? <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles</span>
+        </div>
+        <div class="wiz-ulist">${users.map(u=>uRowMulti(u)).join('')}</div>
+        ${dateField('wiz-due-pack',_wizState.duePack,'Fecha límite empaque')}
+      </div>
+      <div>
+        <div class="wiz-role-lbl"><i data-lucide="${sIcon}" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i> ${sLbl}</div>
+        <div class="wiz-ulist">${users.map(u=>uRowSingle(sRole,u)).join('')}</div>
+        ${dateField('wiz-due-sub',_wizState.dueSub,sDateLbl)}
+      </div>
+    </div>`;
+  } else if(_wizState.concept==='free'){
+    inner=`<div style="max-width:400px;margin:0 auto">
+      <div class="wiz-role-lbl"><i data-lucide="user" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i> ¿Quién se encargará?</div>
+      <div class="wiz-ulist">${users.map(u=>uRowSingle('freeMgr',u)).join('')}</div>
+      ${dateField('wiz-due-pack',_wizState.duePack,'Fecha límite')}
+    </div>`;
+  } else {
+    inner=`<div style="max-width:400px;margin:0 auto">
+      <div class="wiz-role-lbl"><i data-lucide="package" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+        ¿Quién empacará? <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles</span>
+      </div>
+      <div class="wiz-ulist">${users.map(u=>uRowMulti(u)).join('')}</div>
+      ${dateField('wiz-due-pack',_wizState.duePack,'Fecha límite')}
+    </div>`;
+  }
+  body.innerHTML=`<div class="wiz-stitle">¿Quién lo hará?</div>${inner}`;
+  if(window.lucide)lucide.createIcons();
+}
+// Multi-select para empaque — toggle en/off
+function wizTogglePacker(id){
+  const user=(_authUsers||[]).find(u=>u.id===id);if(!user)return;
+  const idx=_wizState.packers.findIndex(p=>p.id===id);
+  if(idx>=0)_wizState.packers.splice(idx,1);else _wizState.packers.push({id,name:user.name});
+  _wizS2(document.getElementById('wiz-body'));
+}
+// Single-select para despacho / almacenamiento / tarea libre
+function wizPickSingle(role,id){
+  const user=(_authUsers||[]).find(u=>u.id===id);if(!user)return;
+  const cur=_wizState[role];
+  _wizState[role]=cur&&cur.id===id?null:{id,name:user.name}; // click mismo = deseleccionar
+  _wizS2(document.getElementById('wiz-body'));
+}
+
+// ── Paso 3: órdenes / transferencias ────────────────────────────────
+function _wizS3(body){
+  body.innerHTML=`<div class="wiz-stitle">¿Qué órdenes o transferencias?</div>
+  <div class="form-group" style="margin-bottom:0">
+    <label class="form-label">Buscar <span style="font-size:10px;font-weight:400;color:var(--text-3)">orden · transferencia · artículo · cliente</span></label>
+    <div class="odoo-search-row">
+      <input id="wiz-ref" class="odoo-search-input" placeholder="S09115 · ALVEN/OUT/00146 · cliente…" value="${esc(_wizRef)}" oninput="wizRefInput()">
+      <button class="btn-search" onclick="wizFetch()"><i data-lucide="search"></i>Buscar</button>
+    </div>
+    <div id="wiz-client" class="odoo-client"></div>
+    <div id="wiz-rpanel" class="items-panel" style="display:none">
+      <div class="items-panel-hdr">
+        <span class="items-panel-title" id="wiz-rpanel-title"><i data-lucide="package"></i>Resultados</span>
+        <button class="sel-all-btn" onclick="wizSelAll()">Sel. todos</button>
+      </div>
+      <div id="wiz-rlist"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="wizAddCart()">
+          <i data-lucide="plus" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>Agregar a la tarea
+        </button>
+      </div>
+    </div>
+    <div id="wiz-cart" style="display:${_wizItems.length?'':'none'};margin-top:10px">
+      <div class="items-panel-hdr" style="background:var(--surface-2);border-radius:var(--radius) var(--radius) 0 0">
+        <span class="items-panel-title" style="color:var(--accent)">
+          <i data-lucide="shopping-cart" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:5px"></i>
+          En esta tarea · <span id="wiz-cart-cnt">${_wizItems.length}</span> artículo(s)
+        </span>
+        <button class="sel-all-btn" style="color:var(--red-text)" onclick="wizClearCart()">Limpiar</button>
+      </div>
+      <div id="wiz-clist" style="border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)"></div>
+    </div>
+    <div id="wiz-add-another-wrap"></div>
+  </div>`;
+  if(window.lucide)lucide.createIcons();
+  if(_wizSearch.length){document.getElementById('wiz-rpanel').style.display='';_wizRenderItems();}
+  if(_wizItems.length){_wizRenderCart();_wizShowAnotherPrompt();}
+  if(_wizCtx.client){
+    document.getElementById('wiz-client').innerHTML=`<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <i data-lucide="user" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px"></i>${esc(_wizCtx.client)}
+      ${_wizCtx.salesperson?`<span style="font-size:11px;color:var(--text-3)">· ${esc(_wizCtx.salesperson)}</span>`:''}
+    </span>`;
+    if(window.lucide)lucide.createIcons();
+  }
+}
+function wizRefInput(){_wizSearch=[];const p=document.getElementById('wiz-rpanel');if(p)p.style.display='none';const c=document.getElementById('wiz-client');if(c)c.innerHTML='';}
+
+async function wizFetch(){
+  const refEl=document.getElementById('wiz-ref');if(!refEl)return;
+  const ref=refEl.value.trim();if(!ref)return;
+  _wizRef=ref;
+  const cEl=document.getElementById('wiz-client');
+  const pEl=document.getElementById('wiz-rpanel');
+  if(cEl)cEl.innerHTML='<span style="color:var(--text-muted)">Buscando en Odoo…</span>';
+  if(pEl)pEl.style.display='none';
+  try{
+    const r=await authFetch('/api/wwp/odoo-order/'+encodeURIComponent(ref));
+    const d=await r.json();
+    if(!d.ok){if(cEl)cEl.innerHTML=`<span style="color:var(--red)"><i data-lucide="x-circle" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(d.error)}</span>`;if(window.lucide)lucide.createIcons();return;}
+    if(d.type==='order'&&d.noPick){const go=await _iosConfirm('⚠ Orden '+esc(d.ref)+' sin pick preparado.\n\n¿Continuar con artículos de la orden?');if(!go){if(cEl)cEl.innerHTML='<span style="color:var(--amber-text)">Cancelado</span>';return;}}
+    if(d.ref)_wizRef=d.ref;
+    _wizCtx={client:d.client||'',salesperson:d.salesperson||'',deliveryAddress:d.deliveryAddress||'',phone:d.phone||''};
+    _wizAutoTitle=[d.ref||ref,d.client||'',d.salesperson||''].filter(Boolean).join('-');
+    const iMap={order:'clipboard-list',transfer:'refresh-cw',article:'box',return:'rotate-ccw'};
+    const tLbl=d.type==='order'?'Orden de Venta':d.type==='return'?'Devolución':d.type==='transfer'?'Transferencia':'Artículo';
+    if(cEl)cEl.innerHTML=`<span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--text-2)">
+        <i data-lucide="${iMap[d.type]||'package'}" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${tLbl}</span>
+      <span><i data-lucide="user" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(d.client)}</span>
+      ${d.salesperson?`<span style="font-size:11px;color:var(--text-3)">· ${esc(d.salesperson)}</span>`:''}
+    </span>`;
+    if(window.lucide)lucide.createIcons();
+    let claims={};
+    try{const cr=await authFetch('/api/wwp/order-claims/'+encodeURIComponent(d.ref||ref));const cd=await cr.json();if(cd.ok)claims=cd.claims||{};}catch{}
+    _wizSearch=(d.items||[]).map(it=>{
+      const row={...it,selected:false,_inCart:_wizItems.some(c=>c.sku===it.sku&&c._sourceRef===_wizRef)};
+      const cl=claims[it.odoo_product_id];
+      if(Array.isArray(it.unitBins)&&it.unitBins.length){const N=it.unitBins.length,taken=(cl&&cl.idxs)?cl.idxs:{};const avail=[];for(let k=1;k<=N;k++)if(!taken[k])avail.push(k);row.availIdx=avail;row.units=avail.length;row._claimedCount=N-avail.length;if(avail.length===0)row._claimed=cl;}
+      else if(cl)row._claimed=cl;
+      return row;
+    });
+    _wizRenderItems();
+    if(pEl)pEl.style.display=_wizSearch.length?'':'none';
+  }catch(e){if(cEl)cEl.innerHTML=`<span style="color:var(--red)">Error: ${esc(e.message)}</span>`;}
+}
+
+function _wizRenderItems(){
+  const el=document.getElementById('wiz-rlist');if(!el)return;
+
+  // Separar kits de artículos sueltos
+  const kitGroups={};
+  const standalone=[];
+  _wizSearch.forEach((it,i)=>{
+    if(it.kitId){
+      if(!kitGroups[it.kitId]) kitGroups[it.kitId]={kitId:it.kitId,kitRef:it.kitRef||'',kitName:it.kitName||'',kitImage:it.kitImage||'',rows:[]};
+      kitGroups[it.kitId].rows.push({it,i});
+    } else {
+      standalone.push({it,i});
+    }
+  });
+
+  const _itemRow=(it,i,indented)=>{
+    const locs=it.locations||[];
+    const avail=locs.reduce((s,l)=>s+l.available,0);
+    const isClaimed=!!it._claimed;
+    const stock=locs.length===0?'<span style="color:var(--text-3);font-style:italic">Sin stock registrado</span>':
+      locs.length===1?`<i data-lucide="map-pin" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>${esc(locs[0].location_name)} · <strong>${avail}</strong> disp.`:
+      `<i data-lucide="building-2" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>${locs.length} ubic. · <strong>${avail}</strong> disp.`;
+    const claimedB=isClaimed?`<span style="font-size:9px;padding:1px 5px;background:rgba(220,38,38,.1);color:var(--red-text);border:1px solid var(--red-dot);border-radius:4px;margin-left:4px">En otra tarea</span>`:'';
+    const partB=it._claimedCount>0?`<span style="font-size:9px;padding:1px 5px;background:rgba(245,158,11,.1);color:var(--amber-text);border:1px solid var(--amber-dot);border-radius:4px;margin-left:4px">${it._claimedCount} ya asignadas</span>`:'';
+    const ctrl=it._inCart?`<span style="font-size:10px;color:var(--green-text);font-weight:700;white-space:nowrap">✓ En tarea</span>`:
+      isClaimed?'':
+      `<input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent)" ${it.selected?'checked':''} onclick="event.stopPropagation();_wizSearch[${i}].selected=this.checked">`;
+    const thumb=it.image?`<img src="${it.image}" style="width:30px;height:30px;object-fit:cover;border-radius:5px;flex-shrink:0" onerror="this.style.display='none'">`:'';
+    const indent=indented?'padding-left:10px;border-left:3px solid rgba(37,99,235,.25);margin-left:4px;':'';
+    return `<div class="item-row${isClaimed?' item-claimed':''}" style="${indent}" onclick="${isClaimed||it._inCart?'':('_wizSearch['+i+'].selected=!_wizSearch['+i+'].selected;_wizRenderItems()')}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:18px;flex-shrink:0">${ctrl}</div>
+        ${thumb}
+        <div style="flex:1;min-width:0">
+          <div class="item-sku" style="font-size:11px">${esc(it.sku||'')} <span class="item-name">${esc(it.product_name||'')}</span></div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:1px">Qty: ${it.quantity||1} · ${stock}${claimedB}${partB}</div>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  let html='';
+
+  // Grupos de kit
+  Object.values(kitGroups).forEach(kg=>{
+    const allDone=kg.rows.every(({it})=>it._inCart);
+    const someAvail=kg.rows.some(({it})=>!it._claimed&&!it._inCart);
+    const selAll=`event.stopPropagation();var s=!${kg.rows.filter(({it})=>!it._claimed&&!it._inCart).every(({it})=>it.selected)};${kg.rows.filter(({it})=>!it._claimed&&!it._inCart).map(({i})=>`_wizSearch[${i}].selected=s`).join(';')};_wizRenderItems()`;
+    html+=`<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-bottom:1px solid var(--border)">
+        ${kg.kitImage
+          ?`<img src="${kg.kitImage}" style="width:46px;height:46px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1px solid var(--border)" onerror="this.style.display='none'">`
+          :`<div style="width:46px;height:46px;border-radius:7px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="package" style="width:20px;height:20px;stroke:var(--text-3)"></i></div>`}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px">
+            <span style="font-size:9px;font-weight:800;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;letter-spacing:.4px;flex-shrink:0">KIT</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text)">${esc(kg.kitName)}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-3)">${kg.kitRef?esc(kg.kitRef)+' · ':''}<strong>${kg.rows.length}</strong> componente${kg.rows.length!==1?'s':''}</div>
+        </div>
+        ${someAvail?`<button onclick="${selAll}" style="font-size:10px;padding:4px 9px;border:1px solid var(--accent);border-radius:6px;background:rgba(37,99,235,.08);color:var(--accent);cursor:pointer;font-weight:600;flex-shrink:0;font-family:inherit">Sel. kit</button>`:''}
+      </div>
+      <div>${kg.rows.map(({it,i})=>_itemRow(it,i,true)).join('')}</div>
+    </div>`;
+  });
+
+  // Artículos sueltos
+  standalone.forEach(({it,i})=>{html+=_itemRow(it,i,false);});
+
+  el.innerHTML=html||'<div style="padding:12px;color:var(--text-3);font-size:12px;text-align:center">Sin resultados</div>';
+  if(window.lucide)lucide.createIcons();
+}
+function wizSelAll(){const a=_wizSearch.filter(i=>!i._claimed&&!i._inCart).every(i=>i.selected);_wizSearch.forEach(i=>{if(!i._claimed&&!i._inCart)i.selected=!a;});_wizRenderItems();}
+function wizAddCart(){
+  const defPacker=_wizState.packers.length>0?_wizState.packers[0].id:null;
+  let added=0;
+  _wizSearch.filter(i=>i.selected&&!i._claimed).forEach(it=>{
+    const origQty=it.quantity||1;
+    const item={...it,selected:true,_sourceRef:_wizRef,_packerId:defPacker,_origQty:origQty,_wizQty:origQty};
+    const ex=_wizItems.findIndex(c=>c.sku===it.sku&&c._sourceRef===_wizRef&&c._packerId===defPacker);
+    if(ex>=0)_wizItems[ex]=item;else _wizItems.push(item);
+    it._inCart=true;it.selected=false;added++;
+  });
+  _wizRenderItems();_wizRenderCart();
+  const cp=document.getElementById('wiz-cart');if(cp&&_wizItems.length)cp.style.display='';
+  if(added>0)_wizShowAnotherPrompt();
+}
+function _wizShowAnotherPrompt(){
+  const wrap=document.getElementById('wiz-add-another-wrap');if(!wrap)return;
+  // Contar referencias únicas ya en el carrito
+  const refs=[...new Set(_wizItems.map(i=>i._sourceRef).filter(Boolean))];
+  const refsLabel=refs.length>0?`<span style="font-size:11px;color:var(--text-3);display:block;margin-bottom:6px">Ya incluidas: ${refs.map(r=>`<strong>${esc(r)}</strong>`).join(', ')}</span>`:'';
+  wrap.innerHTML=`<div style="margin-top:12px;padding:13px 14px;background:rgba(37,99,235,.06);border:1.5px solid var(--accent);border-radius:9px">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">¿Deseas agregar artículos de otra orden o transferencia?</div>
+    ${refsLabel}
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="wizAgregarOtra()">
+        <i data-lucide="plus" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>Agregar otra orden
+      </button>
+      <button class="btn-primary" style="font-size:12px;padding:7px 14px;background:var(--green-dot)" onclick="wizGoTo(4)">
+        Listo, ver resumen →
+      </button>
+    </div>
+  </div>`;
+  if(window.lucide)lucide.createIcons();
+  // Auto-scroll para que el prompt sea visible
+  wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function wizAgregarOtra(){
+  // Limpiar prompt y buscador, mantener carrito
+  const wrap=document.getElementById('wiz-add-another-wrap');if(wrap)wrap.innerHTML='';
+  _wizSearch=[];
+  const refEl=document.getElementById('wiz-ref');if(refEl){refEl.value='';refEl.focus();}
+  const pEl=document.getElementById('wiz-rpanel');if(pEl)pEl.style.display='none';
+  const cEl=document.getElementById('wiz-client');if(cEl)cEl.innerHTML='';
+  // Scroll al buscador
+  if(refEl)refEl.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function _wizRenderCart(){
+  const el=document.getElementById('wiz-clist');const cnt=document.getElementById('wiz-cart-cnt');
+  if(!el)return;if(cnt)cnt.textContent=_wizItems.length;
+  const multi=_wizState.packers.length>1;
+
+  const _cartRow=(it,idx)=>{
+    const qty=it._wizQty||it.quantity||1;
+    const origQty=it._origQty||it.quantity||1;
+    // Encargado: avatar + nombre corto
+    const packer=multi&&it._packerId?_wizState.packers.find(p=>p.id===it._packerId):null;
+    const packerChip=packer?`<div class="wiz-uavatar" style="background:${_wac(packer.name)};width:20px;height:20px;font-size:8px;flex-shrink:0" title="${esc(packer.name)}">${_wai(packer.name)}</div>`:'';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border);min-width:0">
+      ${packerChip}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.sku||'')} · ${esc(it.product_name||'')}">${esc(it.sku||'')} · ${esc(it.product_name||'')}</div>
+        ${it._sourceRef?`<div style="font-size:9px;color:var(--text-3)">${esc(it._sourceRef)}</div>`:''}
+      </div>
+      <!-- Qty editable -->
+      <input type="number" value="${qty}" min="1" max="${origQty}"
+        style="width:40px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:center;background:var(--surface-2);color:var(--text);flex-shrink:0"
+        onchange="wizUpdateQty(${idx},this.value)" title="Cantidad (máx ${origQty})">
+      <!-- Packer dropdown (solo multi) -->
+      ${multi?`<select style="font-size:10px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);color:var(--text);flex-shrink:0;max-width:85px" onchange="wizReassign(${idx},this.value)">
+        ${_wizState.packers.map(p=>`<option value="${p.id}" ${it._packerId===p.id?'selected':''}>${esc(p.name.split(' ')[0])}</option>`).join('')}
+      </select>`:''}
+      <!-- Dividir (solo si qty > 1 y hay multi-packer) -->
+      ${multi&&qty>1?`<button onclick="wizDividir(${idx})" title="Dividir entre encargados" style="border:1px solid var(--accent);background:rgba(37,99,235,.08);color:var(--accent);cursor:pointer;border-radius:4px;font-size:13px;font-weight:700;padding:1px 7px;flex-shrink:0;font-family:inherit;line-height:1.4">÷</button>`:''}
+      <button onclick="wizRemoveItem(${idx})" style="border:none;background:none;color:var(--red-text);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;flex-shrink:0">×</button>
+    </div>`;
+  };
+
+  if(_wizItems.length===0){
+    el.innerHTML='';
+  } else {
+    el.innerHTML=_wizItems.map((it,idx)=>_cartRow(it,idx)).join('');
+  }
+  if(window.lucide)lucide.createIcons();
+}
+function wizReassign(idx,pid){if(_wizItems[idx])_wizItems[idx]._packerId=pid;_wizRenderCart();}
+function wizUpdateQty(idx,val){
+  const it=_wizItems[idx];if(!it)return;
+  const max=it._origQty||it.quantity||1;
+  it._wizQty=Math.max(1,Math.min(max,parseInt(val)||1));
+  _wizRenderCart();
+}
+function wizDividir(idx){
+  const it=_wizItems[idx];if(!it)return;
+  const qty=it._wizQty||it.quantity||1;if(qty<=1)return;
+  // Reducir fila actual en 1, crear nueva con qty=1 y siguiente encargado
+  it._wizQty=qty-1;
+  const ci=_wizState.packers.findIndex(p=>p.id===it._packerId);
+  const nextP=_wizState.packers.length>1?_wizState.packers[(ci+1)%_wizState.packers.length]:_wizState.packers[0];
+  const newRow={...it,_wizQty:1,_packerId:nextP?.id||it._packerId};
+  _wizItems.splice(idx+1,0,newRow);
+  _wizRenderCart();
+}
+function wizRemoveItem(idx){const it=_wizItems[idx];if(it){const s=_wizSearch.find(s=>s.sku===it.sku&&s._sourceRef===it._sourceRef);if(s){s._inCart=false;s.selected=false;}}_wizItems.splice(idx,1);_wizRenderItems();_wizRenderCart();const cp=document.getElementById('wiz-cart');if(cp)cp.style.display=_wizItems.length?'':'none';}
+function wizClearCart(){_wizSearch.forEach(s=>{s._inCart=false;s.selected=false;});_wizItems=[];_wizRenderCart();const cp=document.getElementById('wiz-cart');if(cp)cp.style.display='none';}
+
+// ── Paso 4: resumen ──────────────────────────────────────────────────
+function _wizS4(body){
+  const title=_wizAutoTitle||'';
+  const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
+  const sRole=isCompound?(_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr'):null;
+  const sm=sRole?_wizState[sRole]:null;
+  const sLbl=_wizState.concept==='pack_dispatch'?'🚛 Despacho':'🏭 Almacenamiento';
+  const dateRow=d=>d?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">📅 ${d}</div>`:'';
+  let tHtml='';
+
+  if(_wizState.concept==='free'){
+    const m=_wizState.freeMgr;
+    tHtml=`<div class="wiz-sblock">
+      <div class="wiz-srole">Tarea Libre</div>
+      <div class="wiz-sname">${m&&m.name?esc(m.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
+      ${dateRow(_wizState.duePack)}
+      ${_wizItems.length?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${_wizItems.length} artículo${_wizItems.length!==1?'s':''}</div>`:''}
+    </div>`;
+  } else if(_wizState.packers.length>1){
+    tHtml=_wizState.packers.map(p=>{
+      const pCnt=_wizItems.filter(it=>it._packerId===p.id).length;
+      return `<div class="wiz-sblock" style="margin-bottom:6px">
+        <div class="wiz-srole">📦 Empaque</div>
+        <div class="wiz-sname">${esc(p.name)}</div>
+        ${dateRow(_wizState.duePack)}
+        ${pCnt?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${pCnt} artículo${pCnt!==1?'s':''}</div>`:''}
+      </div>`;
+    }).join('');
+    if(isCompound) tHtml+=`<div class="wiz-arrow"><i data-lucide="arrow-down" style="width:16px;height:16px;stroke:var(--text-3)"></i></div>
+      <div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div>
+        <div class="wiz-sname">${sm&&sm.name?esc(sm.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
+        ${dateRow(_wizState.dueSub)}
+        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos del empaque</div>
+      </div>`;
+  } else {
+    const pm=_wizState.packers.length>0?_wizState.packers[0]:null;
+    const cnt=_wizItems.length;
+    tHtml=`<div class="wiz-sblock">
+      <div class="wiz-srole">📦 Empaque</div>
+      <div class="wiz-sname">${pm&&pm.name?esc(pm.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
+      ${dateRow(_wizState.duePack)}
+      ${cnt?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${cnt} artículo${cnt!==1?'s':''}</div>`:''}
+    </div>`;
+    if(isCompound) tHtml+=`<div class="wiz-arrow">
+        <i data-lucide="arrow-down" style="width:16px;height:16px;stroke:var(--text-3)"></i>
+        <span class="wiz-dep"><i data-lucide="lock" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Bloqueado hasta empaque ✓</span>
+      </div>
+      <div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div>
+        <div class="wiz-sname">${sm&&sm.name?esc(sm.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
+        ${dateRow(_wizState.dueSub)}
+        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos del empaque</div>
+      </div>`;
+  }
+  body.innerHTML=`<div class="wiz-stitle">Resumen</div>
+    ${title
+      ?`<div style="background:rgba(37,99,235,.06);border:1.5px solid var(--accent);border-radius:8px;padding:10px 13px;margin-bottom:14px">
+          <div style="font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Título</div>
+          <strong style="font-size:13px">${esc(title)}</strong>
+        </div>`
+      :`<div style="background:rgba(245,158,11,.06);border:1.5px solid var(--amber-dot);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--amber-text)">
+          <i data-lucide="info" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>El título se genera al buscar una orden en el paso anterior.
+        </div>`}
+    ${tHtml}`;
+  if(window.lucide)lucide.createIcons();
+}
+
+// ── Navegación ───────────────────────────────────────────────────────
+function wizBack(){if(_wizState.step>1)wizGoTo(_wizState.step-1);}
+function wizNext(){const s=_wizState.step;if(s===4){_wizSave();return;}wizGoTo(s+1);}
+
+// ── Guardar ──────────────────────────────────────────────────────────
+async function _wizSave(){
+  const btnN=document.getElementById('wiz-btn-next');
+  if(btnN){btnN.disabled=true;btnN.textContent='Creando…';}
+  try{
+    const odooRef=_wizItems.length?[...new Set(_wizItems.map(i=>i._sourceRef).filter(Boolean))].join(', '):(_wizRef||null);
+    const base={
+      title:_wizAutoTitle||odooRef||'Tarea',
+      priority:'medium',odooRef,
+      client:_wizCtx.client||undefined,salesperson:_wizCtx.salesperson||undefined,
+      deliveryAddress:_wizCtx.deliveryAddress||undefined,phone:_wizCtx.phone||undefined,
+      taskConcept:_wizState.concept,
+      createdBy:_user.id,by:_user.name,byUserId:_user.id
+    };
+    const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
+    const sRole=isCompound?(_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr'):null;
+    const sType=isCompound?(_wizState.concept==='pack_dispatch'?'dispatch_order':'warehouse_move'):null;
+    const sm=sRole?_wizState[sRole]:null;
+    const sUser=sm?.id?(_authUsers||[]).find(u=>u.id===sm.id):null;
+    let firstPackId=null, tasksCreated=0;
+
+    if(_wizState.concept==='free'){
+      const m=_wizState.freeMgr;
+      const mu=m?.id?(_authUsers||[]).find(u=>u.id===m.id):null;
+      const b={...base,type:'general',managerId:m?.id||null,managerName:m?.name||null,
+        assignedTo:(m?.id&&mu?.odooId)?('oe_'+mu.odooId):undefined,dueDate:_wizState.duePack||null};
+      const r=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(b)});
+      const d=await r.json();
+      if(d.task?.id){firstPackId=d.task.id;tasksCreated++;
+        if(_wizItems.length) await authFetch('/api/wwp/tasks/'+d.task.id+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(_wizItems)})});
+      }
+    } else {
+      // Empaque: una tarea por encargado (support multi-packer)
+      const packers=_wizState.packers.length>0?_wizState.packers:[{id:null,name:null}];
+      for(let pi=0;pi<packers.length;pi++){
+        const p=packers[pi];
+        const pu=p.id?(_authUsers||[]).find(u=>u.id===p.id):null;
+        const pItems=(packers.length>1?_wizItems.filter(it=>it._packerId===p.id):_wizItems)
+          .map(it=>({...it,quantity:it._wizQty||it.quantity}));
+        const b={...base,type:'packaging',managerId:p.id||null,managerName:p.name||null,
+          assignedTo:(p.id&&pu?.odooId)?('oe_'+pu.odooId):undefined,dueDate:_wizState.duePack||null};
+        const r=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(b)});
+        const d=await r.json();
+        if(d.task?.id){
+          if(pi===0)firstPackId=d.task.id;
+          tasksCreated++;
+          if(pItems.length) await authFetch('/api/wwp/tasks/'+d.task.id+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(pItems)})});
+        }
+      }
+      // Subtarea de despacho/almacenamiento enlazada a la primera tarea de empaque
+      if(isCompound&&firstPackId){
+        const subBody={...base,type:sType,managerId:sm?.id||null,managerName:sm?.name||null,
+          assignedTo:(sm?.id&&sUser?.odooId)?('oe_'+sUser.odooId):undefined,
+          dueDate:_wizState.dueSub||null,parentId:firstPackId,dependsOnPrev:true,subIndex:2};
+        const r2=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(subBody)});
+        const d2=await r2.json();
+        const subId=d2.task?.id;
+        if(subId){tasksCreated++;
+          if(_wizItems.length){
+            const inh=_wizItems.map(it=>({...it,evidence_images:[],confirmado:false,status:'pending'}));
+            await authFetch('/api/wwp/tasks/'+subId+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(inh)})});
+          }
+        }
+      }
+    }
+    closeTaskWizard();
+    toast(`✓ ${tasksCreated} tarea${tasksCreated!==1?'s':''} creada${tasksCreated!==1?'s':''}`);
+    await loadTasks();
+    if(firstPackId)openDrawer(firstPackId);
+  }catch(e){toast('Error: '+e.message);if(btnN){btnN.disabled=false;btnN.textContent='Crear';}}
 }
 
 // ═══════════════════════════════════════════════════════════════════════
