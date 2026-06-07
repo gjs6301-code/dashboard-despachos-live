@@ -8414,10 +8414,13 @@ var _wizState = {
   storeMgr:null,      // {id,name}
   freeMgr:null,       // {id,name}
   duePack:'',         // fecha límite empaque
-  dueSub:''           // fecha límite despacho/almacenamiento
+  dueSub:'',          // fecha límite despacho/almacenamiento
+  description:'',     // descripción libre
+  actionNote:''       // nota de acción (pie de fotos)
 };
 var _wizItems = [], _wizSearch = [], _wizRef = '', _wizAutoTitle = '';
 var _wizCtx   = { client:'', salesperson:'', deliveryAddress:'', phone:'' };
+var _wizFotos = []; // [{b64, ext, instruccion}] para tarea libre
 
 var _WIZ_DEF = {
   pack:          { label:'Empaque',                  icon:'package',    desc:'1 tarea de embalaje',           color:'#7c3aed' },
@@ -8431,8 +8434,8 @@ var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCa
 
 async function openTaskWizard() {
   if (!can('create_task')) return;
-  _wizState={concept:null,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:''};
-  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
+  _wizState={concept:null,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:'',description:'',actionNote:''};
+  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizFotos=[];_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
   try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
   document.getElementById('modal-task-wizard').classList.add('open');
   wizGoTo(1);
@@ -8608,6 +8611,38 @@ function _wizS3(body){
       <div id="wiz-clist" style="border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius)"></div>
     </div>
     <div id="wiz-add-another-wrap"></div>
+    ${_wizState.concept==='free'?`
+    <!-- Tarea libre: descripción + fotos de guía (sin orden Odoo obligatoria) -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <div class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:5px">
+        <i data-lucide="file-text" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
+        Descripción / Instrucciones <span style="font-size:9px;color:var(--text-3);font-weight:400;margin-left:2px">opcional</span>
+      </div>
+      <textarea id="wiz-desc" class="form-textarea" rows="3"
+        placeholder="Describe qué hacer, dónde ir, qué materiales usar, a quién contactar…"
+        oninput="_wizState.description=this.value" style="font-size:13px">${esc(_wizState.description||'')}</textarea>
+      <div class="form-label" style="margin-top:14px;margin-bottom:6px;display:flex;align-items:center;gap:5px">
+        <i data-lucide="camera" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
+        Fotos de guía <span style="font-size:9px;color:var(--text-3);font-weight:400;margin-left:2px">opcional</span>
+      </div>
+      <button type="button" onclick="wizSeleccionarFotos()"
+        style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--border);border-radius:9px;background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text-secondary);width:100%;box-sizing:border-box;font-family:inherit;transition:border-color .15s"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <i data-lucide="camera" style="width:15px;height:15px;stroke:currentColor;flex-shrink:0"></i>
+        <span id="wiz-fotos-btn-label">${_wizFotos.length?(_wizFotos.length+' foto'+(_wizFotos.length!==1?'s':'')+' · Agregar más'):'Agregar fotos de guía'}</span>
+      </button>
+      <div id="wiz-fotos-preview" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        ${_wizFotos.map((f,i)=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px;background:var(--surface-2);border-radius:9px;border:1px solid var(--border)">
+          <div style="position:relative;flex-shrink:0">
+            <img src="${f.b64}" style="width:56px;height:56px;object-fit:cover;border-radius:7px;cursor:zoom-in" onclick="openLightbox(this.src)">
+            <button onclick="wizRemoveFoto(${i})" style="position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;background:var(--red-dot);color:#fff;border:none;font-size:10px;cursor:pointer;padding:0;line-height:17px;text-align:center">✕</button>
+          </div>
+          <input type="text" placeholder="Instrucción para esta foto… (opcional)" maxlength="150"
+            oninput="_wizFotos[${i}].instruccion=this.value" value="${esc(f.instruccion||'')}"
+            style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>`).join('')}
+      </div>
+    </div>`:''}
   </div>`;
   if(window.lucide)lucide.createIcons();
   if(_wizSearch.length){document.getElementById('wiz-rpanel').style.display='';_wizRenderItems();}
@@ -8850,11 +8885,14 @@ function _wizS4(body){
 
   if(_wizState.concept==='free'){
     const m=_wizState.freeMgr;
+    const fotoCnt=_wizFotos.filter(Boolean).length;
     tHtml=`<div class="wiz-sblock">
       <div class="wiz-srole">Tarea Libre</div>
       <div class="wiz-sname">${m&&m.name?esc(m.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
       ${dateRow(_wizState.duePack)}
       ${_wizItems.length?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${_wizItems.length} artículo${_wizItems.length!==1?'s':''}</div>`:''}
+      ${_wizState.description?`<div style="margin-top:6px;font-size:11px;color:var(--text-3);border-top:1px solid var(--border);padding-top:6px"><i data-lucide="file-text" style="width:10px;height:10px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>${esc(_wizState.description.slice(0,80))}${_wizState.description.length>80?'…':''}</div>`:''}
+      ${fotoCnt?`<div style="margin-top:4px;font-size:11px;color:var(--text-3)"><i data-lucide="camera" style="width:10px;height:10px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>${fotoCnt} foto${fotoCnt!==1?'s':''} de guía</div>`:''}
     </div>`;
   } else if(_wizState.packers.length>1){
     tHtml=_wizState.packers.map(p=>{
@@ -8904,6 +8942,47 @@ function _wizS4(body){
   if(window.lucide)lucide.createIcons();
 }
 
+// ── Fotos de guía (Tarea Libre) ───────────────────────────────────────
+function wizSeleccionarFotos(){
+  _openPhotoSource({
+    title:'Fotos de guía',
+    multiple:true,
+    onFiles:async function(files){
+      const lbl=document.getElementById('wiz-fotos-btn-label');
+      if(lbl)lbl.textContent='Procesando…';
+      for(let i=0;i<files.length;i++){
+        const b64=await _compressImage(files[i]);
+        if(!b64)continue;
+        const idx=_wizFotos.length;
+        _wizFotos.push({b64,ext:'jpg',instruccion:''});
+        const preview=document.getElementById('wiz-fotos-preview');
+        if(preview){
+          const wrap=document.createElement('div');
+          wrap.dataset.wizFoto=idx;
+          wrap.style.cssText='display:flex;align-items:flex-start;gap:10px;padding:8px;background:var(--surface-2);border-radius:9px;border:1px solid var(--border)';
+          wrap.innerHTML=`<div style="position:relative;flex-shrink:0">
+            <img src="${b64}" style="width:56px;height:56px;object-fit:cover;border-radius:7px;cursor:zoom-in" onclick="openLightbox(this.src)">
+            <button onclick="wizRemoveFoto(${idx},this.closest('[data-wiz-foto]'))" style="position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;background:var(--red-dot);color:#fff;border:none;font-size:10px;cursor:pointer;padding:0;line-height:17px;text-align:center">✕</button>
+          </div>
+          <input type="text" placeholder="Instrucción para esta foto… (opcional)" maxlength="150"
+            oninput="_wizFotos[${idx}].instruccion=this.value"
+            style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">`;
+          preview.appendChild(wrap);
+        }
+      }
+      const lbl2=document.getElementById('wiz-fotos-btn-label');
+      if(lbl2){const cnt=_wizFotos.filter(Boolean).length;lbl2.textContent=cnt>0?(cnt+' foto'+(cnt!==1?'s':'')+' · Agregar más'):'Agregar fotos de guía';}
+    }
+  });
+}
+function wizRemoveFoto(idx,wrapEl){
+  if(_wizFotos[idx])_wizFotos[idx]=null;
+  if(wrapEl&&wrapEl.parentNode)wrapEl.parentNode.removeChild(wrapEl);
+  const cnt=_wizFotos.filter(Boolean).length;
+  const lbl=document.getElementById('wiz-fotos-btn-label');
+  if(lbl)lbl.textContent=cnt>0?(cnt+' foto'+(cnt!==1?'s':'')+' · Agregar más'):'Agregar fotos de guía';
+}
+
 // ── Navegación ───────────────────────────────────────────────────────
 function wizBack(){if(_wizState.step>1)wizGoTo(_wizState.step-1);}
 function wizNext(){const s=_wizState.step;if(s===4){_wizSave();return;}wizGoTo(s+1);}
@@ -8917,6 +8996,8 @@ async function _wizSave(){
     const base={
       title:_wizAutoTitle||odooRef||'Tarea',
       priority:'medium',odooRef,
+      description:_wizState.description||undefined,
+      actionNote:_wizState.actionNote||undefined,
       client:_wizCtx.client||undefined,salesperson:_wizCtx.salesperson||undefined,
       deliveryAddress:_wizCtx.deliveryAddress||undefined,phone:_wizCtx.phone||undefined,
       taskConcept:_wizState.concept,
@@ -8936,8 +9017,17 @@ async function _wizSave(){
         assignedTo:(m?.id&&mu?.odooId)?('oe_'+mu.odooId):undefined,dueDate:_wizState.duePack||null};
       const r=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(b)});
       const d=await r.json();
-      if(d.task?.id){firstPackId=d.task.id;tasksCreated++;
+      if(d.task?.id){
+        firstPackId=d.task.id;tasksCreated++;
         if(_wizItems.length) await authFetch('/api/wwp/tasks/'+d.task.id+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(_wizItems)})});
+        // Subir fotos de guía si las hay
+        const fotos=_wizFotos.filter(Boolean);
+        if(fotos.length){
+          try{
+            await authFetch('/api/wwp/tasks/'+d.task.id+'/fotos-guia',{method:'POST',
+              body:JSON.stringify({fotos:fotos.map(f=>({data:f.b64,ext:f.ext,instruccion:f.instruccion||''})),by:_user.name})});
+          }catch(e2){toast('Error subiendo fotos: '+e2.message);}
+        }
       }
     } else {
       // Empaque: una tarea por encargado (support multi-packer)
