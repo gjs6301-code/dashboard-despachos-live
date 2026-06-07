@@ -8434,13 +8434,25 @@ var _WAC=['#2563eb','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777']
 var _wac=n=>_WAC[[...n].reduce((s,c)=>s+c.charCodeAt(0),0)%_WAC.length];
 var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
 
-async function openTaskWizard() {
+// opts = { odooRef, title, location, type } — opcional, desde abrirNuevaTareaWWP
+async function openTaskWizard(opts) {
   if (!can('create_task')) return;
-  _wizState={concept:null,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:'',description:'',actionNote:''};
-  _wizItems=[];_wizSearch=[];_wizRef='';_wizAutoTitle='';_wizFotos=[];_wizPicks=[];_wizPickSel={};_wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
+  // Mapear type → concept del wizard
+  const _typeConceptMap = {
+    packaging:'pack', dispatch_order:'pack_dispatch',
+    warehouse_move:'pack_store', general:'free', item_pickup:'free', truck_loading:'free'
+  };
+  const preConcept = (opts&&opts.type) ? (_typeConceptMap[opts.type]||null) : null;
+  _wizState={concept:preConcept,step:1,packers:[],dispatchMgr:null,storeMgr:null,freeMgr:null,duePack:'',dueSub:'',description:'',actionNote:''};
+  _wizItems=[];_wizSearch=[];
+  _wizRef     = (opts&&opts.odooRef)  ? opts.odooRef  : '';
+  _wizAutoTitle=(opts&&opts.title)    ? opts.title    : '';
+  _wizFotos=[];_wizPicks=[];_wizPickSel={};
+  _wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
   try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
   document.getElementById('modal-task-wizard').classList.add('open');
-  wizGoTo(1);
+  // Si ya viene con concepto pre-seleccionado, saltar directo al paso 2
+  wizGoTo(preConcept ? 2 : 1);
 }
 function closeTaskWizard(){
   document.getElementById('modal-task-wizard').classList.remove('open');
@@ -8476,7 +8488,12 @@ function wizGoTo(step){
 
 // ── Paso 1: concepto ─────────────────────────────────────────────────
 function _wizS1(body){
+  const hasPre=!!_wizState.concept;
   body.innerHTML=`<div class="wiz-stitle">¿Qué quieres hacer?</div>
+  ${hasPre?`<div style="font-size:11px;color:var(--accent);text-align:center;margin:-10px 0 12px;font-weight:600">
+    <i data-lucide="zap" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>
+    Concepto pre-seleccionado según el tipo — puedes cambiarlo
+  </div>`:''}
   <div class="wiz-concepts">
     ${Object.entries(_WIZ_DEF).map(([k,d])=>`
       <button class="wiz-ccard${_wizState.concept===k?' wiz-sel':''}" onclick="wizPickConcept('${k}')">
@@ -8484,7 +8501,10 @@ function _wizS1(body){
         <span class="wiz-ccard-name">${d.label}</span>
         <span class="wiz-ccard-desc">${d.desc}</span>
       </button>`).join('')}
-  </div>`;
+  </div>
+  ${hasPre?`<div style="display:flex;justify-content:flex-end;margin-top:16px">
+    <button class="btn-primary" style="font-size:12px;padding:8px 18px" onclick="wizGoTo(2)">Confirmar y continuar →</button>
+  </div>`:''}`;
   if(window.lucide)lucide.createIcons();
 }
 function wizPickConcept(c){_wizState.concept=c;wizGoTo(2);}
@@ -8649,6 +8669,8 @@ function _wizS3(body){
   if(window.lucide)lucide.createIcons();
   if(_wizSearch.length){document.getElementById('wiz-rpanel').style.display='';_wizRenderItems();}
   if(_wizItems.length){_wizRenderCart();_wizShowAnotherPrompt();}
+  // Auto-buscar si ya viene con ref pre-llenada (desde abrirNuevaTareaWWP)
+  if(_wizRef&&!_wizSearch.length&&!_wizItems.length){ setTimeout(()=>wizFetch(),120); }
   if(_wizCtx.client){
     document.getElementById('wiz-client').innerHTML=`<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <i data-lucide="user" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px"></i>${esc(_wizCtx.client)}
@@ -14484,18 +14506,7 @@ function setNavActive(section){
 function abrirNuevaTareaWWP(odooRef, title, location, type) {
   goToWWP();
   setTimeout(function() {
-    if (!can('create_task')) return;
-    _editingTask = null;
-    resetTaskModal();
-    document.getElementById('modal-task-title').textContent = 'Nueva Tarea';
-    document.getElementById('mf-type').value = type || 'dispatch_order';
-    onTypeChange();
-    if (odooRef) { document.getElementById('mf-odoo-ref').value = odooRef; fetchOrderItems(); }
-    if (title) document.getElementById('mf-title').value = title;
-    if (location) document.getElementById('mf-location').value = location;
-    document.getElementById('modal-task').classList.add('open');
-    var mc = document.querySelector('#modal-task .modal-card');
-    if (mc) mc.scrollTop = 0;
+    openTaskWizard({ odooRef: odooRef||'', title: title||'', location: location||'', type: type||'' });
   }, 300);
 }
 
