@@ -1356,14 +1356,14 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(), camera=()');
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: blob:; " +
+    "img-src 'self' data: blob: https://*.tile.openstreetmap.org; " +
     "font-src 'self' data:; " +
-    "connect-src 'self' https://altritempi.odoo.com https://docs.google.com https://sheets.googleapis.com; " +
+    "connect-src 'self' https://altritempi.odoo.com https://docs.google.com https://sheets.googleapis.com https://*.tile.openstreetmap.org; " +
     "frame-ancestors 'self'; " +
     "base-uri 'self'; " +
     "form-action 'self'"
