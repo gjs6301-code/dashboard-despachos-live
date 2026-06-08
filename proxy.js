@@ -222,6 +222,52 @@ async function tagKitInfo(items) {
   return items;
 }
 
+// Propaga la configuración de kits (armado/desarmado) de un empaque a sus subtareas
+// de despacho/almacén. Si un kit está armado en el empaque → la subtarea muestra la
+// tarjeta-kit (1 unidad); si está desarmado → muestra los componentes. No destructivo:
+// preserva los datos de entrega ya registrados en la subtarea. Devuelve true si cambió algo.
+function syncKitStructureToChildren(parentTask, tasks) {
+  const children = tasks.filter(t => t.parentId === parentTask.id &&
+    ['dispatch_order','warehouse_move'].includes(t.type) && t.status !== 'cancelled');
+  if (!children.length) return false;
+  const pItems = parentTask.items || [];
+  if (!pItems.some(i => i.kitId)) return false; // sin kits, nada que sincronizar
+  // Kits armados en el padre: 'kitId#inst' -> tarjeta-kit del padre
+  const kitArmado = {};
+  pItems.forEach(i => { if (i.isKit && i.selected) kitArmado[(i.kitId||'')+'#'+(i.kitInstance||1)] = i; });
+  let changed = false;
+  children.forEach(child => {
+    const items = (child.items||[]).slice();
+    const byId = {}; items.forEach(i => { byId[i.item_id] = i; });
+    // 1) Componentes: ocultar si su kit-instancia está armada; mostrar si no
+    items.forEach(i => {
+      if (i.kitId && !i.isKit) {
+        const key = (i.kitId||'')+'#'+(i.unit_index||1);
+        const should = !kitArmado[key];
+        if (i.selected !== should) { i.selected = should; changed = true; }
+      }
+    });
+    // 2) Tarjetas-kit: crear/activar las armadas, desactivar las desarmadas
+    Object.entries(kitArmado).forEach(([key, pkit]) => {
+      const ex = byId[pkit.item_id];
+      if (ex) { if (!ex.selected) { ex.selected = true; ex.isKit = true; changed = true; } }
+      else {
+        items.push({ ...pkit, evidence_images:[], deliveryStatus:'', deliveryDamageType:'',
+          delivered:undefined, delivery_by:'', delivery_at:'', confirmado:false, condition:'', status:'pending' });
+        changed = true;
+      }
+    });
+    items.forEach(i => {
+      if (i.isKit) {
+        const key = (i.kitId||'')+'#'+(i.kitInstance||1);
+        if (!kitArmado[key] && i.selected) { i.selected = false; changed = true; }
+      }
+    });
+    if (changed) { child.items = items; child.updatedAt = new Date().toISOString(); }
+  });
+  return changed;
+}
+
 // Normaliza una referencia de orden a su número (S06031 / 6031 / 06031 → "6031")
 function normRef(ref){ const m=(ref||'').match(/\d+/); return m?String(parseInt(m[0],10)):''; }
 // Artículos (productos) ya reclamados por tareas ACTIVAS de la misma orden, fuera de la
@@ -4439,6 +4485,8 @@ const server = http.createServer(async (req, res) => {
       tasks[idx].updatedAt=new Date().toISOString();
       // Marca de modificación de la lista por el encargado → reactiva la tarea para auxiliares que ya terminaron
       tasks[idx].itemsUpdatedAt=tasks[idx].updatedAt;
+      // Propagar config de kit a subtareas de despacho/almacén hijas
+      syncKitStructureToChildren(tasks[idx], tasks);
       saveWwpTasks(tasks);
       broadcastWwpTasks('items_updated', tasks[idx], { taskId:id, items:tasks[idx].items });
       res.writeHead(200,{'Content-Type':'application/json'});
@@ -4585,6 +4633,8 @@ const server = http.createServer(async (req, res) => {
       }
       tasks[idx].items = items;
       tasks[idx].updatedAt = new Date().toISOString();
+      // Propagar la config de kit a subtareas de despacho/almacén hijas
+      syncKitStructureToChildren(tasks[idx], tasks);
       saveWwpTasks(tasks);
       broadcastWwpTasks('items_updated', tasks[idx], { taskId:id });
       res.writeHead(200,{'Content-Type':'application/json'});

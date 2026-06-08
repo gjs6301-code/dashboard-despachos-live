@@ -6841,8 +6841,9 @@ function renderDrawer(t) {
   const feVehiculo  = (t.fotos_vehiculo||[]).length  > 0; // foto vehículo cargado
   const feEntrega   = (t.fotos_entrega||[]).length   > 0; // documentos firmados
   const dispatchChecklistOk = feRecepcion && feVehiculo && feEntrega;
-  // Artículos de entrega: cada uno entregado (ok/avería) o marcado no-entregado, con foto
-  const _dispSel = (t.items||[]).filter(i=>i.selected && !i.isKit);
+  // Artículos de entrega: hereda config de kit del empaque (kit armado = 1 unidad; desarmado = componentes).
+  // Incluye tarjetas-kit armadas (isKit && selected) y excluye componentes ocultos (selected:false).
+  const _dispSel = (t.items||[]).filter(i=>i.selected);
   const dispatchItemsPending = isDispatch ? _dispSel.filter(i =>
     !i.deliveryStatus || (i.deliveryStatus!=='not_delivered' && (i.evidence_images||[]).length===0)
   ) : [];
@@ -7396,12 +7397,16 @@ function renderDrawer(t) {
         const isND  = ds==='not_delivered';
         const needPhoto = ds && ds!=='not_delivered' && !evs.length;
         const bord = !ds?'var(--amber-dot)':isND?'var(--red-dot)':isDmg?'var(--amber-dot)':'var(--green-dot)';
-        return `<div class="item-card" style="border:1.5px solid ${bord}">
+        const isKitCard = !!it.isKit;
+        const kitImg = it.kitImage || it.image;
+        const dispName = isKitCard ? (it.kitName||it.kitRef||it.product_name||'Kit') : (it.product_name||it.sku||'');
+        return `<div class="item-card" style="border:1.5px solid ${isKitCard?'var(--purple-dot)':bord}">
           <div class="item-header" style="align-items:flex-start;gap:8px">
-            ${it.image?`<img class="item-thumb" src="${it.image}" onerror="this.style.display='none'">`:'<div class="item-thumb-ph"><i data-lucide="package" style="width:22px;height:22px;stroke:currentColor;opacity:.4"></i></div>'}
+            ${kitImg?`<img class="item-thumb" src="${kitImg}" style="${isKitCard?'object-fit:contain;background:#fff':''}" onerror="this.style.display='none'">`:'<div class="item-thumb-ph"><i data-lucide="package" style="width:22px;height:22px;stroke:currentColor;opacity:.4"></i></div>'}
             <div style="flex:1;min-width:0">
-              <div class="item-name">${esc(it.product_name||it.sku||'')}${(it.unit_total>1)?`<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:6px">Unidad ${it.unit_index}/${it.unit_total}</span>`:''}</div>
-              <div class="item-sku">SKU: ${esc(it.sku||'')}</div>
+              ${isKitCard?`<div style="font-size:9px;color:var(--purple-text);font-weight:700;text-transform:uppercase;letter-spacing:.5px">🧩 Kit armado${it.unit_total>1?(' · #'+(it.kitInstance||it.unit_index||1)):''}</div>`:''}
+              <div class="item-name">${esc(dispName)}${(!isKitCard&&it.unit_total>1)?`<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:6px">Unidad ${it.unit_index}/${it.unit_total}</span>`:''}</div>
+              <div class="item-sku">${isKitCard?'Kit completo (ensamblado)':'SKU: '+esc(it.sku||'')}</div>
             </div>
             <span class="${evs.length?'item-badge-ok':'item-badge-pend'}">${evs.length?'✓ '+evs.length+' foto'+(evs.length>1?'s':''):'Sin fotos'}</span>
           </div>
