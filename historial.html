@@ -6876,14 +6876,18 @@ function renderDrawer(t) {
     const missingCond = selItems.filter(i=>!i.condition);
     const hasGuiaEvidencia = (t.fotos_guia||[]).some(fg=>(fg.evidencias||[]).length>0);
     const missingGeneralEv = !selItems.length && !(t.evidence||[]).length && !hasGuiaEvidencia;
+    const missingDeliveryPhoto = t.requiresDeliveryPhoto && !(t.fotos_entrega||[]).length;
+    const _btnDisabled = `background:var(--surface-3);color:var(--text-muted);cursor:not-allowed`;
     if (selItems.length && missingEv.length) {
-      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="background:var(--surface-3);color:var(--text-muted);cursor:not-allowed"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (faltan ${missingEv.length} foto${missingEv.length>1?'s':''})</button></div>`;
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (faltan ${missingEv.length} foto${missingEv.length>1?'s':''})</button></div>`;
     } else if (selItems.length && missingConf.length) {
-      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="background:var(--surface-3);color:var(--text-muted);cursor:not-allowed"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${missingConf.length} artículo${missingConf.length>1?'s':''} sin confirmar)</button></div>`;
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${missingConf.length} artículo${missingConf.length>1?'s':''} sin confirmar)</button></div>`;
     } else if (selItems.length && missingCond.length) {
-      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="background:var(--surface-3);color:var(--text-muted);cursor:not-allowed"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${missingCond.length} sin indicar condición)</button></div>`;
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${missingCond.length} sin indicar condición)</button></div>`;
     } else if (missingGeneralEv) {
-      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="background:var(--surface-3);color:var(--text-muted);cursor:not-allowed"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta evidencia fotográfica)</button></div>`;
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta evidencia fotográfica)</button></div>`;
+    } else if (missingDeliveryPhoto) {
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta foto de documentos firmados ↓)</button></div>`;
     } else {
       actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="changeStatus('${t.id}','completed')">✓ Marcar Completado</button></div>`;
     }
@@ -7119,6 +7123,33 @@ function renderDrawer(t) {
     ${evList.length===0?'<div style="color:var(--text-3);font-size:13px;padding:4px 0 12px">Sin fotos de evidencia.</div>':''}
     <button class="btn-add-photo" onclick="uploadEvidence('${t.id}')"><i data-lucide="camera" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Agregar Fotos</button>`;
 
+  // ── Fotos de documentos de entrega (obligatorio en despachos) ──────────────
+  let fotosEntregaHtml = '';
+  if (t.requiresDeliveryPhoto) {
+    const feList = t.fotos_entrega||[];
+    const feMissing = !feList.length;
+    fotosEntregaHtml = `<div class="sec-header" style="margin-top:16px;display:flex;align-items:center;gap:6px">
+      <i data-lucide="file-check" style="width:12px;height:12px;stroke:${feMissing?'var(--red-dot)':'var(--green-dot)'};display:inline-block;vertical-align:-1px"></i>
+      DOCUMENTOS DE ENTREGA FIRMADOS
+      <span style="font-size:10px;font-weight:700;color:${feMissing?'var(--red-text)':'var(--green-text)'}">
+        ${feMissing?'⚠ REQUERIDO':'✓ '+feList.length+' foto'+(feList.length!==1?'s':'')}
+      </span>
+    </div>
+    ${feMissing&&!isClosedTask?`<div style="padding:8px 10px;background:rgba(220,38,38,.06);border:1.5px solid var(--red-dot);border-radius:8px;font-size:12px;color:var(--red-text);margin-bottom:8px">
+      <i data-lucide="alert-circle" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>
+      Debes subir la foto del documento de entrega firmado por el cliente antes de completar esta tarea.
+    </div>`:''}
+    <div class="evidence-grid">${feList.map(e=>`<div class="ev-wrap">
+      <img class="ev-img" src="${mediaUrl(e.url)}" onclick="openLightbox('${mediaUrl(e.url)}')" style="cursor:zoom-in">
+      <div style="font-size:9px;color:var(--text-3);text-align:center;margin-top:2px">${e.by||''}</div>
+      ${canParticipate&&!isClosedTask?`<button class="ev-del" onclick="deleteFotoEntrega('${t.id}','${e.id}')">✕</button>`:''}
+    </div>`).join('')}</div>
+    ${canParticipate&&!isClosedTask?`<button class="btn-add-photo" onclick="uploadFotoEntrega('${t.id}')">
+      <i data-lucide="file-plus" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>
+      ${feList.length?'Agregar otra foto':'Subir foto de documentos firmados'}
+    </button>`:''}`;
+  }
+
   // History
   const histHtml = `<div class="sec-header" style="margin-top:20px">HISTORIAL DE ESTADO</div>${(t.statusHistory||[]).map(h=>`<div class="hist-item"><div class="hist-dot"></div><div class="hist-content"><div class="hist-status">${STATUS_LABELS[h.status]||h.status}</div><div class="hist-meta">${fmtDate(h.date)} · ${h.by||'—'}${h.note?' — '+h.note:''}</div></div></div>`).join('')}`;
 
@@ -7162,10 +7193,26 @@ function renderDrawer(t) {
         ${row('box', 'Recoger en', parent.location)}
         ${row('users', 'Empacó', parent.managerName ? parent.managerName + (pDone?(' · '+fmtDate(pDone)):'') : '')}
         ${parent.actionNote?`<div style="display:flex;gap:7px;align-items:flex-start;margin-top:6px;padding:6px 8px;background:var(--amber-bg);border-radius:6px"><i data-lucide="alert-circle" style="width:13px;height:13px;stroke:var(--amber-text);flex-shrink:0;margin-top:1px"></i><div style="font-size:12px;color:var(--amber-text)"><b>Nota:</b> ${esc(parent.actionNote)}</div></div>`:''}
-        ${pUnits?`<div style="margin-top:8px;font-size:11px;color:var(--text-2);font-weight:600">📦 ${pUnits} unidad${pUnits>1?'es':''} empacada${pUnits>1?'s':''}${pPhotos.length?` · ${pPhotos.length} foto${pPhotos.length>1?'s':''} de empaque`:''}</div>`:''}
-        ${pPhotos.length?`<details style="margin-top:6px"><summary style="font-size:11px;color:var(--accent);cursor:pointer">Ver fotos de empaque (referencia)</summary>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${pPhotos.slice(0,12).map(ph=>`<img src="${mediaUrl(ph.url)}" title="${esc(ph.name)}" onclick="openLightbox('${mediaUrl(ph.url)}')" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in" onerror="this.style.display='none'">`).join('')}</div>
-        </details>`:''}
+        ${pUnits?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">
+            Estado del empaque (${pItems.filter(i=>i.confirmado).length}/${pUnits} confirmados)
+          </div>
+          ${pItems.map(it=>{
+            const done=it.confirmado&&(it.evidence_images||[]).length>0;
+            const hasPh=(it.evidence_images||[]).length>0;
+            const stIcon=done?'✅':hasPh?'📷':'🟡';
+            const stCol=done?'var(--green-text)':hasPh?'var(--accent)':'var(--amber-text)';
+            const ph=(it.evidence_images||[])[0];
+            return `<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:13px;flex-shrink:0">${stIcon}</span>
+              ${ph?`<img src="${mediaUrl(ph.url)}" style="width:32px;height:32px;object-fit:cover;border-radius:5px;flex-shrink:0;cursor:zoom-in" onclick="openLightbox('${mediaUrl(ph.url)}')" onerror="this.style.display='none'">`:'<div style="width:32px;height:32px;border-radius:5px;background:var(--surface-3);flex-shrink:0"></div>'}
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.sku||'')} ${esc(it.product_name||'')}</div>
+                <div style="font-size:10px;color:${stCol}">${done?'Confirmado':hasPh?'Foto agregada':'Pendiente'}${it.condition&&it.condition!=='good'?' · ⚠ '+esc(it.condition):''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`:''}
       </div>`;
     }
   }
@@ -7235,6 +7282,7 @@ function renderDrawer(t) {
     ${itemsHtml}
     ${subsHtml}
     ${evHtml}
+    ${fotosEntregaHtml}
     ${histHtml}
     ${traceHtml}
     <div class="chat-section">
@@ -7785,6 +7833,41 @@ async function uploadEvidence(taskId) {
 async function deleteEvidence(taskId, fname) {
   try {
     await authFetch('/api/wwp/tasks/'+taskId+'/evidence/'+encodeURIComponent(fname),{method:'DELETE',body:JSON.stringify({by:_user.name})});
+    toast('Foto eliminada'); openDrawer(taskId);
+  } catch(e) { toast(e.message); }
+}
+
+// ── Fotos de documentos de entrega (dispatch tasks) ─────────────────────────
+function uploadFotoEntrega(taskId) {
+  _openPhotoSource({
+    title: 'Documentos de entrega firmados',
+    multiple: true,
+    onFiles: async function(files) {
+      toast('Subiendo '+files.length+' foto'+(files.length>1?'s':'')+'…');
+      const fotos = [];
+      for (let i=0;i<files.length;i++) {
+        const b64 = await _compressImage(files[i]);
+        if (!b64) continue;
+        fotos.push({data:b64, ext:'jpg'});
+      }
+      if (!fotos.length) return;
+      try {
+        const r = await authFetch('/api/wwp/tasks/'+taskId+'/fotos-entrega', {
+          method:'POST',
+          body:JSON.stringify({fotos:fotos.map(f=>({data:f.data,ext:f.ext})), by:_user.name})
+        });
+        const d = await r.json();
+        if (!d.ok) { toast('Error: '+(d.error||'Error al subir')); return; }
+        toast('✓ Foto de entrega guardada');
+        openDrawer(taskId);
+      } catch(e) { toast('Error: '+e.message); }
+    }
+  });
+}
+async function deleteFotoEntrega(taskId, fotoId) {
+  if (!await _iosConfirm('¿Eliminar esta foto de documentos de entrega?')) return;
+  try {
+    await authFetch('/api/wwp/tasks/'+taskId+'/fotos-entrega/'+encodeURIComponent(fotoId),{method:'DELETE'});
     toast('Foto eliminada'); openDrawer(taskId);
   } catch(e) { toast(e.message); }
 }
@@ -8393,8 +8476,8 @@ async function saveTask() {
 var _wizState = {
   concept:null, step:1,
   packers:[],         // [{id,name}] — multi-select empaque
-  dispatchMgr:null,   // {id,name}
-  storeMgr:null,      // {id,name}
+  dispatchMgrs:[],    // [{id,name}] — multi-select despacho
+  storeMgrs:[],       // [{id,name}] — multi-select almacenamiento
   freeMgr:null,       // {id,name}
   duePack:'',         // fecha límite empaque
   dueSub:'',          // fecha límite despacho/almacenamiento
@@ -8428,7 +8511,7 @@ async function openTaskWizard(opts) {
   const preConcept = (opts&&opts.type) ? (_typeConceptMap[opts.type]||null) : null;
   _wizState={
     concept:preConcept, step:1,
-    packers:[], dispatchMgr:null, storeMgr:null, freeMgr:null,
+    packers:[], dispatchMgrs:[], storeMgrs:[], freeMgr:null,
     duePack:'', dueSub:'',
     description: (opts&&opts.description) ? opts.description : '',
     actionNote:  (opts&&opts.actionNote)  ? opts.actionNote  : ''
@@ -8536,23 +8619,43 @@ function _wizS2(body){
       onchange="_wizState.${elId==='wiz-due-pack'?'duePack':'dueSub'}=this.value">
   </div>`;
 
+  // Fila multi-select para un array del estado (pack, dispatch, store)
+  const uRowArr=(arr,u)=>{
+    const sel=arr.some(p=>p.id===u.id);
+    const wv=wl[u.id]||0;
+    const wc=wv===0?'var(--green-text)':wv>=4?'var(--red-text)':'var(--amber-text)';
+    const wt=wv===0?'Sin tareas activas':`${wv} tarea${wv!==1?'s':''} activa${wv!==1?'s':''}`;
+    const _arrKey=arr===_wizState.packers?'packers':arr===_wizState.dispatchMgrs?'dispatchMgrs':'storeMgrs';
+    return `<div class="wiz-urow${sel?' wiz-sel':''}" onclick="wizToggleArr(_wizState.${_arrKey},'${u.id}')">
+      <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
+      <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:${wc}">${wt}</div></div>
+      ${sel?`<i data-lucide="check-circle" style="width:16px;height:16px;stroke:var(--accent);flex-shrink:0"></i>`:'<div style="width:16px"></div>'}
+    </div>`;
+  };
+
   let inner='';
   if(_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store'){
-    const sRole=_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr';
+    const sArr=_wizState.concept==='pack_dispatch'?_wizState.dispatchMgrs:_wizState.storeMgrs;
+    const sArrName=_wizState.concept==='pack_dispatch'?'dispatchMgrs':'storeMgrs';
     const sIcon=_wizState.concept==='pack_dispatch'?'truck':'warehouse';
     const sLbl=_wizState.concept==='pack_dispatch'?'¿Quién despachará?':'¿Quién almacenará?';
+    const sNote=_wizState.concept==='pack_dispatch'
+      ?'<span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles · cada uno entrega por su cuenta</span>'
+      :'<span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles</span>';
     const sDateLbl=_wizState.concept==='pack_dispatch'?'Fecha límite despacho':'Fecha límite almacenamiento';
     inner=`<div class="wiz-2col">
       <div>
         <div class="wiz-role-lbl"><i data-lucide="package" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
           ¿Quién empacará? <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles</span>
         </div>
-        <div class="wiz-ulist">${users.map(u=>uRowMulti(u)).join('')}</div>
+        <div class="wiz-ulist">${users.map(u=>uRowArr(_wizState.packers,u)).join('')}</div>
         ${dateField('wiz-due-pack',_wizState.duePack,'Fecha límite empaque')}
       </div>
       <div>
-        <div class="wiz-role-lbl"><i data-lucide="${sIcon}" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i> ${sLbl}</div>
-        <div class="wiz-ulist">${users.map(u=>uRowSingle(sRole,u)).join('')}</div>
+        <div class="wiz-role-lbl"><i data-lucide="${sIcon}" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+          ${sLbl} ${sNote}
+        </div>
+        <div class="wiz-ulist">${users.map(u=>uRowArr(sArr,u)).join('')}</div>
         ${dateField('wiz-due-sub',_wizState.dueSub,sDateLbl)}
       </div>
     </div>`;
@@ -8567,25 +8670,27 @@ function _wizS2(body){
       <div class="wiz-role-lbl"><i data-lucide="package" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
         ¿Quién empacará? <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles</span>
       </div>
-      <div class="wiz-ulist">${users.map(u=>uRowMulti(u)).join('')}</div>
+      <div class="wiz-ulist">${users.map(u=>uRowArr(_wizState.packers,u)).join('')}</div>
       ${dateField('wiz-due-pack',_wizState.duePack,'Fecha límite')}
     </div>`;
   }
   body.innerHTML=`<div class="wiz-stitle">¿Quién lo hará?</div>${inner}`;
   if(window.lucide)lucide.createIcons();
 }
-// Multi-select para empaque — toggle en/off
-function wizTogglePacker(id){
+// Toggle genérico para arrays del wizard (packers, dispatchMgrs, storeMgrs)
+function wizToggleArr(arr,id){
   const user=(_authUsers||[]).find(u=>u.id===id);if(!user)return;
-  const idx=_wizState.packers.findIndex(p=>p.id===id);
-  if(idx>=0)_wizState.packers.splice(idx,1);else _wizState.packers.push({id,name:user.name});
+  const idx=arr.findIndex(p=>p.id===id);
+  if(idx>=0)arr.splice(idx,1);else arr.push({id,name:user.name});
   _wizS2(document.getElementById('wiz-body'));
 }
-// Single-select para despacho / almacenamiento / tarea libre
+// Alias para compatibilidad
+function wizTogglePacker(id){wizToggleArr(_wizState.packers,id);}
+// Single-select para tarea libre
 function wizPickSingle(role,id){
   const user=(_authUsers||[]).find(u=>u.id===id);if(!user)return;
   const cur=_wizState[role];
-  _wizState[role]=cur&&cur.id===id?null:{id,name:user.name}; // click mismo = deseleccionar
+  _wizState[role]=cur&&cur.id===id?null:{id,name:user.name};
   _wizS2(document.getElementById('wiz-body'));
 }
 
@@ -8921,8 +9026,7 @@ function wizClearCart(){_wizSearch.forEach(s=>{s._inCart=false;s.selected=false;
 function _wizS4(body){
   const title=_wizAutoTitle||'';
   const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
-  const sRole=isCompound?(_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr'):null;
-  const sm=sRole?_wizState[sRole]:null;
+  const sArr=isCompound?(_wizState.concept==='pack_dispatch'?_wizState.dispatchMgrs:_wizState.storeMgrs):[];
   const sLbl=_wizState.concept==='pack_dispatch'?'🚛 Despacho':'🏭 Almacenamiento';
   const dateRow=d=>d?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">📅 ${d}</div>`:'';
   let tHtml='';
@@ -8948,12 +9052,16 @@ function _wizS4(body){
         ${pCnt?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${pCnt} artículo${pCnt!==1?'s':''}</div>`:''}
       </div>`;
     }).join('');
-    if(isCompound) tHtml+=`<div class="wiz-arrow"><i data-lucide="arrow-down" style="width:16px;height:16px;stroke:var(--text-3)"></i></div>
-      <div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div>
-        <div class="wiz-sname">${sm&&sm.name?esc(sm.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
+    if(isCompound){
+      const subCards=sArr.length>0?sArr.map(s=>`<div class="wiz-sblock" style="margin-bottom:6px">
+        <div class="wiz-srole">${sLbl}</div>
+        <div class="wiz-sname">${esc(s.name)}</div>
         ${dateRow(_wizState.dueSub)}
-        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos del empaque</div>
-      </div>`;
+        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos del empaque · 📋 requiere doc. firmados</div>
+      </div>`).join(''):
+      `<div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div><div class="wiz-sname"><span style="color:var(--text-3)">Sin asignar</span></div></div>`;
+      tHtml+=`<div class="wiz-arrow"><i data-lucide="arrow-down" style="width:16px;height:16px;stroke:var(--text-3)"></i></div>${subCards}`;
+    }
   } else {
     const pm=_wizState.packers.length>0?_wizState.packers[0]:null;
     const cnt=_wizItems.length;
@@ -8963,15 +9071,19 @@ function _wizS4(body){
       ${dateRow(_wizState.duePack)}
       ${cnt?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">${cnt} artículo${cnt!==1?'s':''}</div>`:''}
     </div>`;
-    if(isCompound) tHtml+=`<div class="wiz-arrow">
+    if(isCompound){
+      const subCards=sArr.length>0?sArr.map(s=>`<div class="wiz-sblock" style="margin-bottom:6px">
+        <div class="wiz-srole">${sLbl}</div>
+        <div class="wiz-sname">${esc(s.name)}</div>
+        ${dateRow(_wizState.dueSub)}
+        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos · 📋 requiere doc. firmados</div>
+      </div>`).join(''):
+      `<div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div><div class="wiz-sname"><span style="color:var(--text-3)">Sin asignar</span></div></div>`;
+      tHtml+=`<div class="wiz-arrow">
         <i data-lucide="arrow-down" style="width:16px;height:16px;stroke:var(--text-3)"></i>
         <span class="wiz-dep"><i data-lucide="lock" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Bloqueado hasta empaque ✓</span>
-      </div>
-      <div class="wiz-sblock"><div class="wiz-srole">${sLbl}</div>
-        <div class="wiz-sname">${sm&&sm.name?esc(sm.name):'<span style="color:var(--text-3)">Sin asignar</span>'}</div>
-        ${dateRow(_wizState.dueSub)}
-        <div style="margin-top:3px;font-size:11px;color:var(--text-3)">Hereda artículos del empaque</div>
-      </div>`;
+      </div>${subCards}`;
+    }
   }
   body.innerHTML=`<div class="wiz-stitle">Resumen</div>
     ${title
@@ -9207,7 +9319,7 @@ function wizNext(){
   if(s===2){
     const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
     const hasPackers=_wizState.packers.length>0||(!!_wizState.freeMgr);
-    const hasSub=!isCompound||(!!_wizState.dispatchMgr||!!_wizState.storeMgr);
+    const hasSub=!isCompound||(_wizState.dispatchMgrs.length>0||_wizState.storeMgrs.length>0);
     if(!hasPackers){
       toast('⚠ Sin encargado asignado — puedes continuar y asignar después desde el drawer');
     } else if(!hasSub&&isCompound){
@@ -9234,10 +9346,10 @@ async function _wizSave(){
       createdBy:_user.id,by:_user.name,byUserId:_user.id
     };
     const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
-    const sRole=isCompound?(_wizState.concept==='pack_dispatch'?'dispatchMgr':'storeMgr'):null;
+    const sArr=isCompound?(_wizState.concept==='pack_dispatch'?_wizState.dispatchMgrs:_wizState.storeMgrs):[];
     const sType=isCompound?(_wizState.concept==='pack_dispatch'?'dispatch_order':'warehouse_move'):null;
-    const sm=sRole?_wizState[sRole]:null;
-    const sUser=sm?.id?(_authUsers||[]).find(u=>u.id===sm.id):null;
+    // Si no hay despachadores, crear uno vacío para tener al menos la subtarea
+    const subMgrs=sArr.length>0?sArr:[{id:null,name:null}];
     let firstPackId=null, tasksCreated=0;
 
     if(_wizState.concept==='free'){
@@ -9277,18 +9389,26 @@ async function _wizSave(){
           if(pItems.length) await authFetch('/api/wwp/tasks/'+d.task.id+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(pItems)})});
         }
       }
-      // Subtarea de despacho/almacenamiento enlazada a la primera tarea de empaque
+      // Subtareas de despacho/almacenamiento — una por cada despachador
       if(isCompound&&firstPackId){
-        const subBody={...base,type:sType,managerId:sm?.id||null,managerName:sm?.name||null,
-          assignedTo:(sm?.id&&sUser?.odooId)?('oe_'+sUser.odooId):undefined,
-          dueDate:_wizState.dueSub||null,parentId:firstPackId,dependsOnPrev:true,subIndex:2};
-        const r2=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(subBody)});
-        const d2=await r2.json();
-        const subId=d2.task?.id;
-        if(subId){tasksCreated++;
-          if(_wizItems.length){
-            const inh=_wizItems.map(it=>({...it,evidence_images:[],confirmado:false,status:'pending'}));
-            await authFetch('/api/wwp/tasks/'+subId+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(inh)})});
+        for(let si=0;si<subMgrs.length;si++){
+          const sm=subMgrs[si];
+          const sUser=sm?.id?(_authUsers||[]).find(u=>u.id===sm.id):null;
+          const subBody={...base,type:sType,
+            managerId:sm?.id||null,managerName:sm?.name||null,
+            assignedTo:(sm?.id&&sUser?.odooId)?('oe_'+sUser.odooId):undefined,
+            dueDate:_wizState.dueSub||null,
+            parentId:firstPackId,dependsOnPrev:true,subIndex:2+si,
+            requiresDeliveryPhoto:true  // foto de documentos firmados obligatoria
+          };
+          const r2=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(subBody)});
+          const d2=await r2.json();
+          const subId=d2.task?.id;
+          if(subId){tasksCreated++;
+            if(_wizItems.length){
+              const inh=_wizItems.map(it=>({...it,evidence_images:[],confirmado:false,status:'pending'}));
+              await authFetch('/api/wwp/tasks/'+subId+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(inh)})});
+            }
           }
         }
       }

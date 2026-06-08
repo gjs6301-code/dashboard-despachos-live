@@ -4752,6 +4752,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── POST /api/wwp/tasks/:id/fotos-entrega — documentos de entrega firmados (obligatorio en despachos) ──
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-entrega$/) && req.method === 'POST') {
+    const _jpFe = requireJwt(req, res); if (!_jpFe) return;
+    const taskId = reqPath.split('/')[4];
+    try {
+      const d = await readBody(req);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+      if (!tasks[idx].fotos_entrega) tasks[idx].fotos_entrega = [];
+      const saved = [];
+      (d.fotos||[]).forEach((f, fi) => {
+        const { b64, ext } = validatePhoto(f);
+        const ts = Date.now();
+        const fotoId = `fe_${ts}_${fi}`;
+        const fname  = `${taskId}_${fotoId}.${ext}`;
+        fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64, 'base64'));
+        const entry = { id: fotoId, url: `/wwp-fotos/${fname}`, by: d.by||_jpFe.name||'', at: new Date().toISOString() };
+        tasks[idx].fotos_entrega.push(entry);
+        saved.push(entry);
+      });
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('fotos_entrega_created', tasks[idx], { taskId, fotos: saved });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, fotos: saved}));
+    } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // ── DELETE /api/wwp/tasks/:id/fotos-entrega/:fname ────────────────────────────
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-entrega\/[^/]+$/) && req.method === 'DELETE') {
+    const _jpFeDel = requireJwt(req, res); if (!_jpFeDel) return;
+    const parts = reqPath.split('/');
+    const taskId = parts[4], fname = decodeURIComponent(parts[6]);
+    const tasks = loadWwpTasks();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
+    const fe = (tasks[idx].fotos_entrega||[]).find(f => f.url.endsWith('/'+fname) || f.id === fname);
+    if (fe) { try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(fe.url))); } catch(e) {} }
+    tasks[idx].fotos_entrega = (tasks[idx].fotos_entrega||[]).filter(f => !f.url.endsWith('/'+fname) && f.id !== fname);
+    tasks[idx].updatedAt = new Date().toISOString();
+    saveWwpTasks(tasks);
+    broadcastWwpTasks('fotos_entrega_deleted', tasks[idx], { taskId, fname });
+    res.writeHead(200,{'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok:true}));
+    return;
+  }
+
   // ── PATCH /api/wwp/tasks/:id/fotos-guia/:fotoId/confirmar ────────────────────
   if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-guia\/[^/]+\/confirmar$/) && req.method === 'PATCH') {
     const _jpFgConf = requireJwt(req, res); if (!_jpFgConf) return;
