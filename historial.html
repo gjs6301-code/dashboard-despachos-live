@@ -5624,21 +5624,29 @@ async function clearReadNotifs() {
   catch(e) {}
 }
 
-function openNotificationById(el) {
+async function openNotificationById(el) {
   const id = el.dataset.notifId;
   const notif = _notifications.find(n => n.id === id);
   if (!notif) return;
   closeNotifPanel();
   if (!notif.readAt) markRead(notif.id);
-  if (notif.relatedTaskId) {
-    openDrawer(notif.relatedTaskId);
+  if (!notif.relatedTaskId) { toast('Esta notificación no tiene una tarea asociada'); return; }
+  // Verificar que la tarea aún exista antes de abrir el drawer
+  try { const r = await authFetch('/api/wwp/tasks'); _tasks = await r.json(); } catch {}
+  if (!(_tasks||[]).some(t => t.id === notif.relatedTaskId)) {
+    toast('La tarea de esta notificación ya no existe');
+    return;
   }
+  openDrawer(notif.relatedTaskId);
 }
 // Mantener compatibilidad si algún lugar aún llama openNotification con objeto
-function openNotification(notif) {
+async function openNotification(notif) {
   closeNotifPanel();
   if (notif && !notif.readAt) markRead(notif.id);
-  if (notif && notif.relatedTaskId) openDrawer(notif.relatedTaskId);
+  if (!notif || !notif.relatedTaskId) return;
+  try { const r = await authFetch('/api/wwp/tasks'); _tasks = await r.json(); } catch {}
+  if (!(_tasks||[]).some(t => t.id === notif.relatedTaskId)) { toast('La tarea de esta notificación ya no existe'); return; }
+  openDrawer(notif.relatedTaskId);
 }
 
 // Close notification panel when clicking outside
