@@ -4004,10 +4004,31 @@ body{font-family:var(--font);min-height:100dvh}
       <div class="pm-name" id="pm-name"></div>
       <div class="pm-email" id="pm-email"></div>
     </div>
+    <div class="pm-item" id="pm-switch-user" onclick="openUserSwitcher()" style="display:none"><i data-lucide="users"></i>Cambiar de usuario</div>
+    <div class="pm-item" id="pm-stop-imp" onclick="stopImpersonate()" style="display:none;color:var(--accent)"><i data-lucide="rotate-ccw"></i>Volver a mi cuenta</div>
     <div class="pm-item" onclick="showChangePassword()"><i data-lucide="key"></i>Cambiar contraseña</div>
     <div class="pm-item" id="btn-install-pwa" onclick="installPWA();closeProfileMenu()" style="display:none"><i data-lucide="smartphone"></i>Instalar como app</div>
     <div class="pm-sep"></div>
     <div class="pm-item danger" onclick="doLogout()"><i data-lucide="log-out"></i>Cerrar sesión</div>
+  </div>
+
+  <!-- Selector de usuario (impersonation, solo admin) -->
+  <div class="modal-overlay" id="modal-user-switch">
+    <div class="modal-card" style="max-width:440px">
+      <div class="modal-header"><span class="modal-title">Cambiar de usuario</span><button class="modal-close" onclick="closeUserSwitcher()">✕</button></div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--text-3);margin:0 0 10px">Como admin, puedes operar la app como otro usuario sin cerrar sesión. La acción queda registrada en auditoría.</p>
+        <input id="us-search" class="form-input" placeholder="Buscar usuario…" oninput="renderUserSwitchList()" style="margin-bottom:10px">
+        <div id="us-list" class="wiz-ulist" style="max-height:340px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banner de impersonación (admin actuando como otro usuario) -->
+  <div id="impersonate-banner" style="display:none;align-items:center;gap:10px;justify-content:center;padding:7px 14px;background:#7c3aed;color:#fff;font-size:12px;font-weight:600">
+    <i data-lucide="user-check" style="width:14px;height:14px;stroke:currentColor;flex-shrink:0"></i>
+    <span id="imp-banner-text"></span>
+    <button onclick="stopImpersonate()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↩ Volver a mi cuenta</button>
   </div>
 
   <nav class="app-nav" id="app-nav">
@@ -5681,6 +5702,7 @@ function timeSince(isoStr) {
 function enterApp() {
   // Header
   setHeaderAvatar(_user);
+  renderImpersonateBanner();
   document.getElementById('user-name-hdr').textContent = _user.name.split(' ')[0]+' '+(_user.name.split(' ')[1]||'');
   const badge = document.getElementById('role-badge-hdr');
   badge.textContent = ROLE_LABELS[_user.role]||_user.role;
@@ -7715,6 +7737,18 @@ async function changeUnitsPrompt(taskId, groupRef) {
   } catch(e) { toast('Error: '+e.message); }
 }
 
+// Captura la ubicación GPS (best-effort) y la envía al servidor. No bloquea la acción.
+function _captureGeo(context){
+  try{
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ try{ authFetch('/api/wwp/auth/location',{method:'POST',body:JSON.stringify({
+        lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy, context:context||'' })}); }catch(e){} },
+      function(){}, { enableHighAccuracy:true, timeout:8000, maximumAge:60000 }
+    );
+  }catch(e){}
+}
+
 async function changeStatus(taskId, status, note) {
   // RBAC: validar solo para admin
   if (status === 'validated' && _user.role !== 'admin') {
@@ -7727,6 +7761,8 @@ async function changeStatus(taskId, status, note) {
     const r = await authFetch('/api/wwp/tasks/'+taskId,{method:'PATCH',body:JSON.stringify(body)});
     const d = await r.json();
     if (!d.ok) { toast((d.error||'Error')); return; }
+    // Capturar ubicación al iniciar o completar una tarea (trazabilidad de campo)
+    if (status==='in_progress'||status==='completed') _captureGeo(status+' · '+taskId);
     toast('Estado actualizado');
     openDrawer(taskId);
   } catch(e) { toast('Error: '+e.message); }
@@ -7953,6 +7989,7 @@ async function setAuxDone(taskId, done) {
     const r = await authFetch('/api/wwp/tasks/'+taskId+'/aux-done',{method:'PATCH',body:JSON.stringify({done})});
     const d = await r.json();
     if (!d.ok) { toast(d.error||'Error'); return; }
+    if (done) _captureGeo('aux-done · '+taskId);
     toast(done?'Marcado como terminado — el encargado fue notificado':'Marca de terminado deshecha');
     openDrawer(taskId);
   } catch(e){ toast(e.message); }
@@ -9898,16 +9935,15 @@ function wizNext(){
       if(wizStaffHours()==null){ toast('La hora de fin debe ser mayor a la de inicio'); return; }
       if(_wizState.staffWorkers.length===0) toast('⚠ Sin auxiliares — puedes continuar y asignar después');
     } else if(_wizState.subtaskParentId){
-      if(_wizState.subMgrs.length===0) toast('⚠ Sin encargado — puedes continuar y asignar después desde el drawer');
+      // Encargado obligatorio para el paso de la cadena
+      if(_wizState.subMgrs.length===0){ toast('Debes asignar al menos un encargado para este paso'); return; }
     } else {
+      // Encargado OBLIGATORIO en todos los conceptos
       const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
       const hasPackers=_wizState.packers.length>0||(!!_wizState.freeMgr);
       const hasSub=!isCompound||(_wizState.dispatchMgrs.length>0||_wizState.storeMgrs.length>0);
-      if(!hasPackers){
-        toast('⚠ Sin encargado asignado — puedes continuar y asignar después desde el drawer');
-      } else if(!hasSub&&isCompound){
-        toast('⚠ No hay encargado de '+(s==='pack_dispatch'?'despacho':'almacenamiento')+' — puedes asignar después');
-      }
+      if(!hasPackers){ toast(_wizState.concept==='free'?'Debes asignar un encargado responsable':'Debes asignar al menos un encargado de empaque'); return; }
+      if(!hasSub&&isCompound){ toast('Debes asignar al menos un encargado de '+(_wizState.concept==='pack_dispatch'?'despacho':'almacenamiento')); return; }
     }
   }
   wizGoTo(s+1);
@@ -10233,6 +10269,14 @@ async function loadUsers() {
         : `${lunchAllowed} min`;
       // Wrap avatar con dot de presencia
       const avatarWrapped = `<div class="user-avatar-wrap">${avatarHtml(u, 44)}<span class="avatar-presence ${presence}" data-presence-dot="${u.id}"></span></div>`;
+      // Última ubicación GPS (si el usuario la compartió)
+      let locHtml='';
+      if (u.lastLocation && isFinite(u.lastLocation.lat) && isFinite(u.lastLocation.lng)) {
+        const ll=u.lastLocation;
+        const ago=ll.at?timeSince(ll.at):'';
+        locHtml=`<a href="https://www.google.com/maps?q=${ll.lat},${ll.lng}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Ver ubicación en el mapa${ago?(' · '+ago):''}" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap">
+          <i data-lucide="map-pin" style="width:12px;height:12px;stroke:currentColor"></i>${ago||'ubicación'}</a>`;
+      }
       return `<div class="user-row">
         ${avatarWrapped}
         <div class="user-row-info">
@@ -10241,6 +10285,7 @@ async function loadUsers() {
         </div>
         ${getRoleBadgeHtml(u.role)}
         <span class="user-presence-pill ${presence}" data-presence-user="${u.id}">${cfg.icon} ${cfg.label}</span>
+        ${locHtml}
         <span style="font-size:11px;color:var(--text-2);white-space:nowrap">${lunchLabel}</span>
         ${u.active?'':'<span class="badge" style="background:var(--red-bg);color:var(--red-text)">Inactivo</span>'}
         <div class="user-row-actions">
@@ -10487,9 +10532,86 @@ async function saveUser() {
 // ═══════════════════════════════════════════════════════════════════════
 // PROFILE MENU
 // ═══════════════════════════════════════════════════════════════════════
-function toggleProfileMenu() { document.getElementById('profile-menu').classList.toggle('open'); }
+function toggleProfileMenu() {
+  const m=document.getElementById('profile-menu');
+  m.classList.toggle('open');
+  // Mostrar opciones de impersonación según contexto
+  const imp=_isImpersonating();
+  const sw=document.getElementById('pm-switch-user');
+  const stop=document.getElementById('pm-stop-imp');
+  // "Cambiar de usuario" visible para admin (real o impersonando un admin)
+  if(sw) sw.style.display=(_user&&_user.role==='admin')||imp?'':'none';
+  if(stop) stop.style.display=imp?'':'none';
+}
 function closeProfileMenu() { document.getElementById('profile-menu').classList.remove('open'); }
 document.addEventListener('click', e=>{ if(!e.target.closest('#user-pill')&&!e.target.closest('#profile-menu')) closeProfileMenu(); });
+
+// ── Impersonation (admin actúa como otro usuario) ──────────────────────
+function _decodeJwt(t){ try{ return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); }catch{ return {}; } }
+function _isImpersonating(){ return !!(_token && _decodeJwt(_token).impersonatedBy); }
+function renderImpersonateBanner(){
+  const b=document.getElementById('impersonate-banner');
+  if(!b)return;
+  const p=_decodeJwt(_token);
+  if(p.impersonatedBy){
+    b.style.display='flex';
+    const txt=document.getElementById('imp-banner-text');
+    if(txt)txt.textContent='Actuando como '+( _user?_user.name:'usuario')+' · '+(p.impersonatorName||'Admin');
+    if(window.lucide)lucide.createIcons();
+  } else b.style.display='none';
+}
+async function openUserSwitcher(){
+  closeProfileMenu();
+  if(!(_authUsers&&_authUsers.length)){ try{ await loadAuthUsersForDropdown(); }catch{} }
+  document.getElementById('us-search').value='';
+  renderUserSwitchList();
+  document.getElementById('modal-user-switch').classList.add('open');
+}
+function closeUserSwitcher(){ document.getElementById('modal-user-switch').classList.remove('open'); }
+function renderUserSwitchList(){
+  const q=(document.getElementById('us-search').value||'').toLowerCase();
+  const list=document.getElementById('us-list'); if(!list)return;
+  const roleLbl={admin:'Admin',manager:'Encargado',assistant:'Auxiliar'};
+  const users=(_authUsers||[]).filter(u=>u.active!==false && u.id!==_user.id && (!q||u.name.toLowerCase().includes(q)));
+  list.innerHTML=users.map(u=>`<div class="wiz-urow" onclick="impersonateUser('${u.id}')">
+    <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
+    <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:var(--text-3)">${roleLbl[u.role]||u.role}</div></div>
+    <i data-lucide="log-in" style="width:15px;height:15px;stroke:var(--accent);flex-shrink:0"></i>
+  </div>`).join('')||'<div style="color:var(--text-3);font-size:12px;padding:10px;text-align:center">Sin usuarios</div>';
+  if(window.lucide)lucide.createIcons();
+}
+async function impersonateUser(id){
+  try{
+    const r=await authFetch('/api/wwp/auth/impersonate',{method:'POST',body:JSON.stringify({targetUserId:id})});
+    const d=await r.json();
+    if(!d.ok){ toast(d.error||'No se pudo cambiar de usuario'); return; }
+    _token=d.accessToken; _refreshToken=null; _user=d.user;
+    saveSession(!!localStorage.getItem('wwp_auth'));
+    closeUserSwitcher();
+    toast('Ahora actúas como '+d.user.name);
+    setHeaderAvatar(_user);
+    _wwpEntered=false;
+    if(isHistorialUser(_user)){ setHistorialUser(); showScreen('screen-historial'); }
+    else { enterApp(); showScreen('screen-app'); }
+    renderImpersonateBanner();
+  }catch(e){ toast('Error: '+e.message); }
+}
+async function stopImpersonate(){
+  closeProfileMenu();
+  try{
+    const r=await authFetch('/api/wwp/auth/stop-impersonate',{method:'POST'});
+    const d=await r.json();
+    if(!d.ok){ toast(d.error||'Error'); return; }
+    _token=d.accessToken; _refreshToken=null; _user=d.user;
+    saveSession(!!localStorage.getItem('wwp_auth'));
+    toast('Volviste a tu cuenta: '+d.user.name);
+    setHeaderAvatar(_user);
+    _wwpEntered=false;
+    if(isHistorialUser(_user)){ setHistorialUser(); showScreen('screen-historial'); }
+    else { enterApp(); showScreen('screen-app'); }
+    renderImpersonateBanner();
+  }catch(e){ toast('Error: '+e.message); }
+}
 
 function showChangePassword() { closeProfileMenu(); document.getElementById('pm-current').value=''; document.getElementById('pm-new').value=''; document.getElementById('pm-confirm').value=''; document.getElementById('pw-modal-error').classList.remove('show'); document.getElementById('modal-password').classList.add('open'); }
 function closePasswordModal() { document.getElementById('modal-password').classList.remove('open'); }

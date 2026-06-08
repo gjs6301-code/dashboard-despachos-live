@@ -2813,6 +2813,43 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /api/wwp/auth/impersonate — un admin pasa a operar como otro usuario (sin login)
+  if (reqPath === '/api/wwp/auth/impersonate' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const users = loadAuthUsers();
+      // El admin real es el original (si ya está impersonando, su impersonatedBy)
+      const adminId = jp.impersonatedBy || jp.userId;
+      const admin = users.find(u => u.id === adminId);
+      if (!admin || admin.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo administradores pueden cambiar de usuario'})); return; }
+      const { targetUserId } = await readBody(req);
+      const target = users.find(u => u.id === targetUserId && u.active !== false);
+      if (!target) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Usuario no encontrado'})); return; }
+      const accessToken = jwtSign({ userId:target.id, role:target.role, name:target.name, odooId:target.odooId, impersonatedBy:adminId, impersonatorName:admin.name }, 8*3600);
+      appendAuditLog('impersonate_start', { adminId, adminName:admin.name, targetId:target.id, targetName:target.name, role:target.role });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, accessToken, impersonatedBy:adminId, impersonatorName:admin.name,
+        user:{id:target.id,name:target.name,email:target.email,role:target.role,odooId:target.odooId,presenceStatus:target.presenceStatus||'active',sectionPerms:getRoleDefPerms(target.role)}}));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // POST /api/wwp/auth/stop-impersonate — el admin vuelve a su propia cuenta
+  if (reqPath === '/api/wwp/auth/stop-impersonate' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      if (!jp.impersonatedBy) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No estás impersonando'})); return; }
+      const users = loadAuthUsers();
+      const admin = users.find(u => u.id === jp.impersonatedBy && u.role === 'admin');
+      if (!admin) { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Admin original no válido'})); return; }
+      const accessToken = jwtSign({ userId:admin.id, role:admin.role, name:admin.name, odooId:admin.odooId }, 8*3600);
+      appendAuditLog('impersonate_stop', { adminId:admin.id, adminName:admin.name, fromUserId:jp.userId });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true, accessToken, user:{id:admin.id,name:admin.name,email:admin.email,role:admin.role,odooId:admin.odooId,presenceStatus:admin.presenceStatus||'active',sectionPerms:getRoleDefPerms(admin.role)}}));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
   // POST /api/wwp/auth/refresh
   if (reqPath === '/api/wwp/auth/refresh' && req.method === 'POST') {
     try {
@@ -2914,8 +2951,25 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/api/wwp/auth/users' && req.method === 'GET') {
     const jwtPayload = requireJwt(req, res); if (!jwtPayload) return;
     if (!['admin','manager'].includes(jwtPayload.role)) { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Se requiere rol admin o manager'})); return; }
-    const users = loadAuthUsers().map(u => ({id:u.id,name:u.name,email:u.email,role:u.role,odooId:u.odooId,active:u.active,lastLogin:u.lastLogin,createdAt:u.createdAt,presenceStatus:u.presenceStatus||'active',presenceAt:u.presenceAt||null,lunchTimeAllowed:u.lunchTimeAllowed||60,sectionPerms:getRoleDefPerms(u.role)}));
+    const users = loadAuthUsers().map(u => ({id:u.id,name:u.name,email:u.email,role:u.role,odooId:u.odooId,active:u.active,lastLogin:u.lastLogin,createdAt:u.createdAt,presenceStatus:u.presenceStatus||'active',presenceAt:u.presenceAt||null,lunchTimeAllowed:u.lunchTimeAllowed||60,lastLocation:u.lastLocation||null,sectionPerms:getRoleDefPerms(u.role)}));
     res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(users));
+    return;
+  }
+
+  // POST /api/wwp/auth/location — guarda la última ubicación GPS del usuario actual
+  if (reqPath === '/api/wwp/auth/location' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    try {
+      const d = await readBody(req);
+      const lat = Number(d.lat), lng = Number(d.lng);
+      if (!isFinite(lat) || !isFinite(lng)) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Coordenadas inválidas'})); return; }
+      const users = loadAuthUsers();
+      const idx = users.findIndex(u => u.id === jp.userId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
+      users[idx].lastLocation = { lat, lng, accuracy: d.accuracy!=null?Number(d.accuracy):null, at: new Date().toISOString(), context: (d.context||'').slice(0,60) };
+      saveAuthUsers(users);
+      res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true}));
+    } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;
   }
 
