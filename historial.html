@@ -8186,34 +8186,8 @@ async function deleteItemEvidence(taskId, itemId, evId) {
 var _subtaskParentId = null; // si está set, la próxima tarea guardada es subtarea de esta madre
 function openNewTaskModal() { openTaskWizard(); }
 // Crear subtarea (cadena de acciones) dentro de una tarea madre — reusa el mismo modal
-function openNewSubtaskModal(parentId) {
-  if (!can('create_task')) { toast('Sin permiso para crear subtareas'); return; }
-  _editingTask=null; _subtaskParentId=parentId; resetTaskModal();
-  const parent=(_tasks||[]).find(x=>x.id===parentId);
-  document.getElementById('modal-task-title').textContent='Nueva Subtarea' + (parent?(' · '+(seqLabel(parent)||'')+' '+parent.title.slice(0,30)):'');
-  document.getElementById('mf-subtask-opts').style.display=''; // mostrar toggles de cadena
-  document.getElementById('mf-depends-prev').checked=false;
-  document.getElementById('mf-inherit-items').checked=true;
-  // Heredar contexto de la orden (cliente, dirección, etc.) y referencia
-  if (parent) {
-    _lastOrderCtx = { client:parent.client||'', salesperson:parent.salesperson||'', deliveryAddress:parent.deliveryAddress||'', phone:parent.phone||'' };
-    if (parent.odooRef) document.getElementById('mf-odoo-ref').value = parent.odooRef;
-    if (parent.location) document.getElementById('mf-location').value = parent.location;
-    // Título auto-rellenado con el mismo formato del padre (documento-cliente-vendedor).
-    // Se reconstruye desde el contexto; si no hay, usa el título del padre. Editable y se
-    // re-genera si se busca otra orden (igual que en la tarea padre).
-    const _autoT = (parent.title && parent.title.trim()) || [parent.odooRef||'', parent.client||'', parent.salesperson||''].filter(Boolean).join('-');
-    document.getElementById('mf-title').value = _autoT;
-    _lastAutoTitle = _autoT;
-    // Heredar artículos: copia con evidencia/confirmación reseteadas (el nuevo equipo hace la suya)
-    _subtaskParentItems = (parent.items||[]).filter(i=>i.selected).map(i=>({
-      ...i, evidence_images:[], confirmado:false, status:'pending'
-    }));
-    inheritSubtaskItemsIfChecked();
-  }
-  applyManagerSelfMode();
-  document.getElementById('modal-task').classList.add('open');
-}
+// Nueva subtarea → wizard de subtarea (agregar paso a la cadena existente)
+function openNewSubtaskModal(parentId) { openTaskWizard({ subtaskParentId: parentId }); }
 var _subtaskParentItems = []; // artículos del padre disponibles para heredar
 function inheritSubtaskItemsIfChecked() {
   const chk = document.getElementById('mf-inherit-items');
@@ -8770,11 +8744,19 @@ var _WIZ_DEF = {
   pack_store:    { label:'Empaque y Almacenamiento', icon:'warehouse',  desc:'Embalaje → Almacén en cadena',  color:'#059669' },
   free:          { label:'Tarea Libre',              icon:'circle-dot', desc:'Sin estructura definida',       color:'#6b7280' }
 };
+// Tipos individuales para agregar un paso a una cadena existente (Nueva subtarea)
+var _WIZ_SUBTYPE_DEF = {
+  dispatch_order: { label:'Despacho',       icon:'truck',          desc:'Entregar al cliente',   color:'#2563eb' },
+  warehouse_move: { label:'Almacenamiento', icon:'warehouse',      desc:'Mover a almacén',       color:'#059669' },
+  item_pickup:    { label:'Recogida',       icon:'package-search', desc:'Recoger artículos',     color:'#0891b2' },
+  truck_loading:  { label:'Carga',          icon:'forklift',       desc:'Cargar en camión',      color:'#d97706' },
+  general:        { label:'Libre',          icon:'circle-dot',     desc:'Paso personalizado',    color:'#6b7280' }
+};
 var _WAC=['#2563eb','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777'];
 var _wac=n=>_WAC[[...n].reduce((s,c)=>s+c.charCodeAt(0),0)%_WAC.length];
 var _wai=n=>(n||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
 
-// opts = { odooRef, title, location, type, description, actionNote } — opcional, desde contexto
+// opts = { odooRef, title, location, type, description, actionNote, subtaskParentId } — opcional
 async function openTaskWizard(opts) {
   if (!can('create_task')) return;
   // Mapear type Odoo → concept del wizard
@@ -8782,24 +8764,47 @@ async function openTaskWizard(opts) {
     packaging:'pack', dispatch_order:'pack_dispatch',
     warehouse_move:'pack_store', general:'free', item_pickup:'free', truck_loading:'free'
   };
-  const preConcept = (opts&&opts.type) ? (_typeConceptMap[opts.type]||null) : null;
+  const preConcept = (opts&&opts.type&&!opts.subtaskParentId) ? (_typeConceptMap[opts.type]||null) : null;
   _wizState={
     concept:preConcept, step:1,
     packers:[], dispatchMgrs:[], storeMgrs:[], freeMgr:null,
     duePack:'', dueSub:'',
     description: (opts&&opts.description) ? opts.description : '',
-    actionNote:  (opts&&opts.actionNote)  ? opts.actionNote  : ''
+    actionNote:  (opts&&opts.actionNote)  ? opts.actionNote  : '',
+    // ── Modo subtarea (agregar paso a cadena existente) ──
+    subtaskParentId: (opts&&opts.subtaskParentId) || null,
+    subType:null,            // tipo individual del paso (dispatch_order, warehouse_move, …)
+    subMgrs:[],              // [{id,name}] encargados del paso
+    inheritItems:true,       // heredar artículos de la madre
+    dependsOnPrev:false      // requiere paso anterior completado
   };
   _wizItems=[];_wizSearch=[];
   _wizRef      = (opts&&opts.odooRef)      ? opts.odooRef      : '';
   _wizAutoTitle= (opts&&opts.title)        ? opts.title        : '';
   _wizFotos=[];_wizPicks=[];_wizPickSel={};
   _wizCtx={client:'',salesperson:'',deliveryAddress:'',phone:''};
+  _wizParentItems=[]; // artículos de la madre disponibles para heredar (modo subtarea)
+
+  // Modo subtarea: heredar contexto/artículos de la tarea madre
+  if (_wizState.subtaskParentId) {
+    const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
+    if (parent) {
+      _wizCtx={ client:parent.client||'', salesperson:parent.salesperson||'', deliveryAddress:parent.deliveryAddress||'', phone:parent.phone||'' };
+      _wizRef = parent.odooRef||'';
+      _wizAutoTitle = (parent.title&&parent.title.trim()) || [parent.odooRef||'',parent.client||'',parent.salesperson||''].filter(Boolean).join('-');
+      // Artículos de la madre (incluye tarjetas-kit armadas), evidencia reseteada, todos incluidos por defecto
+      _wizParentItems = (parent.items||[]).filter(i=>i.selected).map(i=>({
+        ...i, evidence_images:[], confirmado:false, deliveryStatus:'', deliveryDamageType:'', delivered:undefined, status:'pending', _inheritOn:true
+      }));
+    }
+  }
+
   try{const wr=await authFetch('/api/wwp/auth/users/workload');const wd=await wr.json();if(wd.ok)_workloadMap=wd.workload||{};}catch{}
   document.getElementById('modal-task-wizard').classList.add('open');
-  // Si ya viene con concepto pre-seleccionado, saltar al paso 2
+  // Modo subtarea o concepto pre-seleccionado → empieza en paso 1 (subtarea elige tipo) o 2
   wizGoTo(preConcept ? 2 : 1);
 }
+var _wizParentItems = [];
 function closeTaskWizard(){
   document.getElementById('modal-task-wizard').classList.remove('open');
   _wizItems=[];_wizSearch=[];
@@ -8832,8 +8837,27 @@ function wizGoTo(step){
   else if(step===4)_wizS4(body);
 }
 
-// ── Paso 1: concepto ─────────────────────────────────────────────────
+// ── Paso 1: concepto (tarea nueva) o tipo de paso (subtarea) ─────────
 function _wizS1(body){
+  // Modo subtarea: elegir un tipo individual de paso para la cadena existente
+  if (_wizState.subtaskParentId) {
+    const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
+    const pLbl=parent?((seqLabel(parent)||'')+' '+(parent.title||'').slice(0,32)):'';
+    body.innerHTML=`<div class="wiz-stitle">¿Qué paso agregar a la cadena?</div>
+    ${pLbl?`<div style="font-size:11px;color:var(--text-3);text-align:center;margin:-10px 0 14px">
+      <i data-lucide="git-branch" style="width:11px;height:11px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>Subtarea de: <b>${esc(pLbl)}</b>
+    </div>`:''}
+    <div class="wiz-concepts">
+      ${Object.entries(_WIZ_SUBTYPE_DEF).map(([k,d])=>`
+        <button class="wiz-ccard${_wizState.subType===k?' wiz-sel':''}" onclick="wizPickSubType('${k}')">
+          <i data-lucide="${d.icon}" style="width:32px;height:32px;stroke:${d.color};display:block"></i>
+          <span class="wiz-ccard-name">${d.label}</span>
+          <span class="wiz-ccard-desc">${d.desc}</span>
+        </button>`).join('')}
+    </div>`;
+    if(window.lucide)lucide.createIcons();
+    return;
+  }
   const hasPre=!!_wizState.concept;
   body.innerHTML=`<div class="wiz-stitle">¿Qué quieres hacer?</div>
   ${hasPre?`<div style="font-size:11px;color:var(--accent);text-align:center;margin:-10px 0 12px;font-weight:600">
@@ -8854,6 +8878,7 @@ function _wizS1(body){
   if(window.lucide)lucide.createIcons();
 }
 function wizPickConcept(c){_wizState.concept=c;wizGoTo(2);}
+function wizPickSubType(k){_wizState.subType=k;wizGoTo(2);}
 
 // ── Paso 2: encargados + fechas ──────────────────────────────────────
 function _wizS2(body){
@@ -8899,7 +8924,7 @@ function _wizS2(body){
     const wv=wl[u.id]||0;
     const wc=wv===0?'var(--green-text)':wv>=4?'var(--red-text)':'var(--amber-text)';
     const wt=wv===0?'Sin tareas activas':`${wv} tarea${wv!==1?'s':''} activa${wv!==1?'s':''}`;
-    const _arrKey=arr===_wizState.packers?'packers':arr===_wizState.dispatchMgrs?'dispatchMgrs':'storeMgrs';
+    const _arrKey=arr===_wizState.packers?'packers':arr===_wizState.dispatchMgrs?'dispatchMgrs':arr===_wizState.storeMgrs?'storeMgrs':'subMgrs';
     return `<div class="wiz-urow${sel?' wiz-sel':''}" onclick="wizToggleArr(_wizState.${_arrKey},'${u.id}')">
       <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
       <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:${wc}">${wt}</div></div>
@@ -8908,6 +8933,22 @@ function _wizS2(body){
   };
 
   let inner='';
+  // ── Modo subtarea: un solo grupo de encargados para el paso elegido ──
+  if(_wizState.subtaskParentId){
+    const def=_WIZ_SUBTYPE_DEF[_wizState.subType]||{label:'Paso',icon:'circle-dot'};
+    const multiNote = (_wizState.subType==='dispatch_order'||_wizState.subType==='warehouse_move')
+      ? '<span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">varios posibles · cada uno hace su parte</span>' : '';
+    inner=`<div style="max-width:430px;margin:0 auto">
+      <div class="wiz-role-lbl"><i data-lucide="${def.icon}" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+        ¿Quién hará el ${esc(def.label.toLowerCase())}? ${multiNote}
+      </div>
+      <div class="wiz-ulist">${users.map(u=>uRowArr(_wizState.subMgrs,u)).join('')}</div>
+      ${dateField('wiz-due-sub',_wizState.dueSub,'Fecha límite')}
+    </div>`;
+    body.innerHTML=`<div class="wiz-stitle">¿Quién lo hará?</div>${inner}`;
+    if(window.lucide)lucide.createIcons();
+    return;
+  }
   if(_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store'){
     const sArr=_wizState.concept==='pack_dispatch'?_wizState.dispatchMgrs:_wizState.storeMgrs;
     const sArrName=_wizState.concept==='pack_dispatch'?'dispatchMgrs':'storeMgrs';
@@ -8968,8 +9009,46 @@ function wizPickSingle(role,id){
   _wizS2(document.getElementById('wiz-body'));
 }
 
+// ── Paso 3 (subtarea): heredar artículos de la madre ─────────────────
+function _wizS3Sub(body){
+  const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
+  const items=_wizParentItems;
+  const incCount=items.filter(i=>i._inheritOn).length;
+  const rows = items.length ? items.map((it,i)=>{
+    const isKit=!!it.isKit;
+    const nm=isKit?(it.kitName||it.kitRef||it.product_name||'Kit'):(it.product_name||it.sku||'');
+    const img=isKit?(it.kitImage||it.image):it.image;
+    return `<label class="wiz-urow${it._inheritOn?' wiz-sel':''}" style="cursor:pointer">
+      <input type="checkbox" ${it._inheritOn?'checked':''} onchange="_wizParentItems[${i}]._inheritOn=this.checked;_wizS3Sub(document.getElementById('wiz-body'))" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0">
+      ${img?`<img src="${img}" style="width:30px;height:30px;object-fit:${isKit?'contain':'cover'};border-radius:5px;flex-shrink:0;${isKit?'background:#fff':''}" onerror="this.style.display='none'">`:'<div style="width:30px;height:30px;border-radius:5px;background:var(--surface-3);flex-shrink:0"></div>'}
+      <div style="flex:1;min-width:0">
+        <div class="wiz-uname">${isKit?'🧩 ':''}${esc(nm)}</div>
+        <div class="wiz-uwl" style="color:var(--text-3)">${isKit?'Kit armado':'SKU: '+esc(it.sku||'')}${it.unit_total>1?(' · Unidad '+it.unit_index+'/'+it.unit_total):''}</div>
+      </div>
+    </label>`;
+  }).join('') : '<div style="color:var(--text-3);font-size:12px;padding:10px;text-align:center">La tarea madre no tiene artículos para heredar.</div>';
+
+  const dependsToggle = `<label class="perm-check" style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(245,158,11,.06);border:1.5px solid var(--amber-dot);border-radius:8px;cursor:pointer;margin-top:12px">
+    <input type="checkbox" id="wiz-depends-prev" ${_wizState.dependsOnPrev?'checked':''} onchange="_wizState.dependsOnPrev=this.checked" style="width:16px;height:16px;accent-color:var(--amber-dot)">
+    <span style="font-size:12px;color:var(--text)"><b>Requiere el paso anterior completado</b><br><span style="font-size:10px;color:var(--text-3)">No se podrá iniciar hasta cerrar el paso previo de la cadena (ej. empaque antes de despacho)</span></span>
+  </label>`;
+
+  body.innerHTML=`<div class="wiz-stitle">¿Qué artículos lleva este paso?</div>
+    <div style="font-size:11px;color:var(--text-3);text-align:center;margin:-10px 0 12px">
+      <i data-lucide="copy" style="width:11px;height:11px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>
+      Heredados de la orden${parent&&parent.odooRef?(' · '+esc(parent.odooRef)):''} — desmarca los que no apliquen
+    </div>
+    <div class="wiz-role-lbl" style="margin-bottom:6px"><i data-lucide="package" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+      Artículos <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">${incCount}/${items.length} incluidos</span>
+    </div>
+    <div class="wiz-ulist" style="max-height:300px">${rows}</div>
+    ${dependsToggle}`;
+  if(window.lucide)lucide.createIcons();
+}
+
 // ── Paso 3: órdenes / transferencias ────────────────────────────────
 function _wizS3(body){
+  if (_wizState.subtaskParentId) { _wizS3Sub(body); return; }
   body.innerHTML=`<div class="wiz-stitle">¿Qué órdenes o transferencias?</div>
   <div class="form-group" style="margin-bottom:0">
     <label class="form-label">Buscar <span style="font-size:10px;font-weight:400;color:var(--text-3)">orden · transferencia · artículo · cliente</span></label>
@@ -9299,10 +9378,36 @@ function wizClearCart(){_wizSearch.forEach(s=>{s._inCart=false;s.selected=false;
 // ── Paso 4: resumen ──────────────────────────────────────────────────
 function _wizS4(body){
   const title=_wizAutoTitle||'';
+  const dateRow=d=>d?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">📅 ${d}</div>`:'';
+
+  // ── Resumen modo subtarea ──
+  if(_wizState.subtaskParentId){
+    const def=_WIZ_SUBTYPE_DEF[_wizState.subType]||{label:'Paso'};
+    const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
+    const incItems=_wizParentItems.filter(i=>i._inheritOn);
+    const mgrs=_wizState.subMgrs;
+    const isDispatch=_wizState.subType==='dispatch_order';
+    const cards = mgrs.length>0 ? mgrs.map(m=>`<div class="wiz-sblock" style="margin-bottom:6px">
+      <div class="wiz-srole">${esc(def.label)}</div>
+      <div class="wiz-sname">${esc(m.name)}</div>
+      ${dateRow(_wizState.dueSub)}
+      <div style="margin-top:3px;font-size:11px;color:var(--text-3)">${incItems.length} artículo${incItems.length!==1?'s':''}${isDispatch?' · 📋 requiere doc. firmados':''}</div>
+    </div>`).join('') : `<div class="wiz-sblock"><div class="wiz-srole">${esc(def.label)}</div><div class="wiz-sname"><span style="color:var(--text-3)">Sin asignar</span></div></div>`;
+    body.innerHTML=`<div class="wiz-stitle">Resumen del paso</div>
+      <div style="background:rgba(37,99,235,.06);border:1.5px solid var(--accent);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:12px">
+        <i data-lucide="git-branch" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:4px"></i>
+        Se agregará a la cadena de <b>${esc((seqLabel(parent)||'')+' '+(parent?parent.title.slice(0,32):''))}</b>
+        ${_wizState.dependsOnPrev?'<br><span style="color:var(--amber-text);font-size:11px"><i data-lucide="lock" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:2px"></i>Bloqueado hasta completar el paso anterior</span>':''}
+      </div>
+      ${mgrs.length>1?`<div style="font-size:11px;color:var(--text-3);margin-bottom:6px">${mgrs.length} encargados → ${mgrs.length} subtareas de ${esc(def.label.toLowerCase())}</div>`:''}
+      ${cards}`;
+    if(window.lucide)lucide.createIcons();
+    return;
+  }
+
   const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
   const sArr=isCompound?(_wizState.concept==='pack_dispatch'?_wizState.dispatchMgrs:_wizState.storeMgrs):[];
   const sLbl=_wizState.concept==='pack_dispatch'?'🚛 Despacho':'🏭 Almacenamiento';
-  const dateRow=d=>d?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">📅 ${d}</div>`:'';
   let tHtml='';
 
   if(_wizState.concept==='free'){
@@ -9591,13 +9696,17 @@ function wizNext(){
   if(s===4){_wizSave();return;}
   // Validación suave paso 2: advertir si no hay encargado
   if(s===2){
-    const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
-    const hasPackers=_wizState.packers.length>0||(!!_wizState.freeMgr);
-    const hasSub=!isCompound||(_wizState.dispatchMgrs.length>0||_wizState.storeMgrs.length>0);
-    if(!hasPackers){
-      toast('⚠ Sin encargado asignado — puedes continuar y asignar después desde el drawer');
-    } else if(!hasSub&&isCompound){
-      toast('⚠ No hay encargado de '+(s==='pack_dispatch'?'despacho':'almacenamiento')+' — puedes asignar después');
+    if(_wizState.subtaskParentId){
+      if(_wizState.subMgrs.length===0) toast('⚠ Sin encargado — puedes continuar y asignar después desde el drawer');
+    } else {
+      const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
+      const hasPackers=_wizState.packers.length>0||(!!_wizState.freeMgr);
+      const hasSub=!isCompound||(_wizState.dispatchMgrs.length>0||_wizState.storeMgrs.length>0);
+      if(!hasPackers){
+        toast('⚠ Sin encargado asignado — puedes continuar y asignar después desde el drawer');
+      } else if(!hasSub&&isCompound){
+        toast('⚠ No hay encargado de '+(s==='pack_dispatch'?'despacho':'almacenamiento')+' — puedes asignar después');
+      }
     }
   }
   wizGoTo(s+1);
@@ -9608,6 +9717,48 @@ async function _wizSave(){
   const btnN=document.getElementById('wiz-btn-next');
   if(btnN){btnN.disabled=true;btnN.textContent='Creando…';}
   try{
+    // ── Modo subtarea: agregar paso(s) a la cadena de la madre ──
+    if(_wizState.subtaskParentId){
+      const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
+      const subBase={
+        title:_wizAutoTitle||(parent?parent.title:'Subtarea'),
+        priority:'medium', odooRef:(parent?parent.odooRef:'')||null,
+        client:_wizCtx.client||undefined, salesperson:_wizCtx.salesperson||undefined,
+        deliveryAddress:_wizCtx.deliveryAddress||undefined, phone:_wizCtx.phone||undefined,
+        location:(parent?parent.location:'')||undefined,
+        parentId:_wizState.subtaskParentId, dependsOnPrev:!!_wizState.dependsOnPrev,
+        createdBy:_user.id,by:_user.name,byUserId:_user.id
+      };
+      const isDisp=_wizState.subType==='dispatch_order';
+      const incItems=_wizParentItems.filter(i=>i._inheritOn).map(i=>({...i}));
+      // subIndex: continuar la numeración existente de la cadena
+      const sibs=(_tasks||[]).filter(x=>x.parentId===_wizState.subtaskParentId);
+      let nextIdx=sibs.reduce((m,s)=>Math.max(m,s.subIndex||0),1)+1;
+      const mgrs=_wizState.subMgrs.length>0?_wizState.subMgrs:[{id:null,name:null}];
+      let firstId=null, made=0;
+      for(let i=0;i<mgrs.length;i++){
+        const m=mgrs[i];
+        const mu=m?.id?(_authUsers||[]).find(u=>u.id===m.id):null;
+        const body={...subBase, type:_wizState.subType,
+          managerId:m?.id||null, managerName:m?.name||null,
+          assignedTo:(m?.id&&mu?.odooId)?('oe_'+mu.odooId):undefined,
+          dueDate:_wizState.dueSub||null, subIndex:nextIdx+i,
+          ...(isDisp?{requiresDeliveryPhoto:true}:{})
+        };
+        const r=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(body)});
+        const d=await r.json();
+        if(d.task?.id){
+          if(i===0)firstId=d.task.id; made++;
+          if(incItems.length) await authFetch('/api/wwp/tasks/'+d.task.id+'/items',{method:'PUT',body:JSON.stringify({items:expandUnitRows(incItems)})});
+        }
+      }
+      closeTaskWizard();
+      toast(`✓ ${made} subtarea${made!==1?'s':''} agregada${made!==1?'s':''} a la cadena`);
+      await loadTasks();
+      openDrawer(_wizState.subtaskParentId);
+      return;
+    }
+
     const odooRef=_wizItems.length?[...new Set(_wizItems.map(i=>i._sourceRef).filter(Boolean))].join(', '):(_wizRef||null);
     const base={
       title:_wizAutoTitle||odooRef||'Tarea',
