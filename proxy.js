@@ -3644,7 +3644,7 @@ const server = http.createServer(async (req, res) => {
       if (!d.title || !d.type) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Faltan campos: title y type son requeridos'})); return; }
       if (typeof d.title === 'string' && d.title.trim().length > 255) { res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Título máx 255 caracteres'})); return; }
       if (typeof d.description === 'string' && d.description.length > 5000) { res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Descripción máx 5000 caracteres'})); return; }
-      const _validTypes     = ['dispatch_order','packaging','item_pickup','truck_loading','warehouse_move','general'];
+      const _validTypes     = ['dispatch_order','packaging','item_pickup','truck_loading','warehouse_move','general','staffing'];
       const _validPriorities= ['low','medium','high','urgent'];
       if (!_validTypes.includes(d.type)) { res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tipo de tarea inválido'})); return; }
       if (d.priority && !_validPriorities.includes(d.priority)) { res.writeHead(422,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Prioridad inválida'})); return; }
@@ -3673,6 +3673,13 @@ const server = http.createServer(async (req, res) => {
         location: d.location||'',
         dueDate: d.dueDate||null,
         actionNote: d.actionNote||'',
+        // ── Solicitud de Personal (type staffing) ──
+        requester: d.requester||'',           // solicitante (texto libre)
+        staffStart: d.staffStart||null,       // fecha inicio (YYYY-MM-DD)
+        staffEnd: d.staffEnd||null,           // fecha fin
+        staffFrom: d.staffFrom||'',           // hora inicio (HH:MM)
+        staffTo: d.staffTo||'',               // hora fin
+        totalHours: (typeof d.totalHours==='number') ? d.totalHours : null,
         dependsOnPrev: isSubtask ? !!d.dependsOnPrev : false, // cadena: requiere paso anterior completado
         subIndex: null,                       // posición en la cadena (se asigna abajo)
         evidence: [],
@@ -3687,9 +3694,9 @@ const server = http.createServer(async (req, res) => {
       if (isSubtask) {
         task.subIndex = tasks.filter(x => x.parentId === task.parentId).length + 1;
       }
-      // Con encargado (assignedTo/managerId) o auxiliares (executors) → marcar 'assigned'.
+      // Con encargado (assignedTo/managerId) o auxiliares (executors/assignees) → marcar 'assigned'.
       // No saltamos a in_progress: el inicio es explícito (y puede depender del paso anterior).
-      if (task.assignedTo || task.managerId || (isSubtask && task.executors.length > 0)) {
+      if (task.assignedTo || task.managerId || (isSubtask && task.executors.length > 0) || (task.type==='staffing' && task.assignees.length > 0)) {
         task.status='assigned';
         task.statusHistory.push({ status:'assigned', date:now, by:d.createdBy||'', note:d.note||'' });
       }
@@ -3888,7 +3895,13 @@ const server = http.createServer(async (req, res) => {
       if (d.dependsOnPrev!==undefined && tasks[idx].parentId) tasks[idx].dependsOnPrev=!!d.dependsOnPrev;
       if (d.executors!==undefined) tasks[idx].executors=Array.isArray(d.executors)?d.executors:[];
       // auxiliaryAssignees: auth user IDs de auxiliares (enviados por el frontend cuando role=manager asigna)
-      if (d.auxiliaryAssignees!==undefined) tasks[idx].assignees=Array.isArray(d.auxiliaryAssignees)?d.auxiliaryAssignees:[];
+      // Sincroniza ambos campos (assignees + auxiliaryAssignees) para que la lista sea consistente
+      // y al liberar/reemplazar un auxiliar no quede residual en el campo crudo.
+      if (d.auxiliaryAssignees!==undefined) {
+        const _aux=Array.isArray(d.auxiliaryAssignees)?d.auxiliaryAssignees:[];
+        tasks[idx].assignees=_aux;
+        tasks[idx].auxiliaryAssignees=_aux;
+      }
       else if (d.assignees!==undefined) tasks[idx].assignees=Array.isArray(d.assignees)?d.assignees:[];
       if (d.title!==undefined) tasks[idx].title=d.title.trim();
       if (d.description!==undefined) tasks[idx].description=d.description;

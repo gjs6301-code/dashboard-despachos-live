@@ -5034,7 +5034,7 @@ function updateAvatarPreview() {
   el.textContent = initials(name) || '?';
   el.style.background = name ? avatarColor(name) : 'var(--brand-light)';
 }
-const TYPE_LABELS = {dispatch_order:'Orden de Despacho',packaging:'Embalaje',item_pickup:'Recogida de Artículos',truck_loading:'Carga en Camión',warehouse_move:'Movimiento de Almacén',general:'General'};
+const TYPE_LABELS = {dispatch_order:'Orden de Despacho',packaging:'Embalaje',item_pickup:'Recogida de Artículos',truck_loading:'Carga en Camión',warehouse_move:'Movimiento de Almacén',general:'General',staffing:'Solicitud de Personal'};
 const STATUS_LABELS = {pending:'Pendiente',assigned:'Asignado',in_progress:'En Progreso',completed:'Completado',validated:'Validado',cancelled:'Cancelado'};
 const STATUS_CSS = {pending:'b-pending',assigned:'b-assigned',in_progress:'b-inprogress',completed:'b-completed',validated:'b-validated',cancelled:'b-cancelled'};
 const ROLE_LABELS = {admin:'Admin',manager:'Encargado',assistant:'Auxiliar'};
@@ -6515,12 +6515,16 @@ function renderListRow(t) {
   const mgr = t.managerId ? (_authUsers||[]).find(u=>u.id===t.managerId) : null;
   const subs = _tasks.filter(s=>s.parentId===t.id);
   const doneSubs = subs.filter(s=>['completed','validated'].includes(s.status)).length;
-  const typeEmoji = {dispatch_order:'truck',packaging:'package',item_pickup:'scan-line',truck_loading:'truck',warehouse_move:'arrow-left-right',general:'circle-dot'}[t.type]||'circle-dot';
+  const typeEmoji = {dispatch_order:'truck',packaging:'package',item_pickup:'scan-line',truck_loading:'truck',warehouse_move:'arrow-left-right',general:'circle-dot',staffing:'users'}[t.type]||'circle-dot';
   const priorityColor = {high:'#dc2626',medium:'#f59e0b',low:'#10b981'}[t.priority||'medium']||'#f59e0b';
   const meta = [];
   if (mgr) meta.push(`<span style="display:flex;align-items:center;gap:3px">${avatarHtml(mgr,15)}<span>${esc(mgr.name.split(' ')[0])}</span></span>`);
+  if (t.type==='staffing') {
+    if (t.requester) meta.push(`<span>👷 ${esc(t.requester)}</span>`);
+    if (t.staffStart) meta.push(`<span style="color:var(--accent);font-weight:600">📅 ${esc(t.staffStart)}${t.staffEnd&&t.staffEnd!==t.staffStart?('→'+esc(t.staffEnd)):''}${t.staffFrom?(' · 🕐 '+esc(t.staffFrom)+'-'+esc(t.staffTo||'')):''}${t.totalHours!=null?(' · ⏱'+t.totalHours+'h'):''}</span>`);
+  }
   if (t.odooRef) meta.push(`<span>${esc(t.odooRef)}</span>`);
-  if (t.dueDate) meta.push(`<span style="${tier?DUE_DATE_COLOR[tier]:''}">${t.dueDate}</span>`);
+  if (t.dueDate && t.type!=='staffing') meta.push(`<span style="${tier?DUE_DATE_COLOR[tier]:''}">${t.dueDate}</span>`);
   if (subs.length) meta.push(`<span>${doneSubs}/${subs.length} sub</span>`);
   if (t.location) meta.push(`<span>${esc(t.location)}</span>`);
   return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${rowStyle}">
@@ -7489,9 +7493,13 @@ function renderDrawer(t) {
       <div class="info-cell"><div class="info-cell-label">Prioridad</div><div class="info-cell-val">${t.priority==='high'?'<span style="color:var(--red-dot)">●</span> Alta':t.priority==='low'?'<span style="color:var(--green-dot)">●</span> Baja':'<span style="color:var(--amber-dot)">●</span> Media'}</div></div>
       <div class="info-cell"><div class="info-cell-label">Responsable</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px">${(()=>{ const mgr=t.managerId?(_authUsers||[]).find(u=>u.id===t.managerId):null; return mgr?avatarHtml(mgr,24)+`<span>${esc(mgr.name.split(' ').slice(0,2).join(' '))}</span>`:(t.assignedTo?userName(t.assignedTo):'—'); })()}</div></div>
       ${taskAuxiliaryIds(t).length?`<div class="info-cell info-cell-wide"><div class="info-cell-label">Auxiliares</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${taskAuxiliaryIds(t).map(id=>{const u=(_authUsers||[]).find(u=>u.id===id);return u?'<span style="display:flex;align-items:center;gap:4px;margin-right:4px">'+avatarHtml(u,22)+'<span style="font-size:12px">'+esc(u.name.split(' ').slice(0,2).join(' '))+'</span></span>':'';}).join('')}</div></div>`:''}
+      ${t.type==='staffing'&&t.requester?`<div class="info-cell"><div class="info-cell-label">Solicitante</div><div class="info-cell-val">${esc(t.requester)}</div></div>`:''}
+      ${t.type==='staffing'&&t.staffStart?`<div class="info-cell"><div class="info-cell-label">Fechas</div><div class="info-cell-val">${esc(t.staffStart)}${t.staffEnd&&t.staffEnd!==t.staffStart?(' → '+esc(t.staffEnd)):''}</div></div>`:''}
+      ${t.type==='staffing'&&t.staffFrom?`<div class="info-cell"><div class="info-cell-label">Horario</div><div class="info-cell-val">${esc(t.staffFrom)} a ${esc(t.staffTo||'')}</div></div>`:''}
+      ${t.type==='staffing'&&t.totalHours!=null?`<div class="info-cell"><div class="info-cell-label">Horas</div><div class="info-cell-val">⏱ ${t.totalHours}h</div></div>`:''}
       ${t.odooRef?`<div class="info-cell"><div class="info-cell-label">Orden Odoo</div><div class="info-cell-val">${esc(t.odooRef)}</div></div>`:''}
       ${t.location?`<div class="info-cell"><div class="info-cell-label">Localidad</div><div class="info-cell-val">${esc(t.location)}</div></div>`:''}
-      ${t.dueDate?`<div class="info-cell"><div class="info-cell-label">Fecha límite</div><div class="info-cell-val">${t.dueDate}</div></div>`:''}
+      ${t.dueDate&&t.type!=='staffing'?`<div class="info-cell"><div class="info-cell-label">Fecha límite</div><div class="info-cell-val">${t.dueDate}</div></div>`:''}
       <div class="info-cell"><div class="info-cell-label">Creado</div><div class="info-cell-val">${fmtDate(t.createdAt)}</div></div>
     </div>
     ${parentCtxHtml}
@@ -8742,7 +8750,8 @@ var _WIZ_DEF = {
   pack:          { label:'Empaque',                  icon:'package',    desc:'1 tarea de embalaje',           color:'#7c3aed' },
   pack_dispatch: { label:'Empaque y Despacho',       icon:'truck',      desc:'Embalaje → Despacho en cadena', color:'#2563eb' },
   pack_store:    { label:'Empaque y Almacenamiento', icon:'warehouse',  desc:'Embalaje → Almacén en cadena',  color:'#059669' },
-  free:          { label:'Tarea Libre',              icon:'circle-dot', desc:'Sin estructura definida',       color:'#6b7280' }
+  free:          { label:'Tarea Libre',              icon:'circle-dot', desc:'Sin estructura definida',       color:'#6b7280' },
+  staffing:      { label:'Solicitud de Personal',    icon:'users',      desc:'Mano de obra por tiempo',       color:'#dc2626' }
 };
 // Tipos individuales para agregar un paso a una cadena existente (Nueva subtarea)
 var _WIZ_SUBTYPE_DEF = {
@@ -8776,7 +8785,13 @@ async function openTaskWizard(opts) {
     subType:null,            // tipo individual del paso (dispatch_order, warehouse_move, …)
     subMgrs:[],              // [{id,name}] encargados del paso
     inheritItems:true,       // heredar artículos de la madre
-    dependsOnPrev:false      // requiere paso anterior completado
+    dependsOnPrev:false,     // requiere paso anterior completado
+    // ── Solicitud de Personal (staffing) ──
+    requester:'',            // solicitante (texto libre)
+    activity:'',             // actividad (título)
+    staffStart:'', staffEnd:'', staffFrom:'', staffTo:'', // fechas + horario
+    staffWorkers:[],         // [{id,name}] auxiliares de la mano de obra
+    staffReleases:{}         // { auxId: { taskId, replacementId } } liberaciones de tareas en conflicto
   };
   _wizItems=[];_wizSearch=[];
   _wizRef      = (opts&&opts.odooRef)      ? opts.odooRef      : '';
@@ -8885,6 +8900,9 @@ function _wizS2(body){
   // Solo encargados (managers) — los admins no se asignan como responsables de tarea
   const users=(_authUsers||[]).filter(u=>u.active!==false&&u.role==='manager');
   const wl=_workloadMap||{};
+
+  // ── Solicitud de Personal: solicitante + actividad + fechas/horario + auxiliares ──
+  if(_wizState.concept==='staffing'){ _wizS2Staffing(body); return; }
 
   const uRowMulti=(u)=>{
     const sel=_wizState.packers.some(p=>p.id===u.id);
@@ -9009,6 +9027,109 @@ function wizPickSingle(role,id){
   _wizS2(document.getElementById('wiz-body'));
 }
 
+// ── Solicitud de Personal: paso 2 ────────────────────────────────────
+// Tareas activas (assigned/in_progress) operativas donde el auxiliar participa → conflicto
+function wizStaffConflicts(auxId){
+  return (_tasks||[]).filter(t=>
+    ['assigned','in_progress'].includes(t.status) && t.type!=='staffing' &&
+    taskAuxiliaryIds(t).includes(auxId)
+  );
+}
+function wizStaffHours(){
+  const {staffStart,staffEnd,staffFrom,staffTo}=_wizState;
+  if(!staffStart||!staffFrom||!staffTo) return null;
+  const end=staffEnd||staffStart;
+  const days=Math.max(1, Math.round((new Date(end)-new Date(staffStart))/86400000)+1);
+  const [fh,fm]=staffFrom.split(':').map(Number), [th,tm]=staffTo.split(':').map(Number);
+  let hpd=(th+(tm||0)/60)-(fh+(fm||0)/60);
+  if(!(hpd>0)) return null;
+  return Math.round(days*hpd*10)/10;
+}
+function _wizS2Staffing(body){
+  const aux=(_authUsers||[]).filter(u=>u.active!==false&&u.role==='assistant');
+  const wl=_workloadMap||{};
+  const total=wizStaffHours();
+  // dropdown de reemplazo: auxiliares no seleccionados ni en conflicto en esa misma tarea
+  const replOptions=(auxId,taskId)=>{
+    const t=(_tasks||[]).find(x=>x.id===taskId);
+    const already=new Set(t?taskAuxiliaryIds(t):[]);
+    return aux.filter(u=>u.id!==auxId && !already.has(u.id))
+      .map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  };
+  const rows=aux.map(u=>{
+    const sel=_wizState.staffWorkers.some(p=>p.id===u.id);
+    const wv=wl[u.id]||0;
+    const wc=wv===0?'var(--green-text)':wv>=4?'var(--red-text)':'var(--amber-text)';
+    const wt=wv===0?'Sin tareas activas':`${wv} tarea${wv!==1?'s':''} activa${wv!==1?'s':''}`;
+    let conflictHtml='';
+    if(sel){
+      const cf=wizStaffConflicts(u.id);
+      if(cf.length){
+        const c=cf[0]; const rel=_wizState.staffReleases[u.id];
+        conflictHtml=`<div style="margin-top:6px;padding:8px 10px;background:rgba(245,158,11,.08);border:1.5px solid var(--amber-dot);border-radius:7px" onclick="event.stopPropagation()">
+          <div style="font-size:11px;color:var(--amber-text);font-weight:600;margin-bottom:5px">
+            <i data-lucide="alert-triangle" style="width:11px;height:11px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>
+            Ya está en ${c.seq?('#'+String(c.seq).padStart(4,'0')+' · '):''}${esc(TYPE_LABELS[c.type]||c.type)} (${STATUS_LABELS[c.status]||c.status})
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--text-3)">Reemplazar en esa tarea con:</span>
+            <select onchange="wizSetReplacement('${u.id}','${c.id}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text)">
+              <option value="">— Sin reemplazo (solo liberar) —</option>
+              ${replOptions(u.id,c.id)}
+            </select>
+            ${rel&&rel.replacementId?'<span style="font-size:10px;color:var(--green-text);font-weight:700">✓</span>':''}
+          </div>
+        </div>`;
+      }
+    }
+    return `<div class="wiz-urow${sel?' wiz-sel':''}" style="flex-wrap:wrap" onclick="wizToggleWorker('${u.id}')">
+      <div style="display:flex;align-items:center;gap:9px;width:100%">
+        <div class="wiz-uavatar" style="background:${_wac(u.name)}">${_wai(u.name)}</div>
+        <div style="flex:1;min-width:0"><div class="wiz-uname">${esc(u.name)}</div><div class="wiz-uwl" style="color:${wc}">${wt}</div></div>
+        ${sel?`<i data-lucide="check-circle" style="width:16px;height:16px;stroke:var(--accent);flex-shrink:0"></i>`:'<div style="width:16px"></div>'}
+      </div>
+      ${conflictHtml}
+    </div>`;
+  }).join('');
+
+  body.innerHTML=`<div class="wiz-stitle">Detalles de la solicitud</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Solicitante *</label>
+        <input class="form-input" placeholder="ej: Showroom, Mantenimiento…" value="${esc(_wizState.requester)}" oninput="_wizState.requester=this.value"></div>
+      <div class="form-group"><label class="form-label">Actividad *</label>
+        <input class="form-input" placeholder="ej: Montaje de stand, Descarga…" value="${esc(_wizState.activity)}" oninput="_wizState.activity=this.value"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Desde *</label>
+        <input type="date" class="form-select" value="${_wizState.staffStart}" onchange="_wizState.staffStart=this.value;_wizS2Staffing(document.getElementById('wiz-body'))"></div>
+      <div class="form-group"><label class="form-label">Hasta</label>
+        <input type="date" class="form-select" value="${_wizState.staffEnd}" onchange="_wizState.staffEnd=this.value;_wizS2Staffing(document.getElementById('wiz-body'))"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Hora inicio *</label>
+        <input type="time" class="form-select" value="${_wizState.staffFrom}" onchange="_wizState.staffFrom=this.value;_wizS2Staffing(document.getElementById('wiz-body'))"></div>
+      <div class="form-group"><label class="form-label">Hora fin *</label>
+        <input type="time" class="form-select" value="${_wizState.staffTo}" onchange="_wizState.staffTo=this.value;_wizS2Staffing(document.getElementById('wiz-body'))"></div>
+    </div>
+    ${total!=null?`<div style="text-align:center;font-size:12px;color:var(--accent);font-weight:700;margin:2px 0 12px"><i data-lucide="clock" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>${total} horas totales</div>`:'<div style="height:8px"></div>'}
+    <div class="wiz-role-lbl"><i data-lucide="users" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i>
+      ¿Quién hará la actividad? <span style="font-size:9px;color:var(--text-3);font-weight:400;text-transform:none">auxiliares · varios posibles</span>
+    </div>
+    <div class="wiz-ulist" style="max-height:260px">${rows||'<div style="color:var(--text-3);font-size:12px;padding:10px;text-align:center">No hay auxiliares activos</div>'}</div>`;
+  if(window.lucide)lucide.createIcons();
+}
+function wizToggleWorker(id){
+  const u=(_authUsers||[]).find(x=>x.id===id);if(!u)return;
+  const i=_wizState.staffWorkers.findIndex(p=>p.id===id);
+  if(i>=0){_wizState.staffWorkers.splice(i,1); delete _wizState.staffReleases[id];}
+  else _wizState.staffWorkers.push({id,name:u.name});
+  _wizS2Staffing(document.getElementById('wiz-body'));
+}
+function wizSetReplacement(auxId,taskId,replId){
+  _wizState.staffReleases[auxId]={taskId, replacementId:replId||null};
+  _wizS2Staffing(document.getElementById('wiz-body'));
+}
+
 // ── Paso 3 (subtarea): heredar artículos de la madre ─────────────────
 function _wizS3Sub(body){
   const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
@@ -9046,9 +9167,44 @@ function _wizS3Sub(body){
   if(window.lucide)lucide.createIcons();
 }
 
+// ── Paso 3 (staffing): instrucciones + fotos de guía (sin órdenes) ───
+function _wizS3Staffing(body){
+  body.innerHTML=`<div class="wiz-stitle">Instrucciones de la actividad</div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:5px">
+        <i data-lucide="file-text" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
+        Descripción / Instrucciones <span style="font-size:9px;color:var(--text-3);font-weight:400">opcional</span>
+      </label>
+      <textarea class="form-textarea" rows="3" placeholder="Detalles de la actividad, lugar, herramientas, a quién reportarse…"
+        oninput="_wizState.description=this.value" style="font-size:13px">${esc(_wizState.description||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:5px">
+        <i data-lucide="camera" style="width:12px;height:12px;stroke:var(--accent);display:inline-block;vertical-align:-1px"></i>
+        Fotos de guía <span style="font-size:9px;color:var(--text-3);font-weight:400">opcional</span>
+      </label>
+      <button type="button" onclick="wizSeleccionarFotos()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--border);border-radius:9px;background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text-secondary);width:100%;box-sizing:border-box;font-family:inherit">
+        <i data-lucide="camera" style="width:15px;height:15px;stroke:currentColor;flex-shrink:0"></i>
+        <span id="wiz-fotos-btn-label">${_wizFotos.length?(_wizFotos.length+' foto'+(_wizFotos.length!==1?'s':'')+' · Agregar más'):'Agregar fotos de guía'}</span>
+      </button>
+      <div id="wiz-fotos-preview" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        ${_wizFotos.map((f,i)=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px;background:var(--surface-2);border-radius:9px;border:1px solid var(--border)">
+          <div style="position:relative;flex-shrink:0">
+            <img src="${f.b64}" style="width:56px;height:56px;object-fit:cover;border-radius:7px;cursor:zoom-in" onclick="openLightbox(this.src)">
+            <button onclick="wizRemoveFoto(${i})" style="position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;background:var(--red-dot);color:#fff;border:none;font-size:10px;cursor:pointer;padding:0;line-height:17px;text-align:center">✕</button>
+          </div>
+          <input type="text" placeholder="Instrucción para esta foto…" maxlength="150" oninput="_wizFotos[${i}].instruccion=this.value" value="${esc(f.instruccion||'')}"
+            style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>`).join('')}
+      </div>
+    </div>`;
+  if(window.lucide)lucide.createIcons();
+}
+
 // ── Paso 3: órdenes / transferencias ────────────────────────────────
 function _wizS3(body){
   if (_wizState.subtaskParentId) { _wizS3Sub(body); return; }
+  if (_wizState.concept==='staffing') { _wizS3Staffing(body); return; }
   body.innerHTML=`<div class="wiz-stitle">¿Qué órdenes o transferencias?</div>
   <div class="form-group" style="margin-bottom:0">
     <label class="form-label">Buscar <span style="font-size:10px;font-weight:400;color:var(--text-3)">orden · transferencia · artículo · cliente</span></label>
@@ -9380,6 +9536,35 @@ function _wizS4(body){
   const title=_wizAutoTitle||'';
   const dateRow=d=>d?`<div style="margin-top:3px;font-size:11px;color:var(--text-3)">📅 ${d}</div>`:'';
 
+  // ── Resumen Solicitud de Personal ──
+  if(_wizState.concept==='staffing'){
+    const total=wizStaffHours();
+    const fechas=_wizState.staffStart?(_wizState.staffStart+(_wizState.staffEnd&&_wizState.staffEnd!==_wizState.staffStart?(' → '+_wizState.staffEnd):'')):'—';
+    const horario=(_wizState.staffFrom&&_wizState.staffTo)?(_wizState.staffFrom+' a '+_wizState.staffTo):'—';
+    const releases=Object.entries(_wizState.staffReleases).filter(([id,r])=>_wizState.staffWorkers.some(w=>w.id===id) && wizStaffConflicts(id).length);
+    body.innerHTML=`<div class="wiz-stitle">Resumen de la solicitud</div>
+      <div class="wiz-sblock">
+        <div class="wiz-srole">👷 ${esc(_wizState.requester||'Solicitud de Personal')}</div>
+        <div class="wiz-sname">${esc(_wizState.activity||'(sin actividad)')}</div>
+        <div style="margin-top:5px;font-size:11px;color:var(--text-3)">📅 ${esc(fechas)} · 🕐 ${esc(horario)}${total!=null?(' · ⏱ '+total+'h'):''}</div>
+      </div>
+      <div class="wiz-sblock" style="margin-top:8px">
+        <div class="wiz-srole">Auxiliares asignados (${_wizState.staffWorkers.length})</div>
+        ${_wizState.staffWorkers.length?_wizState.staffWorkers.map(w=>{
+          const rel=_wizState.staffReleases[w.id];
+          const conf=wizStaffConflicts(w.id);
+          let note='';
+          if(conf.length){
+            if(rel&&rel.replacementId){const ru=(_authUsers||[]).find(u=>u.id===rel.replacementId);note=`<span style="color:var(--green-text);font-size:10px"> · reemplazado por ${esc(ru?ru.name.split(' ')[0]:'?')} en su tarea</span>`;}
+            else note=`<span style="color:var(--amber-text);font-size:10px"> · se liberará de su tarea actual</span>`;
+          }
+          return `<div style="font-size:12px;color:var(--text);padding:2px 0">• ${esc(w.name)}${note}</div>`;
+        }).join(''):'<div style="font-size:11px;color:var(--text-3)">Sin auxiliares</div>'}
+      </div>`;
+    if(window.lucide)lucide.createIcons();
+    return;
+  }
+
   // ── Resumen modo subtarea ──
   if(_wizState.subtaskParentId){
     const def=_WIZ_SUBTYPE_DEF[_wizState.subType]||{label:'Paso'};
@@ -9696,7 +9881,12 @@ function wizNext(){
   if(s===4){_wizSave();return;}
   // Validación suave paso 2: advertir si no hay encargado
   if(s===2){
-    if(_wizState.subtaskParentId){
+    if(_wizState.concept==='staffing'){
+      if(!_wizState.requester.trim()||!_wizState.activity.trim()){ toast('Indica el solicitante y la actividad'); return; }
+      if(!_wizState.staffStart||!_wizState.staffFrom||!_wizState.staffTo){ toast('Indica la fecha de inicio y el horario'); return; }
+      if(wizStaffHours()==null){ toast('La hora de fin debe ser mayor a la de inicio'); return; }
+      if(_wizState.staffWorkers.length===0) toast('⚠ Sin auxiliares — puedes continuar y asignar después');
+    } else if(_wizState.subtaskParentId){
       if(_wizState.subMgrs.length===0) toast('⚠ Sin encargado — puedes continuar y asignar después desde el drawer');
     } else {
       const isCompound=_wizState.concept==='pack_dispatch'||_wizState.concept==='pack_store';
@@ -9717,6 +9907,54 @@ async function _wizSave(){
   const btnN=document.getElementById('wiz-btn-next');
   if(btnN){btnN.disabled=true;btnN.textContent='Creando…';}
   try{
+    // ── Solicitud de Personal ──
+    if(_wizState.concept==='staffing'){
+      const ws=_wizState;
+      const total=wizStaffHours();
+      const body={
+        title: ws.activity||ws.requester||'Solicitud de Personal',
+        type:'staffing', priority:'medium',
+        requester: ws.requester||'', description: ws.description||undefined,
+        staffStart: ws.staffStart||null, staffEnd: ws.staffEnd||ws.staffStart||null,
+        staffFrom: ws.staffFrom||'', staffTo: ws.staffTo||'',
+        totalHours: (total!=null?total:undefined),
+        dueDate: ws.staffStart||null,
+        assignees: ws.staffWorkers.map(w=>w.id),
+        managerId:_user.id, managerName:_user.name,
+        createdBy:_user.id, by:_user.name, byUserId:_user.id
+      };
+      const r=await authFetch('/api/wwp/tasks',{method:'POST',body:JSON.stringify(body)});
+      const d=await r.json();
+      const staffId=d.task?.id;
+      // Fotos de guía
+      const fotos=_wizFotos.filter(Boolean);
+      if(staffId&&fotos.length){
+        try{ await authFetch('/api/wwp/tasks/'+staffId+'/fotos-guia',{method:'POST',body:JSON.stringify({fotos:fotos.map(f=>({data:f.b64,ext:f.ext,instruccion:f.instruccion||''})),by:_user.name})}); }catch(e){}
+      }
+      // Liberar / reemplazar auxiliares en sus tareas en conflicto
+      let liberados=0;
+      for(const w of ws.staffWorkers){
+        const rel=ws.staffReleases[w.id];
+        if(!rel||!rel.taskId) continue;
+        const t=(_tasks||[]).find(x=>x.id===rel.taskId);
+        if(!t) continue;
+        const nuevos=taskAuxiliaryIds(t).filter(id=>id!==w.id);
+        if(rel.replacementId && !nuevos.includes(rel.replacementId)) nuevos.push(rel.replacementId);
+        try{
+          await authFetch('/api/wwp/tasks/'+rel.taskId,{method:'PATCH',body:JSON.stringify({
+            auxiliaryAssignees:nuevos, by:_user.name, byUserId:_user.id,
+            note:'Auxiliar reasignado a solicitud de personal'+(rel.replacementId?' (con reemplazo)':'')
+          })});
+          liberados++;
+        }catch(e){}
+      }
+      closeTaskWizard();
+      toast('✓ Solicitud de personal creada'+(liberados?` · ${liberados} reasignación${liberados!==1?'es':''}`:''));
+      await loadTasks();
+      if(staffId)openDrawer(staffId);
+      return;
+    }
+
     // ── Modo subtarea: agregar paso(s) a la cadena de la madre ──
     if(_wizState.subtaskParentId){
       const parent=(_tasks||[]).find(x=>x.id===_wizState.subtaskParentId);
@@ -11240,7 +11478,7 @@ function devFilterClick(mes){
 // ════════════════════════════════════════════════════
 //  PENDIENTES — LIVE desde API WWP
 // ════════════════════════════════════════════════════
-var _WWP_TYPE_LABELS  = {dispatch_order:'Orden de Despacho',packaging:'Embalaje',item_pickup:'Recogida de Artículos',truck_loading:'Carga en Camión',warehouse_move:'Movimiento de Almacén',general:'General'};
+var _WWP_TYPE_LABELS  = {dispatch_order:'Orden de Despacho',packaging:'Embalaje',item_pickup:'Recogida de Artículos',truck_loading:'Carga en Camión',warehouse_move:'Movimiento de Almacén',general:'General',staffing:'Solicitud de Personal'};
 var _WWP_TYPE_COLORS  = {dispatch_order:'#2563eb',packaging:'#7c3aed',item_pickup:'#0891b2',truck_loading:'#d97706',warehouse_move:'#059669',general:'#6b7280'};
 var _WWP_TYPE_ICON_NAMES = {dispatch_order:'truck',packaging:'package',item_pickup:'scan-line',truck_loading:'truck',warehouse_move:'arrow-left-right',general:'circle-dot'};
 function _wwpTypeIcon(type,sz){ var n=_WWP_TYPE_ICON_NAMES[type]||'circle-dot'; sz=sz||12; return '<i data-lucide="'+n+'" style="width:'+sz+'px;height:'+sz+'px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>'; }
