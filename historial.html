@@ -4012,6 +4012,21 @@ body{font-family:var(--font);min-height:100dvh}
     <div class="pm-item danger" onclick="doLogout()"><i data-lucide="log-out"></i>Cerrar sesión</div>
   </div>
 
+  <!-- Mapa de ubicaciones (solo admin) -->
+  <div class="modal-overlay" id="modal-users-map">
+    <div class="modal-card" style="max-width:760px;width:96vw">
+      <div class="modal-header">
+        <span class="modal-title" id="users-map-title">Mapa de auxiliares</span>
+        <button class="modal-close" onclick="closeUsersMap()">✕</button>
+      </div>
+      <div style="padding:0 16px 8px">
+        <div id="users-map-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-3);margin-bottom:8px"></div>
+        <div id="users-map" style="width:100%;height:62vh;border-radius:10px;overflow:hidden;background:var(--surface-2)"></div>
+        <div id="users-map-empty" style="display:none;padding:30px;text-align:center;color:var(--text-3);font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Selector de usuario (impersonation, solo admin) -->
   <div class="modal-overlay" id="modal-user-switch">
     <div class="modal-card" style="max-width:440px">
@@ -4232,6 +4247,7 @@ body{font-family:var(--font);min-height:100dvh}
     <!-- USERS TAB (admin only) -->
     <div id="tab-users" style="display:none">
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px">
+        <button class="btn-sm" onclick="openUsersMap()" id="btn-users-map"><i data-lucide="map" style="width:14px;height:14px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Ver mapa</button>
         <button class="btn-new" onclick="openNewUserModal()">+ Nuevo Usuario</button>
       </div>
       <div id="users-list"><div class="loading"><div class="spinner"></div><br>Cargando…</div></div>
@@ -7738,12 +7754,12 @@ async function changeUnitsPrompt(taskId, groupRef) {
 }
 
 // Captura la ubicación GPS (best-effort) y la envía al servidor. No bloquea la acción.
-function _captureGeo(context){
+function _captureGeo(context, taskId){
   try{
     if(!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       function(pos){ try{ authFetch('/api/wwp/auth/location',{method:'POST',body:JSON.stringify({
-        lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy, context:context||'' })}); }catch(e){} },
+        lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy, context:context||'', taskId:taskId||null })}); }catch(e){} },
       function(){}, { enableHighAccuracy:true, timeout:8000, maximumAge:60000 }
     );
   }catch(e){}
@@ -7762,7 +7778,7 @@ async function changeStatus(taskId, status, note) {
     const d = await r.json();
     if (!d.ok) { toast((d.error||'Error')); return; }
     // Capturar ubicación al iniciar o completar una tarea (trazabilidad de campo)
-    if (status==='in_progress'||status==='completed') _captureGeo(status+' · '+taskId);
+    if (status==='in_progress'||status==='completed') _captureGeo(status, taskId);
     toast('Estado actualizado');
     openDrawer(taskId);
   } catch(e) { toast('Error: '+e.message); }
@@ -7989,7 +8005,7 @@ async function setAuxDone(taskId, done) {
     const r = await authFetch('/api/wwp/tasks/'+taskId+'/aux-done',{method:'PATCH',body:JSON.stringify({done})});
     const d = await r.json();
     if (!d.ok) { toast(d.error||'Error'); return; }
-    if (done) _captureGeo('aux-done · '+taskId);
+    if (done) _captureGeo('terminé mi parte', taskId);
     toast(done?'Marcado como terminado — el encargado fue notificado':'Marca de terminado deshecha');
     openDrawer(taskId);
   } catch(e){ toast(e.message); }
@@ -8045,6 +8061,7 @@ function uploadFotoDespacho(taskId, cat) {
         });
         const d = await r.json();
         if (!d.ok) { toast('Error: '+(d.error||'')); return; }
+        _captureGeo('foto '+cat, taskId);
         toast('✓ Foto guardada');
         openDrawer(taskId);
       } catch(e) { toast('Error: '+e.message); }
@@ -10255,6 +10272,7 @@ async function loadLunchReport() {
 // ═══════════════════════════════════════════════════════════════════════
 async function loadUsers() {
   document.getElementById('users-list').innerHTML='<div class="loading"><div class="spinner"></div><br>Cargando…</div>';
+  const mapBtn=document.getElementById('btn-users-map'); if(mapBtn) mapBtn.style.display=(_user&&_user.role==='admin')?'':'none';
   await loadRoleDefs();
   try {
     const r = await authFetch('/api/wwp/auth/users');
@@ -10610,6 +10628,95 @@ async function stopImpersonate(){
     if(isHistorialUser(_user)){ setHistorialUser(); showScreen('screen-historial'); }
     else { enterApp(); showScreen('screen-app'); }
     renderImpersonateBanner();
+  }catch(e){ toast('Error: '+e.message); }
+}
+
+// ── Mapa de ubicaciones (Leaflet, solo admin) ──────────────────────────
+var _leafletLoaded=false, _usersMap=null, _usersMapLayer=null;
+function _ensureLeaflet(){
+  return new Promise(function(resolve,reject){
+    if(_leafletLoaded && window.L){ resolve(); return; }
+    // CSS
+    if(!document.getElementById('leaflet-css')){
+      const l=document.createElement('link'); l.id='leaflet-css'; l.rel='stylesheet'; l.href='/leaflet.css'; document.head.appendChild(l);
+    }
+    if(window.L){ _leafletLoaded=true; resolve(); return; }
+    const s=document.createElement('script'); s.src='/leaflet.js';
+    s.onload=function(){ _leafletLoaded=true; resolve(); };
+    s.onerror=function(){ reject(new Error('No se pudo cargar el mapa')); };
+    document.head.appendChild(s);
+  });
+}
+function _wac2(n){return _wac(n||'?');}
+async function openUsersMap(){
+  if(_user.role!=='admin'){ toast('Solo admin'); return; }
+  const modal=document.getElementById('modal-users-map');
+  modal.classList.add('open');
+  const empty=document.getElementById('users-map-empty');
+  const mapEl=document.getElementById('users-map');
+  document.getElementById('users-map-title').textContent='Mapa de auxiliares';
+  document.getElementById('users-map-bar').innerHTML='<span>Cargando ubicaciones…</span>';
+  try{
+    await _ensureLeaflet();
+    const r=await authFetch('/api/wwp/auth/locations');
+    const d=await r.json();
+    const users=(d.users||[]).filter(u=>u.lastLocation&&isFinite(u.lastLocation.lat)&&isFinite(u.lastLocation.lng));
+    if(!users.length){
+      mapEl.style.display='none'; empty.style.display='block';
+      empty.innerHTML='<i data-lucide="map-pin-off" style="width:20px;height:20px;stroke:var(--text-3);display:block;margin:0 auto 8px"></i>Aún no hay ubicaciones registradas. Aparecerán cuando los auxiliares trabajen tareas con el GPS activado.';
+      document.getElementById('users-map-bar').innerHTML='';
+      if(window.lucide)lucide.createIcons();
+      return;
+    }
+    mapEl.style.display='block'; empty.style.display='none';
+    document.getElementById('users-map-bar').innerHTML=`<i data-lucide="users" style="width:13px;height:13px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i> ${users.length} usuario(s) con ubicación · clic en un marcador para ver detalle o recorrido`;
+    if(window.lucide)lucide.createIcons();
+    // (Re)crear el mapa
+    if(_usersMap){ _usersMap.remove(); _usersMap=null; }
+    setTimeout(function(){
+      _usersMap=L.map('users-map');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(_usersMap);
+      const bounds=[];
+      users.forEach(u=>{
+        const ll=u.lastLocation;
+        const initials=_wai(u.name), color=_wac(u.name);
+        const icon=L.divIcon({className:'', html:`<div style="background:${color};color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4);border:2px solid #fff"><span style="transform:rotate(45deg);font-size:10px;font-weight:700">${initials}</span></div>`, iconSize:[30,30], iconAnchor:[15,30]});
+        const ago=ll.at?timeSince(ll.at):'';
+        const m=L.marker([ll.lat,ll.lng],{icon}).addTo(_usersMap);
+        m.bindPopup(`<div style="font-size:13px"><b>${esc(u.name)}</b><br><span style="color:#666;font-size:11px">${ago?('Última: '+ago):''}${ll.context?(' · '+esc(ll.context)):''}</span><br><a href="#" onclick="showUserRoute('${u.id}','${esc(u.name).replace(/'/g,"")}');return false;" style="font-size:12px;color:#2563eb">Ver recorrido →</a></div>`);
+        bounds.push([ll.lat,ll.lng]);
+      });
+      if(bounds.length===1) _usersMap.setView(bounds[0],15);
+      else _usersMap.fitBounds(bounds,{padding:[40,40]});
+    },180);
+  }catch(e){ toast('Error: '+e.message); document.getElementById('users-map-bar').innerHTML='Error al cargar el mapa'; }
+}
+function closeUsersMap(){ document.getElementById('modal-users-map').classList.remove('open'); }
+
+// Recorrido (historial) de un usuario sobre el mapa
+async function showUserRoute(userId, userName){
+  try{
+    const r=await authFetch('/api/wwp/auth/users/'+userId+'/locations');
+    const d=await r.json();
+    const pts=(d.points||[]).filter(p=>isFinite(p.lat)&&isFinite(p.lng));
+    if(!pts.length){ toast('Sin recorrido registrado'); return; }
+    document.getElementById('users-map-title').textContent='Recorrido · '+userName;
+    document.getElementById('users-map-bar').innerHTML=`<i data-lucide="route" style="width:13px;height:13px;stroke:var(--accent);display:inline-block;vertical-align:-2px"></i> ${pts.length} punto(s) · <a href="#" onclick="openUsersMap();return false;" style="color:var(--accent)">← Ver todos</a>`;
+    if(window.lucide)lucide.createIcons();
+    if(_usersMap){ _usersMap.remove(); _usersMap=null; }
+    setTimeout(function(){
+      _usersMap=L.map('users-map');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(_usersMap);
+      const latlngs=pts.map(p=>[p.lat,p.lng]);
+      L.polyline(latlngs,{color:'#2563eb',weight:3,opacity:.7}).addTo(_usersMap);
+      pts.forEach((p,i)=>{
+        const isLast=i===pts.length-1, isFirst=i===0;
+        const col=isLast?'#16a34a':isFirst?'#dc2626':'#2563eb';
+        const m=L.circleMarker([p.lat,p.lng],{radius:isLast||isFirst?7:5,color:'#fff',weight:2,fillColor:col,fillOpacity:1}).addTo(_usersMap);
+        m.bindPopup(`<div style="font-size:12px"><b>${isFirst?'Inicio':isLast?'Última':'Punto '+(i+1)}</b><br>${p.at?fmtDate(p.at):''}${p.context?('<br>'+esc(p.context)):''}</div>`);
+      });
+      _usersMap.fitBounds(latlngs,{padding:[40,40]});
+    },180);
   }catch(e){ toast('Error: '+e.message); }
 }
 
