@@ -5862,6 +5862,9 @@ function filterTasks() {
         if (!canViewTaskLocal(t, _user.id)) return false;
       }
     }
+    // Auxiliar: ocultar tareas donde ya terminó su parte (solo ve su próxima tarea),
+    // salvo que el encargado las haya modificado después (reaparecen).
+    if (_user && _user.role === 'assistant' && auxFinishedAndStale(t, _user.id)) return false;
     if (st && t.status!==st) return false;
     if (ty && t.type!==ty) return false;
     if (fu && !taskParticipantIds(t).has(fu)) return false;
@@ -5982,6 +5985,25 @@ function authIdFromOdooStr(odooStr) {
 
 function isTaskParticipant(t) {
   return !!(_user && (taskParticipantIds(t).has(_user.id) || _user.role === 'admin'));
+}
+
+// ¿El auxiliar ya terminó su parte y la tarea NO fue modificada después?
+// Si terminó y sin cambios → ocultar de su lista (ve solo su próxima tarea).
+// Si el encargado modificó la lista de artículos o editó la tarea después → reaparece.
+function auxFinishedAndStale(t, userId) {
+  if (!t) return false;
+  const ad = (t.auxDone||{})[userId];
+  let doneAt = ad && ad.at ? ad.at : null;
+  // Respaldo: tarea cerrada (completed/validated) en la que el auxiliar participó
+  if (!doneAt && ['completed','validated'].includes(t.status) && taskParticipantIds(t).has(userId)) {
+    const h = (t.statusHistory||[]).filter(x=>x.status==='completed'||x.status==='validated').pop();
+    doneAt = h ? h.date : (t.updatedAt||null);
+  }
+  if (!doneAt) return false; // no ha terminado → mostrar
+  // ¿Modificada por el encargado después de que terminó? → reaparece
+  const mod = t.itemsUpdatedAt;
+  if (mod && new Date(mod) > new Date(doneAt)) return false;
+  return true; // terminó y sin cambios → ocultar
 }
 
 function canViewTaskLocal(t, userId) {
@@ -6711,6 +6733,14 @@ async function openDrawer(taskId) {
       }
     } catch {}
   }
+  // Estado del pick de Odoo (gate de inicio para tareas de despacho)
+  _drawerPickStatus = null;
+  if (t.type === 'dispatch_order' && t.odooRef) {
+    try {
+      const ps = await authFetch('/api/wwp/tasks/'+taskId+'/pick-status');
+      _drawerPickStatus = await ps.json();
+    } catch { _drawerPickStatus = null; }
+  }
   document.getElementById('drawer-title').textContent = (seqLabel(t)?seqLabel(t)+' · ':'') + t.title;
   renderDrawer(t);
   document.getElementById('wwp-drawer-overlay').classList.add('open');
@@ -6718,6 +6748,7 @@ async function openDrawer(taskId) {
   // Chequeo async de cambios en el pick (no bloquea el render)
   if (t.odooRef && (_user.role==='admin'||_user.role==='manager')) checkPickSync(taskId);
 }
+var _drawerPickStatus = null;
 
 // Detecta diferencias entre la tarea y el pick actual; muestra banner (no aplica nada).
 async function checkPickSync(taskId) {
@@ -6801,6 +6832,22 @@ function renderDrawer(t) {
     taskAuxiliaryIds(t).includes(_user.id)
   );
 
+  // ── DESPACHO — flags para vista de auxiliar de despacho ──────────────────
+  const isDispatch = t.type === 'dispatch_order';
+  // Estado del pick de Odoo (gate de inicio). ready=true si pick 'done' o sin pick.
+  const pickReady = !isDispatch || !_drawerPickStatus || _drawerPickStatus.ready !== false;
+  // Checklist de despacho (3 ítems con foto obligatoria)
+  const feRecepcion = (t.fotos_recepcion||[]).length > 0; // recibir y validar documentos
+  const feVehiculo  = (t.fotos_vehiculo||[]).length  > 0; // foto vehículo cargado
+  const feEntrega   = (t.fotos_entrega||[]).length   > 0; // documentos firmados
+  const dispatchChecklistOk = feRecepcion && feVehiculo && feEntrega;
+  // Artículos de entrega: cada uno entregado (ok/avería) o marcado no-entregado, con foto
+  const _dispSel = (t.items||[]).filter(i=>i.selected && !i.isKit);
+  const dispatchItemsPending = isDispatch ? _dispSel.filter(i =>
+    !i.deliveryStatus || (i.deliveryStatus!=='not_delivered' && (i.evidence_images||[]).length===0)
+  ) : [];
+  const dispatchItemsOk = isDispatch && _dispSel.length>0 && dispatchItemsPending.length===0;
+
   let actionHtml = '';
   // Asignar encargado/auxiliares: admin asigna responsables; encargado asigna auxiliares.
   if (can('assign_task') && !['validated'].includes(t.status)) {
@@ -6865,10 +6912,28 @@ function renderDrawer(t) {
       </div>`;
     }
   }
-  if (t.status==='assigned'&&isResponsibleCloser) {
-    actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="changeStatus('${t.id}','in_progress')">▶ Iniciar</button></div>`;
+  // El ejecutor del despacho (auxiliar asignado) también puede iniciar/cerrar su despacho
+  const canCloseDispatch = isResponsibleCloser || (isDispatch && taskAuxiliaryIds(t).includes(_user.id));
+  const _btnDisabled = `background:var(--surface-3);color:var(--text-muted);cursor:not-allowed`;
+  if (t.status==='assigned' && (isResponsibleCloser || canCloseDispatch)) {
+    if (isDispatch && !pickReady) {
+      // Gate: el despacho solo inicia cuando el pick de Odoo está realizado
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Iniciar (esperando pick realizado en Odoo ↑)</button></div>`;
+    } else {
+      actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="changeStatus('${t.id}','in_progress')">▶ Iniciar</button></div>`;
+    }
   }
-  if (t.status==='in_progress'&&isResponsibleCloser) {
+  if (t.status==='in_progress' && isDispatch && canCloseDispatch) {
+    // ── Completar DESPACHO: checklist (3 fotos) + entrega por artículo ──
+    if (!dispatchChecklistOk) {
+      const faltan = [!feRecepcion&&'recepción de documentos', !feVehiculo&&'foto del vehículo', !feEntrega&&'documentos firmados'].filter(Boolean);
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta ${faltan.join(', ')} ↓)</button></div>`;
+    } else if (!dispatchItemsOk) {
+      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${dispatchItemsPending.length} artículo${dispatchItemsPending.length>1?'s':''} sin registrar entrega ↓)</button></div>`;
+    } else {
+      actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="changeStatus('${t.id}','completed')">✓ Marcar Despacho Completado</button></div>`;
+    }
+  } else if (t.status==='in_progress'&&isResponsibleCloser) {
     // Fotos obligatorias: por articulo cuando hay articulos, o evidencia general si no hay articulos.
     const selItems = (t.items||[]).filter(i=>i.selected);
     const missingEv = selItems.filter(i=>!i.evidence_images||!i.evidence_images.length);
@@ -6876,8 +6941,6 @@ function renderDrawer(t) {
     const missingCond = selItems.filter(i=>!i.condition);
     const hasGuiaEvidencia = (t.fotos_guia||[]).some(fg=>(fg.evidencias||[]).length>0);
     const missingGeneralEv = !selItems.length && !(t.evidence||[]).length && !hasGuiaEvidencia;
-    const missingDeliveryPhoto = t.requiresDeliveryPhoto && !(t.fotos_entrega||[]).length;
-    const _btnDisabled = `background:var(--surface-3);color:var(--text-muted);cursor:not-allowed`;
     if (selItems.length && missingEv.length) {
       actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (faltan ${missingEv.length} foto${missingEv.length>1?'s':''})</button></div>`;
     } else if (selItems.length && missingConf.length) {
@@ -6886,8 +6949,6 @@ function renderDrawer(t) {
       actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (${missingCond.length} sin indicar condición)</button></div>`;
     } else if (missingGeneralEv) {
       actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta evidencia fotográfica)</button></div>`;
-    } else if (missingDeliveryPhoto) {
-      actionHtml += `<div class="action-row"><button class="btn-primary" disabled style="${_btnDisabled}"><i data-lucide="lock" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Completar (falta foto de documentos firmados ↓)</button></div>`;
     } else {
       actionHtml += `<div class="action-row"><button class="btn-primary btn-success" onclick="changeStatus('${t.id}','completed')">✓ Marcar Completado</button></div>`;
     }
@@ -7262,7 +7323,152 @@ function renderDrawer(t) {
     ${(!isClosedTask && canEdit) ? `<button class="btn-add-photo" onclick="addGuiaFoto('${t.id}')"><i data-lucide="camera" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Agregar foto de guía</button>` : ''}
   ` : '';
 
-  document.getElementById('drawer-body').innerHTML = `
+  // ══════════════ PIEZAS DE DESPACHO (vista del auxiliar/ejecutor) ══════════════
+  let pickStatusHtml = '', dispatchChecklistHtml = '', dispatchItemsHtml = '';
+  if (isDispatch) {
+    const canDispUpload = !isClosedTask && canCloseDispatch;
+
+    // ── Banner estado del pick de Odoo ──
+    const ps = _drawerPickStatus;
+    if (ps && ps.hasPick) {
+      const ready = ps.ready;
+      const picksRows = (ps.picks||[]).map(p=>`<div style="display:flex;align-items:center;gap:7px;font-size:11px;padding:3px 0">
+        <i data-lucide="${p.done?'check-circle':'clock'}" style="width:12px;height:12px;stroke:${p.done?'var(--green-dot)':'var(--amber-dot)'};flex-shrink:0"></i>
+        <span style="font-weight:600;color:var(--text)">${esc(p.name)}</span>
+        <span style="color:${p.done?'var(--green-text)':'var(--amber-text)'};font-weight:600">${esc(p.stateLabel)}</span>
+      </div>`).join('');
+      pickStatusHtml = `<div style="background:${ready?'rgba(16,163,74,.06)':'rgba(245,158,11,.06)'};border:1.5px solid ${ready?'var(--green-dot)':'var(--amber-dot)'};border-radius:10px;padding:11px 13px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+          <i data-lucide="${ready?'truck':'loader'}" style="width:15px;height:15px;stroke:${ready?'var(--green-text)':'var(--amber-text)'}"></i>
+          <span style="font-size:12px;font-weight:800;color:${ready?'var(--green-text)':'var(--amber-text)'};text-transform:uppercase;letter-spacing:.4px">
+            ${ready?'Pick realizado — listo para despachar':'Pick en preparación — espera para iniciar'}
+          </span>
+        </div>
+        ${picksRows}
+      </div>`;
+    } else if (ps && !ps.hasPick) {
+      pickStatusHtml = `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;margin-bottom:12px;font-size:11px;color:var(--text-3)">
+        <i data-lucide="info" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:4px"></i>Orden sin pick en Odoo — sin bloqueo de inicio por pick.</div>`;
+    }
+
+    // ── Checklist de despacho (3 ítems con foto) ──
+    const checkItem = (cat, label, hint, fotos, done) => {
+      const photosHtml = fotos.length ? `<div class="evidence-grid" style="margin-top:6px">${fotos.map(e=>`<div class="ev-wrap">
+        <img class="ev-img" src="${mediaUrl(e.url)}" onclick="openLightbox('${mediaUrl(e.url)}')" style="cursor:zoom-in">
+        ${canDispUpload?`<button class="ev-del" onclick="deleteFotoDespacho('${t.id}','${cat}','${e.id}')">✕</button>`:''}
+      </div>`).join('')}</div>` : '';
+      return `<div style="border:1.5px solid ${done?'var(--green-dot)':'var(--border)'};border-radius:9px;padding:10px 12px;margin-bottom:8px;background:${done?'rgba(16,163,74,.04)':'var(--surface-2)'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:20px;height:20px;border-radius:50%;background:${done?'var(--green-dot)':'var(--surface-3)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${done?'<i data-lucide="check" style="width:13px;height:13px;stroke:#fff"></i>':'<span style="font-size:11px;color:var(--text-3)">○</span>'}
+          </span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${label}</div>
+            <div style="font-size:10px;color:var(--text-3)">${hint}</div>
+          </div>
+          <span style="font-size:9px;font-weight:700;color:${done?'var(--green-text)':'var(--amber-text)'};flex-shrink:0">${done?fotos.length+' foto'+(fotos.length!==1?'s':''):'REQUERIDO'}</span>
+        </div>
+        ${photosHtml}
+        ${canDispUpload?`<button class="btn-add-photo" style="margin-top:7px" onclick="uploadFotoDespacho('${t.id}','${cat}')"><i data-lucide="camera" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>${fotos.length?'Agregar otra':'Subir foto'}</button>`:''}
+      </div>`;
+    };
+    dispatchChecklistHtml = `<div class="sec-header" style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        <i data-lucide="clipboard-check" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-1px"></i>
+        CHECKLIST DE DESPACHO
+        <span style="margin-left:auto;font-size:10px;font-weight:700;color:${dispatchChecklistOk?'var(--green-text)':'var(--amber-text)'}">${[feRecepcion,feVehiculo,feEntrega].filter(Boolean).length}/3</span>
+      </div>
+      ${checkItem('recepcion','Recibir y validar documentos de entrega','Verifica que los documentos estén correctos y súbelos', t.fotos_recepcion||[], feRecepcion)}
+      ${checkItem('vehiculo','Foto de vehículo cargado','Foto del vehículo con la mercancía cargada', t.fotos_vehiculo||[], feVehiculo)}
+      ${checkItem('entrega','Foto de documentos de entrega firmados','El cliente firma; sube las fotos (pueden ser varias)', t.fotos_entrega||[], feEntrega)}`;
+
+    // ── Vista de entrega por artículo ──
+    if (_dispSel.length) {
+      const DSTAT = [
+        {v:'ok',           lbl:'✓ Entregado OK',        col:'var(--green-text)'},
+        {v:'damaged',      lbl:'⚠ Entregado con avería', col:'var(--amber-text)'},
+        {v:'not_delivered',lbl:'✕ No entregado / rechazado', col:'var(--red-text)'}
+      ];
+      const DMG = ['Rayado','Con golpe','Desperfecto de pintura','Defecto de fábrica'];
+      const cards = _dispSel.map(it=>{
+        const evs = it.evidence_images||[];
+        const ds = it.deliveryStatus||'';
+        const isDmg = ds==='damaged';
+        const isND  = ds==='not_delivered';
+        const needPhoto = ds && ds!=='not_delivered' && !evs.length;
+        const bord = !ds?'var(--amber-dot)':isND?'var(--red-dot)':isDmg?'var(--amber-dot)':'var(--green-dot)';
+        return `<div class="item-card" style="border:1.5px solid ${bord}">
+          <div class="item-header" style="align-items:flex-start;gap:8px">
+            ${it.image?`<img class="item-thumb" src="${it.image}" onerror="this.style.display='none'">`:'<div class="item-thumb-ph"><i data-lucide="package" style="width:22px;height:22px;stroke:currentColor;opacity:.4"></i></div>'}
+            <div style="flex:1;min-width:0">
+              <div class="item-name">${esc(it.product_name||it.sku||'')}${(it.unit_total>1)?`<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:6px">Unidad ${it.unit_index}/${it.unit_total}</span>`:''}</div>
+              <div class="item-sku">SKU: ${esc(it.sku||'')}</div>
+            </div>
+            <span class="${evs.length?'item-badge-ok':'item-badge-pend'}">${evs.length?'✓ '+evs.length+' foto'+(evs.length>1?'s':''):'Sin fotos'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text-3);font-weight:600">Entrega:</span>
+            <select ${canDispUpload?'':'disabled'} onchange="setItemDelivery('${t.id}','${it.item_id}',this.value)" style="font-size:11px;padding:3px 6px;border:1.5px solid ${bord};border-radius:6px;background:var(--surface);color:var(--text);font-weight:600">
+              <option value="" ${!ds?'selected':''} disabled>Seleccionar…</option>
+              ${DSTAT.map(s=>`<option value="${s.v}" ${ds===s.v?'selected':''}>${s.lbl}</option>`).join('')}
+            </select>
+            ${isDmg?`<select ${canDispUpload?'':'disabled'} onchange="setItemDeliveryDamage('${t.id}','${it.item_id}',this.value)" style="font-size:11px;padding:3px 6px;border:1.5px solid var(--amber-dot);border-radius:6px;background:var(--surface);color:var(--amber-text);font-weight:600">
+              <option value="" ${!it.deliveryDamageType?'selected':''} disabled>Tipo de avería…</option>
+              ${DMG.map(d=>`<option value="${d}" ${it.deliveryDamageType===d?'selected':''}>${d}</option>`).join('')}
+            </select>`:''}
+          </div>
+          ${needPhoto?`<div style="font-size:10px;color:var(--amber-text);margin-top:5px"><i data-lucide="alert-triangle" style="width:10px;height:10px;stroke:currentColor;display:inline-block;vertical-align:-1px;margin-right:3px"></i>Falta foto del artículo entregado</div>`:''}
+          ${evs.length?`<div class="ev-grid">${evs.map(e=>`<div class="ev-wrap"><img class="ev-img" src="${mediaUrl(e.url)}" onclick="openLightbox('${mediaUrl(e.url)}')" style="cursor:zoom-in" onerror="this.src='data:image/svg+xml,<svg/>'">
+            ${canDispUpload?`<button class="ev-del" onclick="deleteItemEvidence('${t.id}','${it.item_id}','${e.id}')">✕</button>`:''}
+          </div>`).join('')}</div>`:''}
+          ${(canDispUpload && !isND)?`<button class="btn-add-photo" onclick="uploadItemEvidence('${t.id}','${it.item_id}')"><i data-lucide="camera" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Foto del artículo entregado</button>`:''}
+        </div>`;
+      }).join('');
+      dispatchItemsHtml = `<div class="sec-header">ARTÍCULOS A ENTREGAR
+        <span style="float:right;font-size:10px;color:${dispatchItemsOk?'var(--green-text)':'var(--amber-text)'}">${_dispSel.length-dispatchItemsPending.length}/${_dispSel.length} registrados</span>
+      </div>${cards}`;
+    }
+  }
+
+  // Aislamiento: el auxiliar de despacho solo ve lo de despacho (oculta guía/evidencia/subtareas de empaque)
+  const _auxDispatchOnly = isDispatch && _user.role==='assistant' && !isResponsibleCloser;
+  const _guiaHtml = _auxDispatchOnly ? '' : guiaHtml;
+  const _itemsHtml = isDispatch ? dispatchItemsHtml : itemsHtml;
+  const _evHtml = _auxDispatchOnly ? '' : evHtml;
+  const _subsHtml = _auxDispatchOnly ? '' : subsHtml;
+  const _fotosEntregaHtml = isDispatch ? '' : fotosEntregaHtml; // en despacho va dentro del checklist
+
+  document.getElementById('drawer-body').innerHTML = isDispatch ? `
+    <div class="status-progress">${stepHtml}</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-cell-label">Estado</div><div class="info-cell-val"><span class="badge ${STATUS_CSS[t.status]||'b-pending'}">${STATUS_LABELS[t.status]||t.status}</span></div></div>
+      <div class="info-cell"><div class="info-cell-label">Tipo</div><div class="info-cell-val">${TYPE_LABELS[t.type]||t.type}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Responsable</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px">${(()=>{ const mgr=t.managerId?(_authUsers||[]).find(u=>u.id===t.managerId):null; return mgr?avatarHtml(mgr,24)+`<span>${esc(mgr.name.split(' ').slice(0,2).join(' '))}</span>`:(t.assignedTo?userName(t.assignedTo):'—'); })()}</div></div>
+      ${taskAuxiliaryIds(t).length?`<div class="info-cell info-cell-wide"><div class="info-cell-label">Auxiliares</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${taskAuxiliaryIds(t).map(id=>{const u=(_authUsers||[]).find(u=>u.id===id);return u?'<span style="display:flex;align-items:center;gap:4px;margin-right:4px">'+avatarHtml(u,22)+'<span style="font-size:12px">'+esc(u.name.split(' ').slice(0,2).join(' '))+'</span></span>':'';}).join('')}</div></div>`:''}
+      ${t.odooRef?`<div class="info-cell"><div class="info-cell-label">Orden Odoo</div><div class="info-cell-val">${esc(t.odooRef)}</div></div>`:''}
+      ${t.deliveryAddress?`<div class="info-cell info-cell-wide"><div class="info-cell-label">Entrega</div><div class="info-cell-val">${esc(t.deliveryAddress)}</div></div>`:''}
+      ${t.dueDate?`<div class="info-cell"><div class="info-cell-label">Fecha límite</div><div class="info-cell-val">${t.dueDate}</div></div>`:''}
+    </div>
+    ${parentCtxHtml}
+    ${pickStatusHtml}
+    ${_guiaHtml}
+    ${dispatchChecklistHtml}
+    ${_itemsHtml}
+    <div style="border-top:1.5px solid var(--border);margin:16px 0 12px"></div>
+    ${actionHtml}
+    ${histHtml}
+    ${traceHtml}
+    <div class="chat-section">
+      <div class="chat-hdr">
+        <span class="chat-hdr-title"><i data-lucide="message-circle" style="width:13px;height:13px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Chat</span>
+      </div>
+      <div class="chat-messages" id="dr-chat-messages"></div>
+      <div class="chat-input-row">
+        <button class="chat-send-btn" onclick="chatAddPhoto('${t.id}')" title="Adjuntar foto" style="padding:0 12px;background:var(--surface-2);color:var(--text-2)"><i data-lucide="camera" style="width:16px;height:16px;stroke:currentColor;display:inline-block;vertical-align:-2px"></i></button>
+        <input class="chat-input" id="dr-chat-input" type="text" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage('${t.id}')}" autocomplete="off">
+        <button class="chat-send-btn" onclick="sendChatMessage('${t.id}')">Enviar ↑</button>
+      </div>
+    </div>
+  ` : `
     <div class="status-progress">${stepHtml}</div>
     <div class="info-grid">
       <div class="info-cell"><div class="info-cell-label">Estado</div><div class="info-cell-val"><span class="badge ${STATUS_CSS[t.status]||'b-pending'}">${STATUS_LABELS[t.status]||t.status}</span></div></div>
@@ -7743,6 +7949,61 @@ async function setItemCondition(taskId, itemId, condition) {
 async function setItemDamage(taskId, itemId, damageType) {
   try {
     const r = await authFetch('/api/wwp/tasks/'+taskId+'/items/'+itemId+'/condition',{method:'PATCH',body:JSON.stringify({condition:'damaged', damageType})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
+
+// ── Despacho: fotos del checklist (recepcion | vehiculo | entrega) ──────────
+const _FOTO_CAT_LABEL = {recepcion:'Recepción de documentos', vehiculo:'Vehículo cargado', entrega:'Documentos de entrega firmados'};
+function uploadFotoDespacho(taskId, cat) {
+  _openPhotoSource({
+    title: _FOTO_CAT_LABEL[cat] || 'Foto',
+    multiple: true,
+    onFiles: async function(files) {
+      toast('Subiendo '+files.length+' foto'+(files.length>1?'s':'')+'…');
+      const fotos = [];
+      for (let i=0;i<files.length;i++) {
+        const b64 = await _compressImage(files[i]);
+        if (!b64) continue;
+        fotos.push({data:b64, ext:'jpg'});
+      }
+      if (!fotos.length) return;
+      try {
+        const r = await authFetch('/api/wwp/tasks/'+taskId+'/fotos-'+cat, {
+          method:'POST', body:JSON.stringify({fotos, by:_user.name})
+        });
+        const d = await r.json();
+        if (!d.ok) { toast('Error: '+(d.error||'')); return; }
+        toast('✓ Foto guardada');
+        openDrawer(taskId);
+      } catch(e) { toast('Error: '+e.message); }
+    }
+  });
+}
+async function deleteFotoDespacho(taskId, cat, fotoId) {
+  if (!await _iosConfirm('¿Eliminar esta foto?')) return;
+  try {
+    await authFetch('/api/wwp/tasks/'+taskId+'/fotos-'+cat+'/'+encodeURIComponent(fotoId),{method:'DELETE'});
+    toast('Foto eliminada'); openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
+// Entrega por artículo
+async function setItemDelivery(taskId, itemId, status) {
+  try {
+    const delivered = status && status !== 'not_delivered';
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/items/'+itemId+'/entrega',{method:'PATCH',
+      body:JSON.stringify({delivered, deliveryStatus:status, by:_user.name})});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error||'Error'); return; }
+    openDrawer(taskId);
+  } catch(e){ toast(e.message); }
+}
+async function setItemDeliveryDamage(taskId, itemId, damageType) {
+  try {
+    const r = await authFetch('/api/wwp/tasks/'+taskId+'/items/'+itemId+'/entrega',{method:'PATCH',
+      body:JSON.stringify({deliveryStatus:'damaged', damageType, by:_user.name})});
     const d = await r.json();
     if (!d.ok) { toast(d.error||'Error'); return; }
     openDrawer(taskId);
