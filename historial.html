@@ -4460,6 +4460,7 @@ body{font-family:var(--font);min-height:100dvh}
   <div class="drawer-header">
     <button class="drawer-back" id="drawer-back-btn" onclick="closeDrawer()">← Volver</button>
     <span class="drawer-title" id="drawer-title">—</span>
+    <button class="btn-sm" onclick="refreshDrawer(this)" id="drawer-refresh-btn" title="Actualizar tarea"><i data-lucide="refresh-cw" class="sec-hdr-icon"></i></button>
     <button class="btn-sm" onclick="openEditTaskModal()" id="drawer-edit-btn" style="display:none"><i data-lucide="pen" class="sec-hdr-icon"></i>Editar</button>
   </div>
   <div class="drawer-body" id="drawer-body"></div>
@@ -6799,6 +6800,13 @@ function closeDrawer() {
   document.getElementById('wwp-drawer').classList.remove('open');
   _drawerTask = null;
   renderTasks();
+}
+// Recarga la tarea abierta desde el servidor sin refrescar el browser
+async function refreshDrawer(btn) {
+  if (!_drawerTask) return;
+  const ic = btn && btn.querySelector('svg');
+  if (ic) { ic.style.transition='transform .6s'; ic.style.transform='rotate(360deg)'; }
+  try { await openDrawer(_drawerTask.id); } catch(e) { toast('Error al actualizar'); }
 }
 
 function renderDrawer(t) {

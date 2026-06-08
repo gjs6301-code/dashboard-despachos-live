@@ -4557,15 +4557,25 @@ const server = http.createServer(async (req, res) => {
       const current = (t.items||[]).filter(i => i.selected && !i.isKit);
       const curByPid = {};
       current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
+      // Unidades del pick reclamadas por OTRAS tareas activas de la misma orden (split entre
+      // encargados): no son "nuevas" para esta tarea, pertenecen a otro despacho. Por producto.
+      const _rootDiff = t.parentId || t.id;
+      const _claimsDiff = getOrderClaims(t.odooRef, _rootDiff);
+      const claimedByOthers = {};
+      Object.entries(_claimsDiff).forEach(([pid, c]) => { claimedByOthers[pid] = c.count || (c.idxList ? c.idxList.length : 0); });
       const merged = []; let added=0, kept=0, relocated=0, retagged=0; const usedIds = new Set();
       Object.keys(targByPid).forEach(pidKey => {
         const arr = targByPid[pidKey]; const n = arr.length;
         const pool = (curByPid[pidKey] || []).slice(); // candidatos a reutilizar (mismo producto)
+        let othersBudget = claimedByOthers[pidKey] || 0; // unidades que pertenecen a otras tareas
         arr.forEach((u, i) => {
           // Fase 1: match exacto producto+bin; Fase 2: mismo producto (cambió bin) → preserva foto
           let ri = pool.findIndex(c => (c.selected_location_name||'') === u.bin && !usedIds.has(c.item_id));
           if (ri < 0) ri = pool.findIndex(c => !usedIds.has(c.item_id));
           const reuse = ri >= 0 ? pool[ri] : null;
+          // Sin match en esta tarea y aún hay unidades de otras tareas por cubrir → es de otro
+          // despacho del split: no es "nuevo", se omite (no entra a merged ni cuenta como added).
+          if (!reuse && othersBudget > 0) { othersBudget--; return; }
           const row = { item_id: n===1 ? ('oi_'+pidKey) : ('oi_'+pidKey+'_u'+(i+1)),
             odoo_product_id:Number(pidKey), odoo_line_id:null,
             sku:u.sku, barcode:u.barcode, product_name:u.name, image:u.image,
