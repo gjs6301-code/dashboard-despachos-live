@@ -2751,6 +2751,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // DELETE /api/wwp/notifications/orphans — borrar notificaciones del usuario cuya tarea ya no existe
+  if (reqPath === '/api/wwp/notifications/orphans' && req.method === 'DELETE') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const taskIds = new Set(loadWwpTasks().map(t => t.id));
+    const all = loadNotifications();
+    const kept = all.filter(n => !(n.userId===jp.userId && n.relatedTaskId && !taskIds.has(n.relatedTaskId)));
+    const removed = all.length - kept.length;
+    saveNotifications(kept);
+    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, removed}));
+    return;
+  }
+
   // ════════════════════════════════════════════════════════════════════════════
   // ── WWP AUTH API ─────────────────────────────────────────────────────────
   // ════════════════════════════════════════════════════════════════════════════
