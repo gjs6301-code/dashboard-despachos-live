@@ -9050,11 +9050,11 @@ function _wizS2Staffing(body){
   const wl=_workloadMap||{};
   const total=wizStaffHours();
   // dropdown de reemplazo: auxiliares no seleccionados ni en conflicto en esa misma tarea
-  const replOptions=(auxId,taskId)=>{
+  const replOptions=(auxId,taskId,selId)=>{
     const t=(_tasks||[]).find(x=>x.id===taskId);
     const already=new Set(t?taskAuxiliaryIds(t):[]);
     return aux.filter(u=>u.id!==auxId && !already.has(u.id))
-      .map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+      .map(u=>`<option value="${u.id}" ${u.id===selId?'selected':''}>${esc(u.name)}</option>`).join('');
   };
   const rows=aux.map(u=>{
     const sel=_wizState.staffWorkers.some(p=>p.id===u.id);
@@ -9074,8 +9074,8 @@ function _wizS2Staffing(body){
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-size:10px;color:var(--text-3)">Reemplazar en esa tarea con:</span>
             <select onchange="wizSetReplacement('${u.id}','${c.id}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text)">
-              <option value="">— Sin reemplazo (solo liberar) —</option>
-              ${replOptions(u.id,c.id)}
+              <option value="" ${!(rel&&rel.replacementId)?'selected':''}>— Sin reemplazo (solo liberar) —</option>
+              ${replOptions(u.id,c.id,rel&&rel.replacementId)}
             </select>
             ${rel&&rel.replacementId?'<span style="font-size:10px;color:var(--green-text);font-weight:700">✓</span>':''}
           </div>
