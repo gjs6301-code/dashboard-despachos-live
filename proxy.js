@@ -337,7 +337,7 @@ const BUILTIN_ROLE_DEFS = [
       'wwp.dashboard':      true,
     }
   },
-  { id:'assistant', name:'Auxiliar',  isBuiltin:true, sectionPerms:{} },
+  { id:'assistant', name:'Auxiliar',  isBuiltin:true, sectionPerms:{ 'wwp.rastreo_gps': true } },
 ];
 function loadRoleDefs() {
   let defs;
@@ -2992,7 +2992,8 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/api/wwp/auth/locations' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
     if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo admin'})); return; }
-    const users = loadAuthUsers().filter(u => u.active !== false && u.lastLocation);
+    // Solo usuarios cuyo rol tiene el rastreo GPS habilitado (por defecto: auxiliares)
+    const users = loadAuthUsers().filter(u => u.active !== false && u.lastLocation && (getRoleDefPerms(u.role)||{})['wwp.rastreo_gps']);
     const out = users.map(u => ({ id:u.id, name:u.name, role:u.role, lastLocation:u.lastLocation }));
     res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, users: out }));
     return;

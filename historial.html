@@ -4778,6 +4778,10 @@ body{font-family:var(--font);min-height:100dvh}
           <label class="perm-check"><input type="checkbox" data-perm="wwp.eliminar_tarea"> Eliminar tarea</label>
           <label class="perm-check"><input type="checkbox" data-perm="wwp.validar_tarea"> Validar tarea</label>
         </div>
+        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:12px 0 6px">Campo</p>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" data-perm="wwp.rastreo_gps"> <span><i data-lucide="map-pin" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:3px"></i>Rastreo de ubicación GPS</span></label>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -7754,8 +7758,10 @@ async function changeUnitsPrompt(taskId, groupRef) {
 }
 
 // Captura la ubicación GPS (best-effort) y la envía al servidor. No bloquea la acción.
+// Solo para usuarios cuyo rol tiene el permiso de rastreo (por defecto: auxiliares).
 function _captureGeo(context, taskId){
   try{
+    if(!(_user&&(_user.sectionPerms||{})['wwp.rastreo_gps'])) return; // rol sin rastreo GPS
     if(!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       function(pos){ try{ authFetch('/api/wwp/auth/location',{method:'POST',body:JSON.stringify({
