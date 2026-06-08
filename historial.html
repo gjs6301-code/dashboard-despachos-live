@@ -5618,10 +5618,13 @@ async function markAllRead() {
 }
 
 async function clearReadNotifs() {
-  _notifications = _notifications.filter(n => !n.readAt);
+  // Limpia leídas + notificaciones huérfanas (cuya tarea ya no existe)
+  const taskIds = new Set((_tasks||[]).map(t => t.id));
+  const isOrphan = n => n.relatedTaskId && !taskIds.has(n.relatedTaskId);
+  _notifications = _notifications.filter(n => !n.readAt && !isOrphan(n));
   renderNotifications();
-  try { await authFetch('/api/wwp/notifications/read', {method:'DELETE'}); }
-  catch(e) {}
+  try { await authFetch('/api/wwp/notifications/read', {method:'DELETE'}); } catch(e) {}
+  try { await authFetch('/api/wwp/notifications/orphans', {method:'DELETE'}); } catch(e) {}
 }
 
 async function openNotificationById(el) {
