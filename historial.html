@@ -10688,7 +10688,10 @@ async function openUsersMap(){
       });
       if(bounds.length===1) _usersMap.setView(bounds[0],15);
       else _usersMap.fitBounds(bounds,{padding:[40,40]});
-    },180);
+      // El contenedor del modal cambió de tamaño tras la animación → recalcular tiles
+      setTimeout(function(){ if(_usersMap){ _usersMap.invalidateSize();
+        if(bounds.length===1) _usersMap.setView(bounds[0],15); else _usersMap.fitBounds(bounds,{padding:[40,40]}); } }, 300);
+    },250);
   }catch(e){ toast('Error: '+e.message); document.getElementById('users-map-bar').innerHTML='Error al cargar el mapa'; }
 }
 function closeUsersMap(){ document.getElementById('modal-users-map').classList.remove('open'); }
@@ -10716,7 +10719,8 @@ async function showUserRoute(userId, userName){
         m.bindPopup(`<div style="font-size:12px"><b>${isFirst?'Inicio':isLast?'Última':'Punto '+(i+1)}</b><br>${p.at?fmtDate(p.at):''}${p.context?('<br>'+esc(p.context)):''}</div>`);
       });
       _usersMap.fitBounds(latlngs,{padding:[40,40]});
-    },180);
+      setTimeout(function(){ if(_usersMap){ _usersMap.invalidateSize(); _usersMap.fitBounds(latlngs,{padding:[40,40]}); } }, 300);
+    },250);
   }catch(e){ toast('Error: '+e.message); }
 }
 
