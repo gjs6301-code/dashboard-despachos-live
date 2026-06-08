@@ -685,6 +685,11 @@ const WWP_NOTIF_FILE = path.join(DATA_DIR, 'wwp-notifications.json');
 function loadNotifications()    { try { return JSON.parse(fs.readFileSync(WWP_NOTIF_FILE,'utf-8')); } catch { return []; } }
 function saveNotifications(arr) { fs.writeFileSync(WWP_NOTIF_FILE, JSON.stringify(arr)); }
 
+// Historial de ubicaciones GPS por acción (recorrido). Retención: últimos 7 días.
+const WWP_LOCATIONS_FILE = path.join(DATA_DIR, 'wwp-locations.json');
+function loadLocations()    { try { return JSON.parse(fs.readFileSync(WWP_LOCATIONS_FILE,'utf-8')); } catch { return []; } }
+function saveLocations(arr) { try { fs.writeFileSync(WWP_LOCATIONS_FILE, JSON.stringify(arr)); } catch(e){} }
+
 function wsEncodeFrame(payload) {
   const data = Buffer.from(JSON.stringify(payload));
   const len = data.length;
@@ -2966,10 +2971,40 @@ const server = http.createServer(async (req, res) => {
       const users = loadAuthUsers();
       const idx = users.findIndex(u => u.id === jp.userId);
       if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
-      users[idx].lastLocation = { lat, lng, accuracy: d.accuracy!=null?Number(d.accuracy):null, at: new Date().toISOString(), context: (d.context||'').slice(0,60) };
+      const now = new Date().toISOString();
+      const ctx = (d.context||'').slice(0,60);
+      users[idx].lastLocation = { lat, lng, accuracy: d.accuracy!=null?Number(d.accuracy):null, at: now, context: ctx };
       saveAuthUsers(users);
+      // Historial por acción (recorrido) — append + retención de 7 días, cap 5000 global
+      try {
+        const cutoff = Date.now() - 7*24*60*60*1000;
+        let hist = loadLocations().filter(p => new Date(p.at).getTime() >= cutoff);
+        hist.push({ userId: jp.userId, lat, lng, accuracy: d.accuracy!=null?Number(d.accuracy):null, at: now, context: ctx, taskId: d.taskId||null });
+        if (hist.length > 5000) hist = hist.slice(hist.length - 5000);
+        saveLocations(hist);
+      } catch(e){}
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true}));
     } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/wwp/auth/locations — última ubicación de todos los usuarios [solo admin]
+  if (reqPath === '/api/wwp/auth/locations' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo admin'})); return; }
+    const users = loadAuthUsers().filter(u => u.active !== false && u.lastLocation);
+    const out = users.map(u => ({ id:u.id, name:u.name, role:u.role, lastLocation:u.lastLocation }));
+    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, users: out }));
+    return;
+  }
+
+  // GET /api/wwp/auth/users/:id/locations — recorrido (historial) de un usuario [solo admin]
+  if (reqPath.match(/^\/api\/wwp\/auth\/users\/[A-Za-z0-9_]+\/locations$/) && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (jp.role !== 'admin') { res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Solo admin'})); return; }
+    const uid = reqPath.split('/')[5];
+    const points = loadLocations().filter(p => p.userId === uid).sort((a,b)=> new Date(a.at)-new Date(b.at));
+    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, points }));
     return;
   }
 
