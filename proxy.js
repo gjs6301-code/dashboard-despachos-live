@@ -3758,28 +3758,58 @@ const server = http.createServer(async (req, res) => {
             return;
           }
         }
-        // Validar evidencias de artículos antes de completar/validar
+        // Validar antes de completar/validar — distinto para despacho vs empaque/otros
         if (d.status==='completed'||d.status==='validated') {
-          const selItems=(tasks[idx].items||[]).filter(it=>it.selected);
-          const missing=selItems.filter(it=>!it.evidence_images||it.evidence_images.length===0);
-          if (missing.length>0) {
-            res.writeHead(422,{'Content-Type':'application/json'});
-            res.end(JSON.stringify({ok:false,error:'Faltan evidencias para: '+missing.map(it=>it.product_name).join(', ')}));
-            return;
+          const selItems=(tasks[idx].items||[]).filter(it=>it.selected && !it.isKit);
+          if (tasks[idx].type==='dispatch_order') {
+            // DESPACHO: checklist (3 fotos) + entrega por artículo
+            if (!(tasks[idx].fotos_recepcion||[]).length || !(tasks[idx].fotos_vehiculo||[]).length || !(tasks[idx].fotos_entrega||[]).length) {
+              const faltan=[!(tasks[idx].fotos_recepcion||[]).length&&'recepción de documentos',!(tasks[idx].fotos_vehiculo||[]).length&&'foto del vehículo',!(tasks[idx].fotos_entrega||[]).length&&'documentos firmados'].filter(Boolean);
+              res.writeHead(422,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:'Checklist de despacho incompleto — falta: '+faltan.join(', ')}));
+              return;
+            }
+            const sinEntrega=selItems.filter(it=>!it.deliveryStatus || (it.deliveryStatus!=='not_delivered' && (!it.evidence_images||!it.evidence_images.length)));
+            if (sinEntrega.length>0) {
+              res.writeHead(422,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:`Faltan ${sinEntrega.length} artículo(s) por registrar entrega (estado + foto)`}));
+              return;
+            }
+          } else {
+            const missing=selItems.filter(it=>!it.evidence_images||it.evidence_images.length===0);
+            if (missing.length>0) {
+              res.writeHead(422,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:'Faltan evidencias para: '+missing.map(it=>it.product_name).join(', ')}));
+              return;
+            }
+            const sinConfirmarItems=selItems.filter(it=>!it.confirmado);
+            if (sinConfirmarItems.length>0) {
+              res.writeHead(422,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:`Faltan confirmar ${sinConfirmarItems.length} artículo(s) antes de completar`}));
+              return;
+            }
+            const sinCondicion=selItems.filter(it=>!it.condition);
+            if (sinCondicion.length>0) {
+              res.writeHead(422,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:`Falta indicar la condición de ${sinCondicion.length} artículo(s)`}));
+              return;
+            }
           }
-          const sinConfirmarItems=selItems.filter(it=>!it.confirmado);
-          if (sinConfirmarItems.length>0) {
-            res.writeHead(422,{'Content-Type':'application/json'});
-            res.end(JSON.stringify({ok:false,error:`Faltan confirmar ${sinConfirmarItems.length} artículo(s) antes de completar`}));
-            return;
-          }
-          // Condición obligatoria: cada artículo debe indicar buen estado o avería
-          const sinCondicion=selItems.filter(it=>!it.condition);
-          if (sinCondicion.length>0) {
-            res.writeHead(422,{'Content-Type':'application/json'});
-            res.end(JSON.stringify({ok:false,error:`Falta indicar la condición de ${sinCondicion.length} artículo(s)`}));
-            return;
-          }
+        }
+        // Gate de inicio para despacho: el pick de Odoo debe estar realizado (done)
+        if (d.status==='in_progress' && tasks[idx].type==='dispatch_order' && tasks[idx].odooRef) {
+          try {
+            let realName = tasks[idx].odooRef;
+            const so = await odooCall('sale.order','search_read',[[['name','ilike',tasks[idx].odooRef]]],{fields:['name'],limit:1});
+            if (so && so.length) realName = so[0].name;
+            const picksAll = await odooCall('stock.picking','search_read',[[['origin','=',realName]]],{fields:['name','state'],limit:50});
+            const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name));
+            if (pickList.length && !pickList.every(p=>p.state==='done')) {
+              res.writeHead(409,{'Content-Type':'application/json'});
+              res.end(JSON.stringify({ok:false,error:'El pick aún no está realizado en Odoo. El despacho no puede iniciar todavía.'}));
+              return;
+            }
+          } catch(_) { /* si Odoo falla, no bloquear */ }
         }
         tasks[idx].status=d.status;
         tasks[idx].statusHistory.push({ status:d.status, date:now, by:d.by||'', note:d.note||'' });
@@ -3826,6 +3856,11 @@ const server = http.createServer(async (req, res) => {
       if (d.dueDate!==undefined) tasks[idx].dueDate=d.dueDate;
       if (d.actionNote!==undefined) tasks[idx].actionNote=d.actionNote;
       tasks[idx].updatedAt=now;
+      // Si un encargado/admin editó campos de contenido (no solo status) → marca de modificación
+      // para reactivar la tarea en la lista de auxiliares que ya marcaron terminado.
+      if (isAdminOrMgr && (d.title!==undefined||d.description!==undefined||d.odooRef!==undefined||d.dueDate!==undefined||d.actionNote!==undefined||d.priority!==undefined)) {
+        tasks[idx].itemsUpdatedAt=now;
+      }
       // ── Auto-completar tarea padre si todas las subtareas están done ──────
       const parentId = tasks[idx].parentId;
       if (parentId && (d.status==='completed'||d.status==='validated')) {
@@ -4402,11 +4437,48 @@ const server = http.createServer(async (req, res) => {
           confirmado:prev.confirmado||false, status:prev.status||'pending' };
       });
       tasks[idx].updatedAt=new Date().toISOString();
+      // Marca de modificación de la lista por el encargado → reactiva la tarea para auxiliares que ya terminaron
+      tasks[idx].itemsUpdatedAt=tasks[idx].updatedAt;
       saveWwpTasks(tasks);
       broadcastWwpTasks('items_updated', tasks[idx], { taskId:id, items:tasks[idx].items });
       res.writeHead(200,{'Content-Type':'application/json'});
       res.end(JSON.stringify({ok:true,items:tasks[idx].items}));
     } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+    return;
+  }
+
+  // GET /api/wwp/tasks/:id/pick-status — estado de los pickings (PICK) de la orden en Odoo
+  // Para tareas de despacho: el despacho solo puede iniciar cuando el pick está 'done' (realizado).
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/pick-status$/) && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    const id = reqPath.split('/')[4];
+    try {
+      const t = loadWwpTasks().find(x => x.id === id);
+      if (!t) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'No encontrado'})); return; }
+      if (!t.odooRef) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true, hasPick:false, ready:true, reason:'sin orden — sin gate de pick'})); return; }
+      // Resolver nombre real de la orden
+      let realName = t.odooRef;
+      try {
+        const so = await odooCall('sale.order','search_read',[[['name','ilike',t.odooRef]]],{fields:['name'],limit:1});
+        if (so && so.length) realName = so[0].name;
+      } catch {}
+      const picksAll = await odooCall('stock.picking','search_read',
+        [[['origin','=',realName]]],
+        {fields:['id','name','state','date_done'],limit:50});
+      const pickList = (picksAll||[]).filter(p => /\/PICK\//i.test(p.name));
+      if (!pickList.length) {
+        // Sin pick en Odoo → respaldo: gate por empaque (tarea padre) completado
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, hasPick:false, ready:true, reason:'orden sin pick en Odoo'}));
+        return;
+      }
+      const ST = {draft:'Borrador', waiting:'En espera', confirmed:'Por preparar', assigned:'En preparación', done:'Realizado', cancel:'Cancelado'};
+      const picks = pickList.map(p => ({ name:p.name, state:p.state, stateLabel:ST[p.state]||p.state, done:p.state==='done', dateDone:p.date_done||null }));
+      const allDone = picks.every(p => p.done);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok:true, hasPick:true, ready:allDone, picks,
+        reason: allDone ? 'Todos los picks realizados' : 'Pick aún en preparación' }));
+    } catch(e) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false, ready:false, error:e.message})); }
     return;
   }
 
@@ -4752,52 +4824,91 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── POST /api/wwp/tasks/:id/fotos-entrega — documentos de entrega firmados (obligatorio en despachos) ──
-  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-entrega$/) && req.method === 'POST') {
-    const _jpFe = requireJwt(req, res); if (!_jpFe) return;
-    const taskId = reqPath.split('/')[4];
+  // ── Fotos de despacho por categoría: entrega | vehiculo | recepcion ──────────
+  //   entrega  = documentos de entrega firmados
+  //   vehiculo = foto del vehículo cargado
+  //   recepcion= recibir y validar documentos de entrega
+  // Cada categoría se guarda en su propio campo: fotos_entrega / fotos_vehiculo / fotos_recepcion
+  const _FOTO_CAT = { entrega:'fotos_entrega', vehiculo:'fotos_vehiculo', recepcion:'fotos_recepcion' };
+  // POST
+  {
+    const _m = reqPath.match(/^\/api\/wwp\/tasks\/([a-z0-9_]+)\/fotos-(entrega|vehiculo|recepcion)$/);
+    if (_m && req.method === 'POST') {
+      const _jpFc = requireJwt(req, res); if (!_jpFc) return;
+      const taskId = _m[1], cat = _m[2], field = _FOTO_CAT[cat];
+      try {
+        const d = await readBody(req);
+        const tasks = loadWwpTasks();
+        const idx = tasks.findIndex(t => t.id === taskId);
+        if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
+        if (!tasks[idx][field]) tasks[idx][field] = [];
+        const saved = [];
+        (d.fotos||[]).forEach((f, fi) => {
+          const { b64, ext } = validatePhoto(f);
+          const ts = Date.now();
+          const fotoId = `${cat.slice(0,3)}_${ts}_${fi}`;
+          const fname  = `${taskId}_${fotoId}.${ext}`;
+          fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64, 'base64'));
+          const entry = { id: fotoId, url: `/wwp-fotos/${fname}`, by: d.by||_jpFc.name||'', at: new Date().toISOString() };
+          tasks[idx][field].push(entry);
+          saved.push(entry);
+        });
+        tasks[idx].updatedAt = new Date().toISOString();
+        saveWwpTasks(tasks);
+        broadcastWwpTasks('fotos_'+cat+'_created', tasks[idx], { taskId, fotos: saved });
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, fotos: saved}));
+      } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
+      return;
+    }
+  }
+  // DELETE
+  {
+    const _m = reqPath.match(/^\/api\/wwp\/tasks\/([a-z0-9_]+)\/fotos-(entrega|vehiculo|recepcion)\/([^/]+)$/);
+    if (_m && req.method === 'DELETE') {
+      const _jpFcDel = requireJwt(req, res); if (!_jpFcDel) return;
+      const taskId = _m[1], cat = _m[2], field = _FOTO_CAT[cat], fname = decodeURIComponent(_m[3]);
+      const tasks = loadWwpTasks();
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
+      const fe = (tasks[idx][field]||[]).find(f => f.url.endsWith('/'+fname) || f.id === fname);
+      if (fe) { try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(fe.url))); } catch(e) {} }
+      tasks[idx][field] = (tasks[idx][field]||[]).filter(f => !f.url.endsWith('/'+fname) && f.id !== fname);
+      tasks[idx].updatedAt = new Date().toISOString();
+      saveWwpTasks(tasks);
+      broadcastWwpTasks('fotos_'+cat+'_deleted', tasks[idx], { taskId, fname });
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ok:true}));
+      return;
+    }
+  }
+
+  // ── PATCH /api/wwp/tasks/:id/items/:itemId/entrega — entrega por artículo (despacho) ──
+  // Marca entregado/no-entregado, condición de entrega y se apoya en evidence_images existentes.
+  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/items\/[A-Za-z0-9_]+\/entrega$/) && req.method === 'PATCH') {
+    const _jpEnt = requireJwt(req, res); if (!_jpEnt) return;
     try {
+      const parts = reqPath.split('/');
+      const taskId = parts[4], itemId = parts[6];
       const d = await readBody(req);
       const tasks = loadWwpTasks();
       const idx = tasks.findIndex(t => t.id === taskId);
       if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Tarea no encontrada'})); return; }
-      if (!tasks[idx].fotos_entrega) tasks[idx].fotos_entrega = [];
-      const saved = [];
-      (d.fotos||[]).forEach((f, fi) => {
-        const { b64, ext } = validatePhoto(f);
-        const ts = Date.now();
-        const fotoId = `fe_${ts}_${fi}`;
-        const fname  = `${taskId}_${fotoId}.${ext}`;
-        fs.writeFileSync(path.join(WWP_FOTOS_DIR, fname), Buffer.from(b64, 'base64'));
-        const entry = { id: fotoId, url: `/wwp-fotos/${fname}`, by: d.by||_jpFe.name||'', at: new Date().toISOString() };
-        tasks[idx].fotos_entrega.push(entry);
-        saved.push(entry);
-      });
+      const itemIdx = (tasks[idx].items||[]).findIndex(it => it.item_id === itemId);
+      if (itemIdx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:'Artículo no encontrado'})); return; }
+      const it = tasks[idx].items[itemIdx];
+      // delivered: true/false/null ; deliveryStatus: 'ok'|'damaged'|'not_delivered' ; damageType opcional
+      if (d.delivered !== undefined)      it.delivered = d.delivered;
+      if (d.deliveryStatus !== undefined) it.deliveryStatus = d.deliveryStatus;
+      if (d.damageType !== undefined)     it.deliveryDamageType = d.damageType;
+      it.delivery_by = d.by || _jpEnt.name || '';
+      it.delivery_at = new Date().toISOString();
       tasks[idx].updatedAt = new Date().toISOString();
       saveWwpTasks(tasks);
-      broadcastWwpTasks('fotos_entrega_created', tasks[idx], { taskId, fotos: saved });
+      broadcastWwpTasks('item_entrega', tasks[idx], { taskId, itemId });
       res.writeHead(200,{'Content-Type':'application/json'});
-      res.end(JSON.stringify({ok:true, fotos: saved}));
+      res.end(JSON.stringify({ok:true, item: it}));
     } catch(e) { res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
-    return;
-  }
-
-  // ── DELETE /api/wwp/tasks/:id/fotos-entrega/:fname ────────────────────────────
-  if (reqPath.match(/^\/api\/wwp\/tasks\/[a-z0-9_]+\/fotos-entrega\/[^/]+$/) && req.method === 'DELETE') {
-    const _jpFeDel = requireJwt(req, res); if (!_jpFeDel) return;
-    const parts = reqPath.split('/');
-    const taskId = parts[4], fname = decodeURIComponent(parts[6]);
-    const tasks = loadWwpTasks();
-    const idx = tasks.findIndex(t => t.id === taskId);
-    if (idx === -1) { res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false})); return; }
-    const fe = (tasks[idx].fotos_entrega||[]).find(f => f.url.endsWith('/'+fname) || f.id === fname);
-    if (fe) { try { fs.unlinkSync(path.join(WWP_FOTOS_DIR, path.basename(fe.url))); } catch(e) {} }
-    tasks[idx].fotos_entrega = (tasks[idx].fotos_entrega||[]).filter(f => !f.url.endsWith('/'+fname) && f.id !== fname);
-    tasks[idx].updatedAt = new Date().toISOString();
-    saveWwpTasks(tasks);
-    broadcastWwpTasks('fotos_entrega_deleted', tasks[idx], { taskId, fname });
-    res.writeHead(200,{'Content-Type':'application/json'});
-    res.end(JSON.stringify({ok:true}));
     return;
   }
 
