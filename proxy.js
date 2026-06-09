@@ -4594,6 +4594,8 @@ const server = http.createServer(async (req, res) => {
           // Condición del artículo: '' (sin elegir) | 'good' (buen estado) | 'damaged' (avería) + tipo
           // Sin preselección: el auxiliar debe elegirla explícitamente (obligatoria para completar).
           condition: item.condition||prev.condition||'', damageType: item.damageType||prev.damageType||'',
+          // Clasificación de sincronización con el pick (executed | moved | new | current)
+          pickGroup: item.pickGroup||prev.pickGroup||null, pickNameNow: item.pickNameNow||prev.pickNameNow||'',
           evidence_images:prev.evidence_images||[], comments:item.comments||prev.comments||'',
           confirmado:prev.confirmado||false, status:prev.status||'pending' };
       });
@@ -4657,68 +4659,79 @@ const server = http.createServer(async (req, res) => {
       const pr = await buildItemsFromPicks(t.odooRef);
       if (pr.noPick) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,hasChanges:false,noPick:true})); return; }
       const sBin = b => (b||'').replace(/^ALVEN\/Stock\//i,'').replace(/^WH\/Stock\//i,'');
-      // Unidades objetivo del pick agrupadas por producto
+      // Estado de cada pick (done/assigned) por nombre
+      const pickState = {}; (pr.picks||[]).forEach(p => { pickState[p.name] = p.state; });
+      // Unidades objetivo del pick agrupadas por producto, con el pick y su estado por unidad
       const targByPid = {};
       pr.items.forEach(it => { (it.unitBins||[]).forEach(bin => {
         (targByPid[it.odoo_product_id] = targByPid[it.odoo_product_id] || []).push(
           { pid:it.odoo_product_id, bin:sBin(bin), sku:it.sku, barcode:it.barcode, name:it.product_name, image:it.image,
-            kitId:it.kitId||null, kitRef:it.kitRef||'', kitName:it.kitName||'', kitImage:it.kitImage||'' });
+            kitId:it.kitId||null, kitRef:it.kitRef||'', kitName:it.kitName||'', kitImage:it.kitImage||'',
+            pickNameNow:it.pickName||'', pickStateNow:pickState[it.pickName]||'assigned' });
       }); });
-      // Kits ARMADOS actuales: se preservan tal cual (con su foto/condición). Sus
-      // componentes quedan ocultos (selected:false) bajo el kit.
+      // Kits ARMADOS actuales: se preservan tal cual.
       const armadoKitItems = (t.items||[]).filter(i => i.isKit && i.selected);
       const armadoSet = new Set(armadoKitItems.map(k => (k.kitId||'')+'#'+(k.kitInstance||1)));
       // Unidades actuales (selected) por producto (excluye tarjetas-kit sintéticas)
       const current = (t.items||[]).filter(i => i.selected && !i.isKit);
       const curByPid = {};
       current.forEach(i => { (curByPid[i.odoo_product_id] = curByPid[i.odoo_product_id] || []).push(i); });
-      // Unidades del pick reclamadas por OTRAS tareas activas de la misma orden (split entre
-      // encargados): no son "nuevas" para esta tarea, pertenecen a otro despacho. Por producto.
+      // Unidades reclamadas por OTRAS tareas activas de la misma orden (split entre encargados)
       const _rootDiff = t.parentId || t.id;
       const _claimsDiff = getOrderClaims(t.odooRef, _rootDiff);
       const claimedByOthers = {};
       Object.entries(_claimsDiff).forEach(([pid, c]) => { claimedByOthers[pid] = c.count || (c.idxList ? c.idxList.length : 0); });
-      const merged = []; let added=0, kept=0, relocated=0, retagged=0; const usedIds = new Set();
+
+      // ── Sincronización NO destructiva: nunca se eliminan artículos ya cargados (preservan
+      // fotos/evidencia). Cada artículo se clasifica en grupo: executed | moved | new | current ──
+      const merged = []; const usedIds = new Set();
+      let g_executed=0, g_moved=0, g_new=0, g_current=0;
       Object.keys(targByPid).forEach(pidKey => {
         const arr = targByPid[pidKey]; const n = arr.length;
-        const pool = (curByPid[pidKey] || []).slice(); // candidatos a reutilizar (mismo producto)
-        let othersBudget = claimedByOthers[pidKey] || 0; // unidades que pertenecen a otras tareas
+        const pool = (curByPid[pidKey] || []).slice();
+        let othersBudget = claimedByOthers[pidKey] || 0;
         arr.forEach((u, i) => {
-          // Fase 1: match exacto producto+bin; Fase 2: mismo producto (cambió bin) → preserva foto
           let ri = pool.findIndex(c => (c.selected_location_name||'') === u.bin && !usedIds.has(c.item_id));
           if (ri < 0) ri = pool.findIndex(c => !usedIds.has(c.item_id));
           const reuse = ri >= 0 ? pool[ri] : null;
-          // Sin match en esta tarea y aún hay unidades de otras tareas por cubrir → es de otro
-          // despacho del split: no es "nuevo", se omite (no entra a merged ni cuenta como added).
+          // Sin match en la tarea y todavía hay unidades de otras tareas → de otro despacho: omitir
           if (!reuse && othersBudget > 0) { othersBudget--; return; }
-          const row = { item_id: n===1 ? ('oi_'+pidKey) : ('oi_'+pidKey+'_u'+(i+1)),
+          const row = { item_id: reuse ? reuse.item_id : (n===1 ? ('oi_'+pidKey) : ('oi_'+pidKey+'_u'+(i+1))),
             odoo_product_id:Number(pidKey), odoo_line_id:null,
             sku:u.sku, barcode:u.barcode, product_name:u.name, image:u.image,
             quantity:1, units:n, unit_index:i+1, unit_total:n, group_ref:'oi_'+pidKey,
-            fromPick:true, pickName:(pr.pickNames[0]||''),
+            fromPick:true, pickName:u.pickNameNow||(pr.pickNames[0]||''), pickNameNow:u.pickNameNow,
             kitId:u.kitId||null, kitRef:u.kitRef||'', kitName:u.kitName||'', kitImage:u.kitImage||'',
             selected:true, locations:[], selected_location:null, selected_location_name:u.bin };
           if (reuse) {
-            row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false; row.status=reuse.status||'pending';
-            usedIds.add(reuse.item_id); kept++;
-            if ((reuse.selected_location_name||'') !== u.bin) relocated++; // cambió de bin
-            if ((reuse.kitId||'') !== (u.kitId||'')) retagged++;            // info de kit faltante/cambiada
+            // Artículo ya cargado: preservar TODO (fotos, confirmación, condición)
+            row.evidence_images=reuse.evidence_images||[]; row.confirmado=reuse.confirmado||false;
+            row.status=reuse.status||'pending'; row.condition=reuse.condition||''; row.damageType=reuse.damageType||'';
+            row.deliveryStatus=reuse.deliveryStatus||''; row.deliveryDamageType=reuse.deliveryDamageType||'';
+            usedIds.add(reuse.item_id);
+            // Clasificar según el estado del pick donde está ahora
+            if (u.pickStateNow === 'done') { row.pickGroup='executed'; g_executed++; }
+            else if (u.pickNameNow && reuse.pickName && u.pickNameNow !== reuse.pickName) { row.pickGroup='moved'; g_moved++; }
+            else { row.pickGroup='current'; g_current++; }
+          } else {
+            // Artículo NUEVO en el pick → se agrega
+            row.evidence_images=[]; row.confirmado=false; row.status='pending'; row.condition=''; row.damageType='';
+            row.pickGroup = (u.pickStateNow==='done') ? 'executed' : 'new';
+            if (row.pickGroup==='executed') g_executed++; else g_new++;
           }
-          else { row.evidence_images=[]; row.confirmado=false; row.status='pending'; added++; }
-          // Si la instancia del kit está armada, el componente queda oculto bajo la tarjeta-kit
           if (row.kitId && armadoSet.has(row.kitId+'#'+row.unit_index)) row.selected = false;
           merged.push(row);
         });
       });
-      // Conservar las tarjetas-kit armadas tal cual (foto/condición intactas)
-      armadoKitItems.forEach(k => { merged.push(k); usedIds.add(k.item_id); });
-      const removed = current.filter(i => !usedIds.has(i.item_id));
-      const removedWithPhotos = removed.filter(i => (i.evidence_images||[]).length>0).length;
-      const hasChanges = added>0 || removed.length>0 || relocated>0 || retagged>0;
+      // Artículos de la tarea SIN match en ningún pick actual → NO se eliminan, se conservan
+      const orphan = current.filter(i => !usedIds.has(i.item_id));
+      orphan.forEach(i => { merged.push({ ...i, pickGroup:'current' }); g_current++; });
+      // Tarjetas-kit armadas: preservar
+      armadoKitItems.forEach(k => { merged.push({ ...k, pickGroup:'current' }); });
+      const hasChanges = g_new>0 || g_executed>0 || g_moved>0;
       res.writeHead(200,{'Content-Type':'application/json'});
-      res.end(JSON.stringify({ ok:true, hasChanges, pickNames:pr.pickNames,
-        summary:{ added, removed:removed.length, removedWithPhotos, kept, relocated, retagged },
-        removedItems: removed.map(i=>({name:i.product_name, bin:i.selected_location_name, hasPhoto:(i.evidence_images||[]).length>0})),
+      res.end(JSON.stringify({ ok:true, hasChanges, pickNames:pr.pickNames, picks:pr.picks||[],
+        summary:{ executed:g_executed, moved:g_moved, added:g_new, current:g_current },
         merged }));
     } catch(e) { res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok:false,error:e.message})); }
     return;

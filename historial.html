@@ -6860,21 +6860,21 @@ async function checkPickSync(taskId) {
     if (!d.ok || !d.hasChanges) { box.innerHTML=''; return; }
     const s = d.summary||{};
     const parts = [];
-    if (s.added) parts.push('+'+s.added+' nuevo'+(s.added>1?'s':''));
-    if (s.removed) parts.push('−'+s.removed+' quitado'+(s.removed>1?'s':''));
-    if (s.relocated) parts.push(s.relocated+' cambió de ubicación');
-    if (s.retagged) parts.push(s.retagged+' actualizar info de kit');
-    if (!parts.length) return;
-    box.innerHTML = `<div style="background:var(--amber-bg);border:1.5px solid var(--amber-dot);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+    if (s.added)    parts.push('➕ '+s.added+' nuevo'+(s.added>1?'s':''));
+    if (s.executed) parts.push('✅ '+s.executed+' ejecutado'+(s.executed>1?'s':'')+' en Odoo');
+    if (s.moved)    parts.push('🔄 '+s.moved+' en otro pick');
+    if (!parts.length) { box.innerHTML=''; return; }
+    box.innerHTML = `<div style="background:var(--amber-bg);border:1.5px solid var(--amber-dot);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <i data-lucide="refresh-cw" style="width:16px;height:16px;stroke:var(--amber-text);flex-shrink:0"></i>
-      <div style="flex:1;min-width:0;font-size:12px;color:var(--amber-text)"><b>El pick cambió:</b> ${parts.join(' · ')}${s.removedWithPhotos?` · <b>${s.removedWithPhotos} con foto</b>`:''}</div>
+      <div style="flex:1;min-width:140px;font-size:12px;color:var(--amber-text)"><b>El pick cambió:</b> ${parts.join(' · ')}</div>
       <button class="btn-sm" onclick="syncPickNow('${taskId}')" style="flex-shrink:0;background:var(--amber-dot);color:#fff;border:none">Sincronizar</button>
     </div>`;
     if(window.lucide) lucide.createIcons();
   } catch(e){ box.innerHTML=''; }
 }
 
-// Aplica la sincronización: PUT de la lista fusionada (protege fotos).
+// Aplica la sincronización (NO destructiva): agrega los nuevos, etiqueta cada artículo por
+// su estado en el pick (ejecutado/en otro pick/nuevo) y preserva las fotos ya cargadas.
 async function syncPickNow(taskId) {
   if (!(_user.role==='admin'||_user.role==='manager')) { toast('Solo admin o encargado'); return; }
   try {
@@ -6882,15 +6882,11 @@ async function syncPickNow(taskId) {
     const d = await r.json();
     if (!d.ok) { toast(d.error||'Error'); return; }
     if (!d.hasChanges) { toast('Sin cambios'); return; }
-    if (d.summary.removedWithPhotos > 0) {
-      const lst = (d.removedItems||[]).filter(x=>x.hasPhoto).map(x=>'· '+x.name+(x.bin?' ('+shortBin(x.bin)+')':'')).join('\n');
-      const ok = await _iosConfirm('⚠ Se quitarán '+d.summary.removedWithPhotos+' unidad(es) que YA tienen foto:\n\n'+lst+'\n\nLas fotos se perderán. ¿Continuar?');
-      if (!ok) return;
-    }
     const pr = await authFetch('/api/wwp/tasks/'+taskId+'/items',{method:'PUT',body:JSON.stringify({items:d.merged})});
     const pd = await pr.json();
     if (!pd.ok) { toast(pd.error||'Error al sincronizar'); return; }
-    toast('Sincronizado con el pick');
+    const s=d.summary||{};
+    toast(`✓ Sincronizado · ${s.added||0} nuevos · ${s.executed||0} ejecutados · ${s.moved||0} en otro pick`);
     openDrawer(taskId);
   } catch(e){ toast('Error: '+e.message); }
 }
@@ -7158,6 +7154,11 @@ function renderDrawer(t) {
           <div class="item-thumb-ph" style="${it.image?'display:none':''}"><i data-lucide="package" style="width:22px;height:22px;stroke:currentColor;opacity:.4"></i></div>
           <div style="flex:1;min-width:0">
             <div class="item-name">${esc(it.product_name||it.sku||'')}${(it.unit_total>1)?`<span style="font-size:10px;font-weight:700;color:var(--accent);margin-left:6px">Unidad ${it.unit_index}/${it.unit_total}</span>`:''}</div>
+            ${(()=>{ const pg=it.pickGroup;
+              if(pg==='executed') return `<div style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(16,163,74,.12);color:var(--green-text);border:1px solid var(--green-dot);margin:2px 0">✅ Ejecutado en Odoo</div>`;
+              if(pg==='moved')    return `<div style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(37,99,235,.1);color:var(--accent);border:1px solid var(--accent);margin:2px 0">🔄 En otro pick${it.pickNameNow?(': '+esc(it.pickNameNow)):''}</div>`;
+              if(pg==='new')      return `<div style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(245,158,11,.12);color:var(--amber-text);border:1px solid var(--amber-dot);margin:2px 0">➕ Nuevo del pick</div>`;
+              return ''; })()}
             <div class="item-sku">SKU: ${esc(it.sku||'')}${(it.unit_total>1)?'':` · Cant: ${it.quantity||1}`}</div>
             ${(()=>{
               if (it.selected_location_name) {
