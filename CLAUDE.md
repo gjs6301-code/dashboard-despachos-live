@@ -12,6 +12,8 @@ Todos los archivos editables están en la **carpeta raíz** del proyecto:
 | `index.html` | Dashboard de despachos |
 | `proxy.js` | Servidor Node.js (API + archivos estáticos) |
 | `lucide.min.js` | Librería de íconos (LOCAL, no CDN) |
+| `leaflet.js` / `leaflet.css` | Mapas (LOCAL, no CDN) — usados en el mapa de ubicaciones |
+| `MEMORIA-PROYECTO.md` | Historial de features y decisiones (leer para contexto completo) |
 
 ## Archivos que NO se editan
 
@@ -23,10 +25,12 @@ Todos los archivos editables están en la **carpeta raíz** del proyecto:
 
 - Correr siempre: doble clic en `restart.bat`
 - URL local: `http://localhost:3000`
-- URL producción (Render): `https://altritempi-operaciones.onrender.com`
+- **URL producción (Render): `https://dashboard-despachos.onrender.com`** ⚠️ (NO `altritempi-operaciones`, esa da 404)
 - Entrada principal: `/historial.html` (la raíz `/` redirige automáticamente)
 - El servidor sirve desde **la raíz** (no desde ningún worktree)
 - Datos persistentes en Render: disco `/data` (DATA_DIR env var, 10 GB)
+- Datos en local: carpeta `data-local/` (se pasa `DATA_DIR=...data-local` al correr)
+- **Deploy**: Render despliega desde la rama `master`. Flujo: commit en `dev` → `git checkout master && git merge dev --no-edit && git push origin master` → volver a `dev`. Tarda ~2-3 min.
 
 ## Convenciones de código
 
