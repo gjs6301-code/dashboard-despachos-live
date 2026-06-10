@@ -8699,15 +8699,27 @@ function expandUnitRows(items) {
     // Esto preserva item_id (y por ende sus evidencias en el server) al editar una tarea existente.
     if (it.unit_index && it.unit_total) { out.push({ ...it, quantity:1 }); return; }
     const bins = Array.isArray(it.unitBins) ? it.unitBins : null; // bin por unidad (del pick)
-    const n = bins ? bins.length : Math.max(1, parseInt(it.units, 10) || it.quantity || 1);
     const baseId = it.group_ref || it.item_id;
-    const mk = (k) => {
-      const row = { ...it, quantity:1, units:n, unit_index:k, unit_total:n, group_ref:baseId,
-        item_id: n===1 ? baseId : baseId+'_u'+k };
-      if (bins) { row.selected_location_name = shortBin(bins[k-1]); row.fromPick = true; delete row.unitBins; }
-      return row;
-    };
-    for (let k = 1; k <= n; k++) out.push(mk(k));
+    if (bins) {
+      // Pick: tomar SOLO las unidades disponibles (availIdx) limitadas por la cantidad elegida (units).
+      // El índice de unidad es GLOBAL del pick (estable) → permite repartir unidades entre tareas.
+      const avail = (Array.isArray(it.availIdx) && it.availIdx.length) ? it.availIdx : bins.map((_,i)=>i+1);
+      const take = Math.max(1, Math.min(parseInt(it.units,10)||avail.length, avail.length));
+      const idxs = avail.slice(0, take);
+      idxs.forEach(idx => {
+        const row = { ...it, quantity:1, units:idxs.length, unit_index:idx, unit_total:bins.length,
+          group_ref:baseId, item_id: baseId+'_u'+idx,
+          selected_location_name: shortBin(bins[idx-1]), fromPick:true };
+        delete row.unitBins; delete row.availIdx; delete row._claimedCount;
+        out.push(row);
+      });
+    } else {
+      const n = Math.max(1, parseInt(it.units, 10) || it.quantity || 1);
+      for (let k = 1; k <= n; k++) {
+        out.push({ ...it, quantity:1, units:n, unit_index:k, unit_total:n, group_ref:baseId,
+          item_id: n===1 ? baseId : baseId+'_u'+k });
+      }
+    }
   });
   return out;
 }
@@ -8723,8 +8735,12 @@ function itemLocName(it) {
   return '';
 }
 function setCartUnits(idx, val) {
-  const n = Math.max(1, parseInt(val, 10) || 1);
-  if (_modalItems[idx]) { _modalItems[idx].units = n; renderCart(); }
+  let n = Math.max(1, parseInt(val, 10) || 1);
+  const it = _modalItems[idx];
+  if (!it) return;
+  // Items de pick: no exceder las unidades disponibles (resto puede estar asignado a otra tarea)
+  if (Array.isArray(it.availIdx) && it.availIdx.length) n = Math.min(n, it.availIdx.length);
+  it.units = n; renderCart();
 }
 function renderCart() {
   const panel = document.getElementById('mf-cart-panel');
@@ -8754,10 +8770,13 @@ function renderCart() {
         </div>
         ${it.unit_index ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
           <span style="font-size:9px;color:var(--accent);font-weight:700">Unidad ${it.unit_index}/${it.unit_total}</span>
-        </div>` : (it.fromPick || Array.isArray(it.unitBins)) ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+        </div>` : (Array.isArray(it.availIdx)) ? (()=>{ const maxA=it.availIdx.length; return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+          <span style="font-size:9px;color:var(--text-3);font-weight:600">Unidades</span>
+          <input type="number" min="1" max="${maxA}" value="${Math.min(u,maxA)}" onchange="setCartUnits(${it._cartIdx}, this.value)" onclick="event.stopPropagation()" style="width:48px;text-align:center;border:1.5px solid var(--border);border-radius:5px;padding:3px;font-size:12px;font-weight:700">
+          <span style="font-size:9px;color:var(--text-3)">${maxA<it.unitBins.length?('de '+maxA+' disp.'):(Math.min(u,maxA)+' foto'+(Math.min(u,maxA)>1?'s':''))}</span>
+        </div>`; })() : (it.fromPick) ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
           <span style="font-size:9px;color:var(--text-3);font-weight:600">Del pick</span>
           <span style="font-size:14px;font-weight:800;color:var(--accent)">${u}</span>
-          <span style="font-size:9px;color:var(--text-3)">${u} foto${u>1?'s':''}</span>
         </div>` : `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
           <span style="font-size:9px;color:var(--text-3);font-weight:600">Unidades</span>
           <input type="number" min="1" value="${u}" onchange="setCartUnits(${it._cartIdx}, this.value)" onclick="event.stopPropagation()" style="width:48px;text-align:center;border:1.5px solid var(--border);border-radius:5px;padding:3px;font-size:12px;font-weight:700">
