@@ -10799,7 +10799,7 @@ async function loadOpsAgent() {
       if (phb) phb.replaceWith(_prevBrief);
     }
     if (window.lucide) lucide.createIcons();
-    loadAgentGroupChat();
+    if (!(_prevMesa && _prevMesa.childNodes.length)) loadAgentGroupChat();
     // Parte del día con IA (Claude) — carga async para no bloquear el panel heurístico
     if (d.aiEnabled && !(_prevBrief && _prevBrief.childNodes.length)) loadOpsBrief(false);
   } catch(e) {
@@ -11084,8 +11084,9 @@ function renderAgentGroupPanel(data) {
     const tableText = extractMarkdownTable(msgText);
     const quality = m.quality || {};
     const qualityHtml = quality.score ? `<span class="agent-quality-pill ${quality.passed ? 'ok' : 'warn'}">Calidad ${quality.score}% · ${esc(m.format || quality.format || 'respuesta')}</span>` : '';
+    const learnedHtml = m.learned ? `<span class="agent-quality-pill ok" title="Aprendizajes guardados desde este mensaje">🧠 Aprendí ${m.learned}</span>` : '';
     const actionsHtml = `<div class="agent-msg-actions">
-      ${qualityHtml}
+      ${qualityHtml}${learnedHtml}
       <button class="btn-sm" data-text="${esc(msgText)}" onclick="agentCopyText(this)"><i data-lucide="copy" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Copiar</button>
       ${tableText ? `<button class="btn-sm" data-text="${esc(tableText)}" onclick="agentCopyText(this)"><i data-lucide="table" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Copiar tabla</button>
       <button class="btn-sm" data-text="${esc(msgText)}" onclick="agentDownloadCsv(this)"><i data-lucide="download" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>CSV</button>` : ''}
@@ -11108,11 +11109,16 @@ function renderAgentGroupPanel(data) {
       <div class="ops-next-action" style="margin:8px 0">Se ejecutan en Railway aunque tu computadora este apagada. Todas empiezan apagadas hasta que las actives.</div>
       ${renderAgentRoutines(routines)}
     </details>
+    ${(Array.isArray(data.learnings) && data.learnings.length) ? `<details style="margin:0 0 10px">
+      <summary class="ops-agent-card-title" style="cursor:pointer;margin-bottom:0"><i data-lucide="brain"></i>Lo que he aprendido (${data.learnings.length})</summary>
+      <div class="ops-next-action" style="margin:8px 0">Aprendido directamente de este chat. Se aplica siempre, sin reconfigurar.</div>
+      <ul class="auditor-ai-list">${data.learnings.slice(-30).reverse().map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+    </details>` : ''}
     <div class="auditor-chat-box">
       <div class="auditor-chat-messages" id="agent-group-chat">${messagesHtml}</div>
       <div class="auditor-chat-input">
         <textarea id="agent-group-input" placeholder="Ej: consulta en Odoo los articulos en ubicacion obsoleto y preparame el reporte para ventas..." oninput="window._agentGroupDraft=this.value" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentGroupChat()}"></textarea>
-        <button class="btn-sm primary" onclick="sendAgentGroupChat()"><i data-lucide="send" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Enviar</button>
+        <button type="button" class="btn-sm primary" onclick="sendAgentGroupChat()"><i data-lucide="send" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Enviar</button>
       </div>
     </div>
   </div>`;
@@ -11170,6 +11176,10 @@ async function loadAgentGroupChat() {
   if (!isAgentOwnerUser()) return;
   const panel = document.getElementById('agent-group-panel');
   if (!panel) return;
+  if ((window._agentGroupPending || []).length) {
+    if (window._agentGroupLast) renderAgentGroupPanel(window._agentGroupLast);
+    return;
+  }
   if (!window._agentGroupLast) {
     panel.innerHTML = '<div class="agent-group-card"><div class="loading"><div class="spinner"></div><br>Cargando Mesa de Agentes...</div></div>';
   }
@@ -11183,6 +11193,32 @@ async function loadAgentGroupChat() {
   }
 }
 
+function appendAgentGroupMessageDirect(m) {
+  const box = document.getElementById('agent-group-chat');
+  if (!box || !m) return false;
+  if (m.role === 'user') {
+    box.insertAdjacentHTML('beforeend', `<div class="agent-group-msg user" data-local-id="${esc(m.id || '')}">
+      <div class="auditor-chat-meta">${esc(m.by || 'Tu')}${m.createdAt ? ' · ' + new Date(m.createdAt).toLocaleString('es-DO') : ''}</div>
+      ${esc(m.text || '')}
+    </div>`);
+  } else {
+    box.insertAdjacentHTML('beforeend', `<div class="agent-group-msg assistant" data-local-id="${esc(m.id || '')}">
+      <div class="auditor-chat-meta">🧭 ${esc(m.by || 'Coordinador de Agentes')}${m.createdAt ? ' · ' + new Date(m.createdAt).toLocaleString('es-DO') : ''}</div>
+      <div style="margin-top:8px">${esc(m.text || '')}</div>
+    </div>`);
+  }
+  box.scrollTop = box.scrollHeight;
+  return true;
+}
+
+function updateAgentGroupLocalMessage(id, text) {
+  const el = document.querySelector(`.agent-group-msg[data-local-id="${CSS.escape(id)}"]`);
+  if (el) {
+    const body = el.querySelector('div[style*="margin-top"]');
+    if (body) body.textContent = text;
+  }
+}
+
 async function sendAgentGroupChat() {
   if (!isAgentOwnerUser()) return;
   const input = document.getElementById('agent-group-input');
@@ -11190,8 +11226,6 @@ async function sendAgentGroupChat() {
   if (!input) return;
   const text = (input.value || '').trim();
   if (!text) { toast('Escribe tu solicitud para la Mesa de Agentes'); return; }
-  input.value = '';
-  window._agentGroupDraft = '';
   const optimisticUser = {
     id: 'local_' + Date.now(),
     role: 'user',
@@ -11208,14 +11242,15 @@ async function sendAgentGroupChat() {
     text: 'Consultando al equipo correcto...',
     createdAt: new Date().toISOString()
   };
+  input.value = '';
+  window._agentGroupDraft = '';
   window._agentGroupPending = [...(window._agentGroupPending || []), optimisticUser, optimisticAssistant];
   window._agentGroupLast = {
     ...(window._agentGroupLast || {}),
     chat: [...((window._agentGroupLast && window._agentGroupLast.chat) || []), optimisticUser, optimisticAssistant]
   };
-  if (box) {
-    renderAgentGroupPanel(window._agentGroupLast);
-  }
+  appendAgentGroupMessageDirect(optimisticUser);
+  appendAgentGroupMessageDirect(optimisticAssistant);
   try {
     const r = await authFetch('/api/wwp/agent-group/chat', {
       method: 'POST',
@@ -11226,16 +11261,24 @@ async function sendAgentGroupChat() {
       toast(d.error || 'No se pudo consultar la Mesa de Agentes');
       window._agentGroupPending = (window._agentGroupPending || []).map(m => m.id === optimisticAssistant.id ? { ...m, text: 'No pude completar la consulta. Reintenta o revisa la conexion.' } : m);
       window._agentGroupLast.chat = (window._agentGroupLast.chat || []).map(m => m.id === optimisticAssistant.id ? { ...m, text: 'No pude completar la consulta. Reintenta o revisa la conexion.' } : m);
-      renderAgentGroupPanel(window._agentGroupLast);
+      updateAgentGroupLocalMessage(optimisticAssistant.id, 'No pude completar la consulta. Reintenta o revisa la conexion.');
       return;
     }
     window._agentGroupPending = [];
-    renderAgentGroupPanel(d);
+    if (d.message && d.message.text) {
+      updateAgentGroupLocalMessage(optimisticAssistant.id, d.message.text);
+    }
+    if (Array.isArray(d.chat) && d.chat.length) {
+      const previous = (window._agentGroupLast && window._agentGroupLast.chat) || [];
+      const serverIds = new Set(d.chat.map(m => m.id).filter(Boolean));
+      const unsyncedLocal = previous.filter(m => String(m.id || '').startsWith('local_') && !serverIds.has(m.id));
+      window._agentGroupLast = { ...(window._agentGroupLast || {}), ...d, chat: [...d.chat, ...unsyncedLocal] };
+    }
   } catch(e) {
     toast('Error consultando Mesa de Agentes');
     window._agentGroupPending = (window._agentGroupPending || []).map(m => m.id === optimisticAssistant.id ? { ...m, text: 'Error consultando la Mesa de Agentes: ' + (e.message || e) } : m);
     window._agentGroupLast.chat = (window._agentGroupLast.chat || []).map(m => m.id === optimisticAssistant.id ? { ...m, text: 'Error consultando la Mesa de Agentes: ' + (e.message || e) } : m);
-    renderAgentGroupPanel(window._agentGroupLast);
+    updateAgentGroupLocalMessage(optimisticAssistant.id, 'Error consultando la Mesa de Agentes: ' + (e.message || e));
   }
 }
 

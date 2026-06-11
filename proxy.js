@@ -644,6 +644,36 @@ function requireAgentOwner(jp, res) {
 const AGENT_COMPANY_CONTEXT_TTL = 10 * 60_000;
 let _agentCompanyContextCache = { at: 0, value: null };
 
+// Registra aprendizajes nuevos en el estado (dedupe + tope). Devuelve cuántos se agregaron.
+function recordAgentLearnings(state, items) {
+  if (!Array.isArray(items)) return 0;
+  if (!Array.isArray(state.agentGroup.learnings)) state.agentGroup.learnings = [];
+  const existing = new Set(state.agentGroup.learnings.map(l => String(l).toLowerCase().trim()));
+  let added = 0;
+  items.forEach(raw => {
+    const t = String(raw || '').trim();
+    if (!t || t.length < 4 || t.length > 240) return;
+    if (existing.has(t.toLowerCase())) return;
+    state.agentGroup.learnings.push(t);
+    existing.add(t.toLowerCase());
+    added++;
+  });
+  // Conservar las más recientes (las nuevas pesan más para el comportamiento actual)
+  if (state.agentGroup.learnings.length > 120) {
+    state.agentGroup.learnings = state.agentGroup.learnings.slice(-120);
+  }
+  return added;
+}
+
+// Tono humano compartido por todos los agentes (anti-robótico).
+const AGENT_HUMAN_TONE = [
+  'Habla como una persona real del equipo de Altri Tempi: cálido, natural, cercano y directo — nunca robótico.',
+  'Varía tus frases; no repitas plantillas ni el mismo saludo cada vez. Usa el nombre de la persona con naturalidad, no en cada línea.',
+  'En lo conversacional (saludos, gracias, charla), responde corto y humano; no generes reportes ni listas si no te los pidieron.',
+  'Muestra criterio y emoción mesurada cuando aplique (entusiasmo, preocupación, calma), como lo haría un buen compañero de trabajo.',
+  'Evita muletillas de IA ("Como modelo...", "Estoy aquí para ayudarte", "No dudes en..."). Ve al punto con calidez.'
+].join(' ');
+
 function getAgentCompanyKnowledgeBase() {
   return {
     company: {
@@ -835,6 +865,20 @@ function needsObsoleteStockReport(text) {
   return q.includes('obsoleto') && (q.includes('ubicacion') || q.includes('ubicación') || q.includes('stock') || q.includes('articulo') || q.includes('artículo'));
 }
 
+function isConversationalAgentMessage(text) {
+  const q = String(text || '').trim().toLowerCase();
+  if (!q) return false;
+  if (/^(hola|buenas|buenos dias|buenos días|buenas tardes|buenas noches|saludos|hey|hello|hi|gracias|ok|perfecto|listo|entendido|como estas|cómo estás|que tal|qué tal)[.!?¡¿\s]*$/.test(q)) return true;
+  if (q.length <= 80 && /(hola|buenas|saludos|gracias|como estas|cómo estás|que tal|qué tal)/i.test(q)) return true;
+  return false;
+}
+
+function shouldIncludeOdooForAgentRequest(text) {
+  const q = String(text || '').toLowerCase();
+  if (isConversationalAgentMessage(q)) return false;
+  return /odoo|orden|pick|picking|inventario|stock|ubicaci[oó]n|familia|producto|art[ií]culo|obsoleto|venta|cliente|disponible|cantidad/.test(q);
+}
+
 async function getOdooObsoleteStockReport() {
   const report = {
     ok: false,
@@ -989,6 +1033,9 @@ function ensureAgentGroupState(state) {
   const byId = new Map([...defaults, ...existing].map(a => [a.id, a]));
   state.agentGroup.agents = Array.from(byId.values());
   if (!Array.isArray(state.agentGroup.chat)) state.agentGroup.chat = [];
+  // Aprendizajes capturados desde el propio chat (hechos, preferencias, correcciones de tono).
+  // Crece solo; se inyecta en cada prompt para que los agentes recuerden sin reconfigurarlos.
+  if (!Array.isArray(state.agentGroup.learnings)) state.agentGroup.learnings = [];
   if (!Array.isArray(state.agentGroup.preferences)) state.agentGroup.preferences = [
     'Responder 100% la solicitud exacta de Gabriel.',
     'No agregar dashboard, tareas vencidas, auditoria ni recomendaciones operativas si no fueron solicitadas.',
@@ -1200,6 +1247,11 @@ function pickAgentParticipants(text, agents) {
   const q = String(text || '').toLowerCase();
   const ids = new Set(['coordinator']);
   const hasAny = (words) => words.some(w => q.includes(w));
+  if (isConversationalAgentMessage(text)) {
+    ids.add('ops_assistant');
+    const availableQuick = new Set((agents || []).map(a => a.id));
+    return Array.from(ids).filter(id => availableQuick.has(id));
+  }
   const asksOdooStock = hasAny(['odoo', 'orden', 'pick', 'inventario', 'cliente', 'historial', 'venta', 'stock', 'ubicacion', 'ubicación', 'familia', 'producto', 'articulo', 'artículo', 'obsoleto']);
   if (hasAny(['tarea', 'avance', 'vencid', 'overdue', 'operacion', 'responsable', 'prioridad', 'dashboard', 'riesgo']) && !asksOdooStock) ids.add('ops_manager');
   if (hasAny(['mensaje', 'chat', 'seguimiento', 'actualizacion', 'humano', 'conversacion', 'pedir'])) ids.add('ops_assistant');
@@ -1401,6 +1453,24 @@ function fallbackAgentGroupReply(text, agents, report, companyContext, specialRe
   const participantIds = pickAgentParticipants(text, agents);
   const byId = Object.fromEntries((agents || []).map(a => [a.id, a]));
   const s = report.summary || {};
+  if (isConversationalAgentMessage(text)) {
+    return {
+      participantIds,
+      consultations: participantIds.filter(id => id !== 'coordinator').map(id => ({
+        agentId: id,
+        message: 'Apoyo la conversacion con tono humano, claro y orientado a ayudar.'
+      })),
+      newAgents: [],
+      format: 'conversation',
+      finalAnswer: [
+        'Hola Gabriel. Estoy aqui y te leo.',
+        '',
+        'Puedes hablarme normal: pedirme un reporte, una consulta en Odoo, seguimiento de tareas, preparar un mensaje para alguien, crear un documento o revisar una decision operativa.',
+        '',
+        'Si lo que necesitas requiere datos, te dire exactamente que voy a consultar y te lo devuelvo en un formato claro para usar.'
+      ].join('\n')
+    };
+  }
   if (specialReports.obsoleteStock) {
     return {
       participantIds,
@@ -5448,9 +5518,13 @@ const server = http.createServer(async (req, res) => {
       state.opsChats[agent].push(userMsg);
 
       const agentName = agent === 'assistant' ? 'Asistente de Operaciones' : 'Gerente de Operaciones';
-      const systemPrompt = agent === 'assistant'
-        ? 'Eres el Asistente de Operaciones de Altri Tempi. Eres humano en tono, responsable, honesto y calmado. Tu trabajo es dar seguimiento a tareas, pedir actualizaciones con tacto, redactar mensajes conversacionales para chats de tareas, detectar bloqueos y ayudar al gerente. Puedes mostrar urgencia, empatia o preocupacion segun la situacion, sin exagerar. Tienes contexto de empresa, documentos asociados y Odoo solo lectura; usalo para entender, no para modificar. Responde en español claro y accionable.'
-        : 'Eres la Gerente de Operaciones de Altri Tempi. Eres directa, sincera, responsable y justa. Analizas tareas, carga del equipo, atrasos, vencidas, evidencia, validaciones y riesgos. Tienes contexto de empresa, documentos asociados y Odoo solo lectura; usalo para entender ordenes, picks, inventario y flujo empresarial, sin modificar Odoo. Das decisiones operativas claras y no maquillas problemas. Responde en español profesional, concreto y accionable.';
+      const _learnBlock = (state.agentGroup && state.agentGroup.learnings && state.agentGroup.learnings.length)
+        ? ('\n\nAprendizajes del equipo (recuérdalos y aplícalos siempre):\n- ' + state.agentGroup.learnings.slice(-40).join('\n- '))
+        : '';
+      const systemPrompt = (agent === 'assistant'
+        ? 'Eres el Asistente de Operaciones de Altri Tempi. Tu trabajo es dar seguimiento a tareas, pedir actualizaciones con tacto, redactar mensajes para chats de tareas, detectar bloqueos y ayudar al gerente. Puedes mostrar urgencia, empatia o preocupacion segun la situacion. Tienes contexto de empresa, documentos y Odoo solo lectura; usalo para entender, no para modificar. Responde en español claro y accionable.'
+        : 'Eres la Gerente de Operaciones de Altri Tempi. Eres directa, sincera, responsable y justa. Analizas tareas, carga del equipo, atrasos, vencidas, evidencia, validaciones y riesgos. Tienes contexto de empresa, documentos y Odoo solo lectura; usalo para entender ordenes, picks, inventario y flujo empresarial, sin modificar Odoo. Das decisiones claras y no maquillas problemas. Responde en español, concreto y accionable.')
+        + ' ' + AGENT_HUMAN_TONE + _learnBlock;
 
       let answer = '';
       let ai = !!anthropicClient;
@@ -5513,6 +5587,7 @@ const server = http.createServer(async (req, res) => {
         agents: state.agentGroup.agents,
         chat: state.agentGroup.chat.slice(-40),
         knowledgePack: state.agentGroup.knowledgePack,
+        learnings: state.agentGroup.learnings || [],
         dailyAssignments: state.agentGroup.dailyAssignments || [],
         routines: state.agentGroup.routines || [],
         companyContext,
@@ -5539,7 +5614,8 @@ const server = http.createServer(async (req, res) => {
       }
       const state = loadProcessAuditorState();
       const report = computeOpsAgentReport();
-      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const includeOdooContext = shouldIncludeOdooForAgentRequest(text);
+      const companyContext = await getAgentCompanyContext({ includeOdoo: includeOdooContext });
       const agents = state.agentGroup.agents || getDefaultAgentRoster();
       const userMsg = {
         id: wwpId('grpchat'),
@@ -5571,7 +5647,13 @@ const server = http.createServer(async (req, res) => {
         try {
           const systemPrompt = [
             'Eres el Coordinador de Agentes de Altri Tempi. Moderas un group chat de agentes especializados.',
+            AGENT_HUMAN_TONE,
+            'APRENDIZAJE CONTINUO: del propio chat extraes lo que debes recordar para SIEMPRE — preferencias de Gabriel, correcciones de tono o formato, datos de negocio, nombres y roles, reglas nuevas. Devuelve esos aprendizajes en el campo "learn" (frases cortas y accionables). No repitas lo que ya está en "learnings". Aplica de inmediato lo aprendido; Gabriel NO debería tener que repetir una instrucción dos veces.',
+            'Ya tienes una lista "learnings" con lo aprendido antes: respétala y trátala como reglas vigentes.',
             'Tienes un knowledgePack y fullKnowledgeBase. Tratalos como manual interno obligatorio para todos los agentes.',
+            'Tambien eres capaz de conversar con humanos de forma natural. Si Gabriel saluda, agradece, prueba el chat o conversa, responde con calidez, brevedad y utilidad; no generes reportes ni consultes fuentes innecesarias.',
+            'Los agentes deben poder pedir informacion a usuarios con tono humano: saludo breve, motivo claro, dato solicitado, urgencia/ETA si aplica y cierre respetuoso. Pueden sonar preocupados, tranquilos o firmes segun la situacion, pero siempre profesionales.',
+            'Si el mensaje es ambiguo o conversacional, no inventes una tarea: responde, orienta y ofrece caminos concretos. Si falta informacion, pregunta una sola cosa clara.',
             'Tu regla principal: responde 100% la solicitud exacta de Gabriel. No agregues temas de dashboard, tareas vencidas, evidencias, auditoria o recomendaciones si Gabriel no los pidio.',
             'Si Gabriel corrige el enfoque en el chat, aprende esa preferencia y ajusta inmediatamente: menos contexto no solicitado, mas respuesta directa.',
             'Cuando presentes datos, no los entregues como base de datos cruda. Conviertelos a un formato de negocio: resumen ejecutivo, tabla limpia, totales, agrupaciones y texto listo para copiar.',
@@ -5586,13 +5668,16 @@ const server = http.createServer(async (req, res) => {
             'Si detectas que falta una especialidad recurrente o necesaria, crea un agente nuevo con id, avatar elegante, nombre, especialidad y descripcion. Debe quedar especializado y permanente.',
             'Los agentes no desaparecen: se especializan. Las tareas diarias y rutinas periodicas estan vacias por ahora y no debes asignarlas todavia.',
             'Odoo es solo lectura. No prometas modificar Odoo ni ejecutar cambios de plataforma sin aprobacion explicita de Gabriel.',
-            'Devuelve JSON valido con esta forma exacta: {"participantIds":[],"consultations":[{"agentId":"","message":""}],"newAgents":[{"id":"","avatar":"","name":"","specialty":"","description":""}],"format":"","finalAnswer":""}.',
+            'Devuelve JSON valido con esta forma exacta: {"participantIds":[],"consultations":[{"agentId":"","message":""}],"newAgents":[{"id":"","avatar":"","name":"","specialty":"","description":""}],"learn":[],"format":"","finalAnswer":""}.',
+            'El campo "learn" es un array de strings (puede ir vacio) con lo aprendido en este intercambio para recordar siempre.',
             'Los participantIds deben incluir coordinator y los agentes consultados.'
           ].join(' ');
           const payloadContext = {
             request: text,
+            isConversational: isConversationalAgentMessage(text),
             agents,
             preferences: state.agentGroup.preferences,
+            learnings: state.agentGroup.learnings,
             knowledgePack: state.agentGroup.knowledgePack,
             fullKnowledgeBase: getAgentCompanyKnowledgeBase(),
             recentChat: state.agentGroup.chat.slice(-8),
@@ -5626,7 +5711,9 @@ const server = http.createServer(async (req, res) => {
         } catch(e) {
           ai = false;
           result = fallbackAgentGroupReply(text, agents, report, companyContext, specialReports);
-          result.finalAnswer += '\n\nNota: IA avanzada no disponible temporalmente; use coordinacion base con datos actuales.';
+          if (!isConversationalAgentMessage(text)) {
+            result.finalAnswer += '\n\nNota: IA avanzada no disponible temporalmente; use coordinacion base con datos actuales.';
+          }
         }
       }
 
@@ -5647,6 +5734,8 @@ const server = http.createServer(async (req, res) => {
         existingIds.add(id);
       });
 
+      // Aprendizaje desde el chat: persistir lo que el Coordinador identificó para recordar
+      const _learnedNow = recordAgentLearnings(state, result.learn);
       const participantIds = Array.isArray(result.participantIds) && result.participantIds.length
         ? result.participantIds
         : pickAgentParticipants(text, state.agentGroup.agents);
@@ -5668,6 +5757,7 @@ const server = http.createServer(async (req, res) => {
         format: result.format || quality.format,
         quality,
         ai,
+        learned: _learnedNow,
         createdAt: new Date().toISOString()
       };
       state.agentGroup.chat.push(assistantMsg);
@@ -5682,6 +5772,7 @@ const server = http.createServer(async (req, res) => {
         agents: state.agentGroup.agents,
         chat: state.agentGroup.chat.slice(-40),
         knowledgePack: state.agentGroup.knowledgePack,
+        learnings: state.agentGroup.learnings,
         message: assistantMsg,
         dailyAssignments: state.agentGroup.dailyAssignments || [],
         routines: state.agentGroup.routines || [],
