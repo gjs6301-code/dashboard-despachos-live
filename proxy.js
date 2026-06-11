@@ -5373,6 +5373,18 @@ const server = http.createServer(async (req, res) => {
       out.contentDump = msg && Array.isArray(msg.content) ? msg.content.map(c=>({type:c.type, keys:Object.keys(c), textSample:(c.text||c.output_text||c.value||'').slice(0,60)})) : msg?.content;
       out.usage = p.usage || null;
     } catch(e) { out.fetchError = e.message; }
+    // Test 2: aiComplete REAL como lo usa Marta (contexto grande + 2500 tokens)
+    try {
+      const rep = computeOpsAgentReport();
+      const cc = await getAgentCompanyContext({ includeOdoo: true });
+      const t0 = Date.now();
+      const ans = await aiComplete({
+        system: 'Eres la Gerente de Operaciones de Altri Tempi. Responde en una frase cálida. ' + AGENT_HUMAN_TONE,
+        user: 'Contexto:\n```json\n' + JSON.stringify(cc, null, 1).slice(0, 25000) + '\n```\n\nOperativo:\n```json\n' + JSON.stringify(rep, null, 1).slice(0, 35000) + '\n```\n\nSaluda y di cómo vamos.',
+        maxTokens: 2500
+      });
+      out.martaTest = { ms: Date.now()-t0, len: ans.length, sample: ans.slice(0, 120) };
+    } catch(e) { out.martaTest = { error: e.message }; }
     res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(out));
     return;
   }
