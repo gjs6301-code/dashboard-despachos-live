@@ -2,6 +2,7 @@
 
 > Molde en blanco. Duplica este archivo como `agentes-estandar/<nombre>.md` y rellena.
 > Marca cada bloque como 🌐 (universal/portable) o 📍 (específico del proyecto).
+> Regla de cerebro: al ser invocado, este agente debe leer este expediente antes de actuar y actualizarlo al terminar si aprende algo durable.
 
 ## 1. Identidad y misión 🌐
 <Quién es, en una o dos frases. Qué prioriza por encima de todo.>
@@ -30,3 +31,5 @@ patrón 🌐 si la idea es portable o 📍 si depende del proyecto.>
 ## 8. Aprendizajes del chat
 <Preferencias y correcciones del usuario relevantes a este agente, extraídas de las
 conversaciones. Marca 🌐 si es una preferencia general del usuario o 📍 si es del proyecto.>
+
+

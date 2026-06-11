@@ -5,6 +5,18 @@ ya establecidos) tiene **un expediente** aquí: identidad, estándares, patrones
 lo que ha aprendido en los chats. La idea es llevarte el mismo equipo a otros desarrollos sin
 re-explicar nada.
 
+
+## Protocolo permanente de cerebro
+
+Esta carpeta es la memoria canónica de los agentes. Cuando Gabriel invoque a un agente en cualquier proyecto o documento, el asistente debe:
+
+1. Leer el expediente correspondiente: `agentes-estandar/<agente>.md`.
+2. Usar ese expediente como cerebro activo del agente.
+3. Al terminar, guardar informacion durable en ese mismo expediente: decisiones, patrones, aprendizajes o capa de proyecto.
+4. Si el agente no existe, crear su expediente desde `_PLANTILLA-EXPEDIENTE.md`.
+
+Ver protocolo completo en `PROTOCOLO-CEREBRO-AGENTES.md`.
+
 ## Estructura
 
 ```
@@ -12,6 +24,7 @@ agentes-estandar/
   README.md                ← este archivo
   _PLANTILLA-EXPEDIENTE.md ← molde en blanco para crear un agente nuevo
   mark.md                  ← expediente del agente (uno por agente)
+  david.md                 ← expediente de administracion de edificios
   ...
 ```
 
@@ -45,3 +58,6 @@ propio expediente.
   y, si descubrió algo reutilizable, a **Patrones** o **Aprendizajes del chat**.
 - Una decisión que contradiga un estándar previo se documenta y se actualiza el estándar — no se
   deja la contradicción silenciosa.
+
+
+
