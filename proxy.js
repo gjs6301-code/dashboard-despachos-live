@@ -5348,6 +5348,19 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /api/wwp/ai-diag — diagnóstico temporal: prueba la IA y devuelve el error exacto (owner)
+  if (reqPath === '/api/wwp/ai-diag' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    const out = { hasKey: !!OPENAI_API_KEY, keyPrefix: (OPENAI_API_KEY||'').slice(0,8), model: CODEX_AUDITOR_MODEL };
+    try {
+      out.reply = await aiComplete({ system: 'Responde solo: OK', user: 'di OK', maxTokens: 20 });
+      out.ok = true;
+    } catch(e) { out.ok = false; out.error = e.message; }
+    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(out));
+    return;
+  }
+
   // GET /api/wwp/ops-agent — agente gerente de operaciones (admin)
   if (reqPath === '/api/wwp/ops-agent' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
