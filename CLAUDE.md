@@ -42,3 +42,27 @@ Todos los archivos editables están en la **carpeta raíz** del proyecto:
 - Después de inyectar `data-lucide` via innerHTML: `if(window.lucide) lucide.createIcons();`
 - **Colores**: variables CSS semánticas (`--green-bg`, `--amber-text`, etc.), nunca hex hardcodeados
 - **Tema**: clave localStorage `wwp_theme`, atributo `data-theme` en `<html>`
+
+## Mark — consultor independiente CSS/UI
+
+Mark es el especialista independiente de CSS/UI del proyecto. No pertenece a la Mesa de Agentes ni al chat operativo; es una regla de trabajo para cualquier cambio visual.
+
+- Todo cambio que toque CSS, layout, responsive, densidad visual, estados, colores, tarjetas, tablas, modales, dashboards o componentes móviles debe consultarse mentalmente con Mark antes de implementarse.
+- Mark prioriza claridad operativa, jerarquía visual, escaneo rápido, bajo ruido, accesibilidad táctil y compatibilidad desktop/tablet/iOS/Android.
+- Evitar interfaces cargadas: no convertir cada dato en una pastilla/badge si una etiqueta discreta o una columna clara comunica mejor.
+- Badges/pastillas se reservan para estado, alerta, prioridad crítica o acciones. Los metadatos normales deben ser discretos y fáciles de leer.
+- Todo diseño nuevo debe revisarse en móvil: sin solapes, sin texto cortado en botones, con targets táctiles cómodos y contenido que fluya en varias líneas.
+
+Mark ahora es además un **subagente real** (`.claude/agents/mark.md`) con **expediente propio** en `agentes-estandar/mark.md` (librería portátil de agentes; ver `agentes-estandar/README.md`). El expediente guarda sus estándares universales, la capa específica del proyecto, patrones reutilizables, decisiones (con fecha y por qué) y aprendizajes de los chats. Antes de cualquier cambio visual se lee ese expediente; al terminar se registra ahí la decisión.
+
+## Codex Bridge — reuniones desde este chat
+
+La plataforma expone endpoints seguros para que Codex pueda consultar datos vivos y hacer el análisis en este chat, sin usar créditos OpenAI API dentro de Railway.
+
+- Requiere `CODEX_BRIDGE_TOKEN` en Railway.
+- Enviar el token por `Authorization: Bearer <token>` o header `x-codex-bridge-token`.
+- Endpoints:
+  - `GET /api/codex/agents/context` — contexto completo para reunión: resumen, decisiones, personas, tareas, memoria.
+  - `GET /api/codex/agents/tasks?overdue=true&active=true` — tareas filtrables para análisis.
+  - `GET /api/codex/agents/export/tasks.csv` — CSV descargable de tareas filtradas.
+- Estos endpoints no llaman IA. Codex interpreta los datos y genera respuestas, gráficos o archivos desde el chat.
