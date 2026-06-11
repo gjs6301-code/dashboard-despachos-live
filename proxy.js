@@ -5367,6 +5367,10 @@ const server = http.createServer(async (req, res) => {
       out.incomplete = p.incomplete_details || null;
       out.outputTextLen = (p.output_text||'').length;
       out.outputArrayTypes = (p.output||[]).map(o=>o.type);
+      // Estructura cruda del primer message para ver dónde está el texto
+      const msg = (p.output||[]).find(o=>o.type==='message') || (p.output||[])[0] || null;
+      out.msgKeys = msg ? Object.keys(msg) : null;
+      out.contentDump = msg && Array.isArray(msg.content) ? msg.content.map(c=>({type:c.type, keys:Object.keys(c), textSample:(c.text||c.output_text||c.value||'').slice(0,60)})) : msg?.content;
       out.usage = p.usage || null;
     } catch(e) { out.fetchError = e.message; }
     res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(out));
