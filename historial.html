@@ -1928,6 +1928,17 @@ body{font-family:var(--font);min-height:100dvh}
   padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);
   font-size:13px;color:var(--text);background:var(--surface);outline:none;cursor:pointer;
 }
+/* Mark: filtros colapsados detrás de un botón "Filtros" + chips de filtros activos */
+.filters-toggle{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap}
+.filters-toggle:hover{background:var(--surface-2)}
+.filters-toggle.has-active{border-color:var(--brand-light);color:var(--brand-light)}
+.filters-toggle .filters-count{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--brand-light);color:#fff;font-size:10px;font-weight:800}
+.filter-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.filter-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 6px 4px 10px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);font-size:11px;color:var(--text-2);white-space:nowrap}
+.filter-chip button{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:none;border-radius:50%;background:transparent;color:var(--text-3);cursor:pointer;font-size:13px;line-height:1;padding:0}
+.filter-chip button:hover{background:var(--border);color:var(--text)}
+.filter-panel{flex-basis:100%;display:none;flex-wrap:wrap;gap:8px;padding:10px 0 2px}
+.filter-panel.open{display:flex}
 .btn-new{
   padding:9px 18px;background:var(--brand-light);color:white;border:none;
   border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
@@ -2122,9 +2133,29 @@ body{font-family:var(--font);min-height:100dvh}
 .task-list-row[data-status="validated"]  {border-left-color:#8b5cf6}
 .task-list-main{flex:1;min-width:0;overflow:hidden}
 .task-list-title{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.task-list-meta{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;margin-top:1px}
+.task-list-meta{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow:hidden;margin-top:4px}
 .task-list-sep{color:var(--border);flex-shrink:0}
+.task-meta-chip{display:inline-flex;align-items:center;gap:3px;min-width:0;max-width:260px;line-height:1.35;color:var(--text-2)}
+.task-meta-chip .meta-label{font-size:9px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.task-meta-chip .meta-label::after{content:":"}
+.task-meta-chip .meta-value{font-size:11px;font-weight:650;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.task-meta-chip.due-overdue .meta-label,.task-meta-chip.due-overdue .meta-value{color:#991b1b}
 .task-list-badges{display:flex;align-items:center;gap:6px;flex-shrink:0}
+/* Mark: "Reasignar" por fila → solo visible al pasar el cursor en desktop (no permanente) */
+.row-reassign{display:inline-flex;align-items:center;opacity:0;transition:opacity .12s;pointer-events:none}
+.task-list-row:hover .row-reassign,.task-list-row:focus-within .row-reassign{opacity:1;pointer-events:auto}
+@media(hover:none){.row-reassign{opacity:1;pointer-events:auto}}
+@media(max-width:720px){
+  /* Mark: fila en móvil = 2 líneas claras (título arriba; estado + alerta abajo) */
+  .task-list-row{align-items:flex-start;flex-wrap:wrap;padding:12px;min-height:56px}
+  .task-list-main{flex-basis:calc(100% - 22px)}
+  .task-list-title{white-space:normal;line-height:1.3}
+  .task-list-badges{width:100%;justify-content:flex-start;padding-left:20px;flex-wrap:wrap;margin-top:6px}
+  .task-meta-chip{max-width:100%}
+  /* Reasignar se oculta en móvil: la reasignación vive en el drawer de la tarea */
+  .row-reassign{display:none!important}
+  .task-list-badges .btn-sm{min-height:36px}
+}
 
 /* ── Vista Kanban ────────────────────────────────────────────────────── */
 .task-kanban{display:flex;gap:10px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
@@ -2541,6 +2572,12 @@ body{font-family:var(--font);min-height:100dvh}
 .ops-agent-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:12px}
 .ops-agent-card{border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:10px}
 .ops-agent-card-title{font-size:11px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+/* Mark: contexto empresa/Odoo colapsable — el detalle queda a un clic, sin ocupar espacio fijo */
+.ops-context-collapsible>summary{cursor:pointer;list-style:none;margin-bottom:0;user-select:none}
+.ops-context-collapsible>summary::-webkit-details-marker{display:none}
+.ops-context-collapsible>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(-45deg);transition:transform .15s}
+.ops-context-collapsible[open]>summary{margin-bottom:8px}
+.ops-context-collapsible[open]>summary::after{transform:rotate(45deg)}
 .ops-decision{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
 .ops-decision:last-child{border-bottom:none}
 .ops-sev{width:8px;border-radius:8px;flex-shrink:0;background:var(--border)}
@@ -4333,7 +4370,13 @@ body{font-family:var(--font);min-height:100dvh}
           <span class="search-icon"><i data-lucide="search"></i></span>
           <input id="task-search" type="text" placeholder="Buscar tarea, orden…" oninput="filterTasks()" autocomplete="off" autocorrect="off">
         </div>
-        <div class="filter-row">
+        <button class="filters-toggle" id="filters-toggle" type="button" onclick="toggleFilters()" aria-expanded="false">
+          <i data-lucide="sliders-horizontal" style="width:14px;height:14px;stroke:currentColor;display:inline-block;vertical-align:-2px"></i>
+          Filtros<span class="filters-count" id="filters-count" style="display:none">0</span>
+        </button>
+        <div class="filter-chips" id="filter-chips"></div>
+        <div class="filter-panel" id="filter-panel">
+          <div class="filter-row">
           <select class="filter-sel" id="filter-status" onchange="filterTasks()">
             <option value="">Todos los estados</option>
             <option value="pending">Pendiente</option>
@@ -4367,6 +4410,7 @@ body{font-family:var(--font);min-height:100dvh}
             <option value="week">📆 Esta semana</option>
             <option value="nodate">— Sin fecha</option>
           </select>
+          </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-new" id="btn-new-task" onclick="openNewTaskModal()" style="display:none">+ Nueva Tarea</button>
@@ -4428,7 +4472,7 @@ body{font-family:var(--font);min-height:100dvh}
     <!-- DASHBOARD TAB -->
     <div id="tab-dashboard" style="display:none">
       <!-- Mesa unica de agentes -->
-      <div class="sec-header" style="margin-bottom:12px"><i data-lucide="radar" class="sec-hdr-icon"></i>MESA DE AGENTES</div>
+      <div class="sec-header" id="ops-agent-header" style="margin-bottom:12px"><i data-lucide="radar" class="sec-hdr-icon"></i>MESA DE AGENTES</div>
       <div class="ops-agent-wrap" id="ops-agent-panel">
         <div class="loading"><div class="spinner"></div><br>Analizando tareas en vivo...</div>
       </div>
@@ -5278,7 +5322,8 @@ function canSection(key) {
 }
 
 function isAgentOwnerUser() {
-  return !!(_user && String(_user.email || '').toLowerCase().trim() === 'gsanchez@altritempi.com.do');
+  const email = String((_user && _user.email) || '').toLowerCase().trim();
+  return email === 'gsanchez@altritempi.com.do' || email === 'jbencini@altritempi.com.do';
 }
 
 /** Devuelve true si el usuario debe entrar al historial (admin o con sectionPerms asignados) */
@@ -6184,6 +6229,44 @@ async function loadTasks() {
   } catch(e) { listEl.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
 }
 
+// Mark: panel de filtros colapsable + chips de filtros activos
+function toggleFilters() {
+  const panel = document.getElementById('filter-panel');
+  const btn = document.getElementById('filters-toggle');
+  if (!panel) return;
+  const open = panel.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+var _FILTER_DEFS = [
+  {id:'filter-status',   label:'Estado'},
+  {id:'filter-type',     label:'Tipo'},
+  {id:'filter-user',     label:'Usuario'},
+  {id:'filter-priority', label:'Prioridad'},
+  {id:'filter-due',      label:'Plazo'}
+];
+function clearFilter(id) {
+  const sel = document.getElementById(id);
+  if (sel) { sel.value = ''; filterTasks(); }
+}
+function renderFilterChips() {
+  const wrap = document.getElementById('filter-chips');
+  const btn = document.getElementById('filters-toggle');
+  const badge = document.getElementById('filters-count');
+  if (!wrap) return;
+  const active = [];
+  _FILTER_DEFS.forEach(def => {
+    const sel = document.getElementById(def.id);
+    if (sel && sel.value) {
+      const txt = (sel.options[sel.selectedIndex] || {}).text || sel.value;
+      active.push({id:def.id, text:txt});
+    }
+  });
+  wrap.innerHTML = active.map(a =>
+    `<span class="filter-chip">${esc(a.text)}<button type="button" title="Quitar filtro" onclick="clearFilter('${a.id}')">&times;</button></span>`
+  ).join('');
+  if (badge) { badge.textContent = active.length; badge.style.display = active.length ? '' : 'none'; }
+  if (btn) btn.classList.toggle('has-active', active.length > 0);
+}
 function filterTasks() {
   const q    = (document.getElementById('task-search').value||'').toLowerCase();
   const st   = document.getElementById('filter-status').value;
@@ -6231,6 +6314,8 @@ function filterTasks() {
 
   // Badge de vencidas en el nav
   _updateOverdueBadge();
+  // Chips de filtros activos
+  renderFilterChips();
 
   // Mostrar/ocultar botón CSV (solo admin/manager)
   var csvBtn = document.getElementById('btn-export-tasks');
@@ -6951,26 +7036,33 @@ function renderListRow(t) {
   const doneSubs = subs.filter(s=>['completed','validated'].includes(s.status)).length;
   const typeEmoji = {dispatch_order:'truck',packaging:'package',item_pickup:'scan-line',truck_loading:'truck',warehouse_move:'arrow-left-right',general:'circle-dot',staffing:'users'}[t.type]||'circle-dot';
   const priorityColor = {high:'#dc2626',medium:'#f59e0b',low:'#10b981'}[t.priority||'medium']||'#f59e0b';
+  const typeLabel = {dispatch_order:'Despacho / Entrega',packaging:'Empaque y almacenamiento',item_pickup:'Recogida de articulos',truck_loading:'Carga de camion',warehouse_move:'Movimiento de almacen',staffing:'Solicitud de personal',general:'Tarea general'}[t.type] || (t.type || 'Tarea');
   const meta = [];
-  if (mgr) meta.push(`<span style="display:flex;align-items:center;gap:3px">${avatarHtml(mgr,15)}<span>${esc(mgr.name.split(' ')[0])}</span></span>`);
+  const chip = (label, value, extraClass='', icon='') => {
+    const val = String(value || '').trim();
+    if (!val) return '';
+    return `<span class="task-meta-chip ${extraClass}">${icon || ''}<span class="meta-label">${esc(label)}</span><span class="meta-value">${esc(val)}</span></span>`;
+  };
+  if (mgr) meta.push(`<span class="task-meta-chip"><span style="display:flex;align-items:center;gap:3px">${avatarHtml(mgr,15)}</span><span class="meta-label">Responsable</span><span class="meta-value">${esc(mgr.name.split(' ')[0])}</span></span>`);
   if (t.type==='staffing') {
-    if (t.requester) meta.push(`<span>👷 ${esc(t.requester)}</span>`);
-    if (t.staffStart) meta.push(`<span style="color:var(--accent);font-weight:600">📅 ${esc(t.staffStart)}${t.staffEnd&&t.staffEnd!==t.staffStart?('→'+esc(t.staffEnd)):''}${t.staffFrom?(' · 🕐 '+esc(t.staffFrom)+'-'+esc(t.staffTo||'')):''}${t.totalHours!=null?(' · ⏱'+t.totalHours+'h'):''}</span>`);
+    if (t.requester) meta.push(chip('Solicitante', t.requester));
+    if (t.staffStart) meta.push(chip('Periodo', `${t.staffStart}${t.staffEnd&&t.staffEnd!==t.staffStart?(' -> '+t.staffEnd):''}${t.staffFrom?(' · '+t.staffFrom+'-'+(t.staffTo||'')):''}${t.totalHours!=null?(' · '+t.totalHours+'h'):''}`));
   }
-  if (t.odooRef) meta.push(`<span>${esc(t.odooRef)}</span>`);
-  if (t.dueDate && t.type!=='staffing') meta.push(`<span style="${tier?DUE_DATE_COLOR[tier]:''}">${t.dueDate}</span>`);
-  if (subs.length) meta.push(`<span>${doneSubs}/${subs.length} sub</span>`);
-  if (t.location) meta.push(`<span>${esc(t.location)}</span>`);
+  if (t.odooRef) meta.push(chip('Orden Odoo', t.odooRef));
+  meta.push(chip('Tipo', typeLabel));
+  if (t.dueDate && t.type!=='staffing') meta.push(chip('Fecha limite', t.dueDate, tier==='overdue'?'due-overdue':''));
+  if (subs.length) meta.push(chip('Subtareas', `${doneSubs}/${subs.length} completadas`));
+  if (t.location) meta.push(chip('Ubicacion', t.location));
   return `<div class="task-list-row" data-status="${t.status}" onclick="openDrawer('${t.id}')" style="${rowStyle}">
-    <span style="width:8px;height:8px;border-radius:50%;background:${priorityColor};flex-shrink:0;display:inline-block"></span>
+    <span title="Prioridad ${esc(({high:'Alta',medium:'Media',low:'Baja'}[t.priority||'medium'] || 'Media'))}" style="width:8px;height:8px;border-radius:50%;background:${priorityColor};flex-shrink:0;display:inline-block"></span>
     <div class="task-list-main">
-      <span class="task-list-title">${t.parentId?'<i data-lucide="git-branch" style="width:11px;height:11px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>':''}${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:5px">${seqLabel(t)}</span>`:''}${esc(t.title)}</span>
+      <span class="task-list-title">${t.parentId?'<i data-lucide="git-branch" style="width:11px;height:11px;stroke:var(--accent);display:inline-block;vertical-align:-1px;margin-right:3px"></i>':''}${seqLabel(t)?`<span style="color:var(--text-3);font-weight:700;margin-right:5px">Tarea ${seqLabel(t)}</span>`:''}${esc(t.title)}</span>
       ${t.parentId?(()=>{const p=(_tasks||[]).find(x=>x.id===t.parentId);return `<div class="task-list-meta" style="color:var(--accent)">↳ Subtarea de ${p?(seqLabel(p)+' '+esc(p.title.slice(0,30))):'tarea madre'}</div>`;})():''}
       ${meta.length?`<div class="task-list-meta">${meta.join('<span class="task-list-sep">·</span>')}</div>`:''}
     </div>
     <div class="task-list-badges">
       ${overdueBadgeHtml(t)}
-      ${overdueReassignButtonHtml(t)}
+      ${(()=>{const b=overdueReassignButtonHtml(t);return b?`<span class="row-reassign">${b}</span>`:'';})()}
       <span class="badge ${STATUS_CSS[t.status]||'b-pending'}">${STATUS_LABELS[t.status]||t.status}</span>
       <i data-lucide="${typeEmoji}" style="width:13px;height:13px;stroke:var(--text-muted);display:inline-block;vertical-align:-2px;flex-shrink:0"></i>
     </div>
@@ -7969,7 +8061,6 @@ function renderDrawer(t) {
     <div class="status-progress">${stepHtml}</div>
     ${overdueBannerHtml}
     <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label">Estado</div><div class="info-cell-val"><span class="badge ${STATUS_CSS[t.status]||'b-pending'}">${STATUS_LABELS[t.status]||t.status}</span></div></div>
       <div class="info-cell"><div class="info-cell-label">Tipo</div><div class="info-cell-val">${TYPE_LABELS[t.type]||t.type}</div></div>
       <div class="info-cell"><div class="info-cell-label">Responsable</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px">${(()=>{ const mgr=t.managerId?(_authUsers||[]).find(u=>u.id===t.managerId):null; return mgr?avatarHtml(mgr,24)+`<span>${esc(mgr.name.split(' ').slice(0,2).join(' '))}</span>`:(t.assignedTo?userName(t.assignedTo):'—'); })()}</div></div>
       ${taskAuxiliaryIds(t).length?`<div class="info-cell info-cell-wide"><div class="info-cell-label">Auxiliares</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${taskAuxiliaryIds(t).map(id=>{const u=(_authUsers||[]).find(u=>u.id===id);return u?'<span style="display:flex;align-items:center;gap:4px;margin-right:4px">'+avatarHtml(u,22)+'<span style="font-size:12px">'+esc(u.name.split(' ').slice(0,2).join(' '))+'</span></span>':'';}).join('')}</div></div>`:''}
@@ -8001,7 +8092,6 @@ function renderDrawer(t) {
     <div class="status-progress">${stepHtml}</div>
     ${overdueBannerHtml}
     <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label">Estado</div><div class="info-cell-val"><span class="badge ${STATUS_CSS[t.status]||'b-pending'}">${STATUS_LABELS[t.status]||t.status}</span></div></div>
       <div class="info-cell"><div class="info-cell-label">Tipo</div><div class="info-cell-val">${TYPE_LABELS[t.type]||t.type}</div></div>
       <div class="info-cell"><div class="info-cell-label">Prioridad</div><div class="info-cell-val">${t.priority==='high'?'<span style="color:var(--red-dot)">●</span> Alta':t.priority==='low'?'<span style="color:var(--green-dot)">●</span> Baja':'<span style="color:var(--amber-dot)">●</span> Media'}</div></div>
       <div class="info-cell"><div class="info-cell-label">Responsable</div><div class="info-cell-val" style="display:flex;align-items:center;gap:6px">${(()=>{ const mgr=t.managerId?(_authUsers||[]).find(u=>u.id===t.managerId):null; return mgr?avatarHtml(mgr,24)+`<span>${esc(mgr.name.split(' ').slice(0,2).join(' '))}</span>`:(t.assignedTo?userName(t.assignedTo):'—'); })()}</div></div>
@@ -10690,11 +10780,14 @@ async function loadDashboard() {
 
 async function loadOpsAgent() {
   const panel = document.getElementById('ops-agent-panel');
+  const header = document.getElementById('ops-agent-header');
   if (!panel) return;
   if (!isAgentOwnerUser()) {
+    if (header) header.style.display = 'none';
     panel.style.display = 'none';
     return;
   }
+  if (header) header.style.display = '';
   panel.style.display = '';
   panel.innerHTML = '<div class="loading"><div class="spinner"></div><br>Analizando tareas en vivo...</div>';
   try {
@@ -10746,10 +10839,10 @@ async function loadOpsAgent() {
     const typeHtml = Object.entries(s.byType||{}).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<span class="ops-pill">${typeLabel[k]||k}: ${v}</span>`).join(' ');
     const companyContext = d.companyContext || {};
     const odooActive = !!(companyContext.odoo && companyContext.odoo.ok);
-    const companyContextHtml = `<div class="ops-agent-card" style="margin-bottom:12px">
-      <div class="ops-agent-card-title"><i data-lucide="network"></i>Contexto empresa / Odoo</div>
+    const companyContextHtml = `<details class="ops-agent-card ops-context-collapsible" style="margin-bottom:12px">
+      <summary class="ops-agent-card-title"><i data-lucide="network"></i>Contexto empresa / Odoo</summary>
       <div class="ops-next-action">${odooActive ? 'Activo en solo lectura: los agentes usan Odoo y documentos asociados para entender ordenes, picks, inventario y flujo de empresa.' : 'Contexto de empresa activo. Odoo no devolvio datos ahora mismo, pero los agentes siguen trabajando con Workforce Platform.'}</div>
-    </div>`;
+    </details>`;
     const urgentCount = decisions.filter(x => x.task && ['critical','high'].includes(x.severity)).length;
     const assistantHtml = `<div class="ops-agent-card ops-assistant-bar">
       <div class="ops-assistant-copy">
@@ -11286,7 +11379,7 @@ async function loadProcessAuditor() {
   const panel = document.getElementById('process-auditor-panel');
   if (!panel) return;
   if (!isAgentOwnerUser()) {
-    panel.innerHTML = '<div class="loading">Este agente esta reservado para gsanchez@altritempi.com.do</div>';
+    panel.innerHTML = '<div class="loading">Esta Mesa de Agentes esta reservada para usuarios ejecutivos autorizados.</div>';
     return;
   }
   panel.innerHTML = '<div class="loading"><div class="spinner"></div><br>Analizando procesos...</div>';
@@ -11307,10 +11400,10 @@ async function loadProcessAuditor() {
     const auditorChat = d.chat || [];
     const companyContext = d.companyContext || {};
     const odooActive = !!(companyContext.odoo && companyContext.odoo.ok);
-    const companyContextHtml = `<div class="ops-agent-card" style="margin-bottom:12px">
-      <div class="ops-agent-card-title"><i data-lucide="network"></i>Contexto empresa / Odoo</div>
+    const companyContextHtml = `<details class="ops-agent-card ops-context-collapsible" style="margin-bottom:12px">
+      <summary class="ops-agent-card-title"><i data-lucide="network"></i>Contexto empresa / Odoo</summary>
       <div class="ops-next-action">${odooActive ? 'Activo en solo lectura: el Auditor Codex usa Odoo y documentos asociados para entender la empresa, pero sus acciones siguen limitadas a Workforce Platform.' : 'Contexto de empresa activo. Odoo no devolvio datos ahora mismo; el Auditor sigue usando tareas, eventos y documentos de Workforce Platform.'}</div>
-    </div>`;
+    </details>`;
     const metricsHtml = `<div class="ops-agent-top">
       <div class="ops-agent-metric"><div class="ops-agent-val">${s.active||0}</div><div class="ops-agent-label">Activas</div></div>
       <div class="ops-agent-metric"><div class="ops-agent-val" style="color:${s.overdue?'#dc2626':'var(--brand)'}">${s.overdue||0}</div><div class="ops-agent-label">Vencidas</div></div>
