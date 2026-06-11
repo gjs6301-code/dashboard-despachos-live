@@ -10761,6 +10761,11 @@ async function loadOpsAgent() {
         <button class="btn-sm" onclick="loadOpsAgent()" title="Actualizar analisis"><i data-lucide="refresh-cw" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px"></i></button>
       </div>
     </div>`;
+    // Preservar la Mesa de Agentes (y el parte IA) vivos: los eventos WebSocket re-ejecutan
+    // loadDashboard→loadOpsAgent y el innerHTML destruía el textarea — borrando lo que el
+    // usuario estaba escribiendo — y el chat. Conservamos los nodos y los reinsertamos.
+    const _prevMesa = document.getElementById('agent-group-panel');
+    const _prevBrief = document.getElementById('ops-ai-brief');
     panel.innerHTML = `<div id="ops-ai-brief"></div>
       <div id="agent-group-panel"></div>
       ${metricsHtml}
@@ -10784,10 +10789,19 @@ async function loadOpsAgent() {
         </div>
       </div>
       <div style="font-size:10px;color:var(--text-3);margin-top:10px">Actualizado: ${new Date(d.generatedAt).toLocaleString('es-DO')}</div>`;
+    // Reinsertar los nodos vivos (chat, textarea con borrador, scroll y parte IA intactos)
+    if (_prevMesa && _prevMesa.childNodes.length) {
+      const ph = panel.querySelector('#agent-group-panel');
+      if (ph) ph.replaceWith(_prevMesa);
+    }
+    if (_prevBrief && _prevBrief.childNodes.length) {
+      const phb = panel.querySelector('#ops-ai-brief');
+      if (phb) phb.replaceWith(_prevBrief);
+    }
     if (window.lucide) lucide.createIcons();
     loadAgentGroupChat();
     // Parte del día con IA (Claude) — carga async para no bloquear el panel heurístico
-    if (d.aiEnabled) loadOpsBrief(false);
+    if (d.aiEnabled && !(_prevBrief && _prevBrief.childNodes.length)) loadOpsBrief(false);
   } catch(e) {
     panel.innerHTML = '<div class="loading">Error analizando operaciones: '+esc(e.message)+'</div>';
   }
@@ -11018,6 +11032,13 @@ function renderAgentRoutines(routines) {
 function renderAgentGroupPanel(data) {
   const panel = document.getElementById('agent-group-panel');
   if (!panel) return;
+  // Preservar borrador, foco y scroll del chat antes de reescribir el innerHTML
+  // (el re-render llega por WebSocket/dashboard y no debe borrar lo que se está escribiendo)
+  const _oldInput = document.getElementById('agent-group-input');
+  const _draft = _oldInput ? _oldInput.value : (window._agentGroupDraft || '');
+  const _hadFocus = _oldInput && document.activeElement === _oldInput;
+  const _oldBox = document.getElementById('agent-group-chat');
+  const _oldScroll = _oldBox ? { top:_oldBox.scrollTop, atBottom:(_oldBox.scrollHeight - _oldBox.scrollTop - _oldBox.clientHeight) < 40 } : null;
   const incomingChat = Array.isArray(data?.chat) ? data.chat : [];
   const pendingChat = Array.isArray(window._agentGroupPending) ? window._agentGroupPending : [];
   const incomingIds = new Set(incomingChat.map(m => m.id).filter(Boolean));
@@ -11090,13 +11111,23 @@ function renderAgentGroupPanel(data) {
     <div class="auditor-chat-box">
       <div class="auditor-chat-messages" id="agent-group-chat">${messagesHtml}</div>
       <div class="auditor-chat-input">
-        <textarea id="agent-group-input" placeholder="Ej: consulta en Odoo los articulos en ubicacion obsoleto y preparame el reporte para ventas..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentGroupChat()}"></textarea>
+        <textarea id="agent-group-input" placeholder="Ej: consulta en Odoo los articulos en ubicacion obsoleto y preparame el reporte para ventas..." oninput="window._agentGroupDraft=this.value" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentGroupChat()}"></textarea>
         <button class="btn-sm primary" onclick="sendAgentGroupChat()"><i data-lucide="send" style="width:12px;height:12px;stroke:currentColor;display:inline-block;vertical-align:-2px;margin-right:4px"></i>Enviar</button>
       </div>
     </div>
   </div>`;
+  // Restaurar borrador, foco y scroll preservados arriba
+  const _newInput = document.getElementById('agent-group-input');
+  if (_newInput) {
+    if (_draft) { _newInput.value = _draft; window._agentGroupDraft = _draft; }
+    if (_hadFocus) { _newInput.focus(); try { _newInput.setSelectionRange(_draft.length, _draft.length); } catch(_){} }
+  }
   const box = document.getElementById('agent-group-chat');
-  if (box) box.scrollTop = box.scrollHeight;
+  if (box) {
+    // Mantener la posición de lectura: solo auto-scroll al fondo si ya estaba al fondo
+    if (_oldScroll && !_oldScroll.atBottom) box.scrollTop = _oldScroll.top;
+    else box.scrollTop = box.scrollHeight;
+  }
   if (window.lucide) lucide.createIcons();
 }
 
@@ -11160,6 +11191,7 @@ async function sendAgentGroupChat() {
   const text = (input.value || '').trim();
   if (!text) { toast('Escribe tu solicitud para la Mesa de Agentes'); return; }
   input.value = '';
+  window._agentGroupDraft = '';
   const optimisticUser = {
     id: 'local_' + Date.now(),
     role: 'user',
