@@ -5348,47 +5348,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/wwp/ai-diag — diagnóstico temporal: prueba la IA y devuelve el error exacto (owner)
-  if (reqPath === '/api/wwp/ai-diag' && req.method === 'GET') {
-    const jp = requireJwt(req, res); if (!jp) return;
-    if (!requireAgentOwner(jp, res)) return;
-    const out = { model: CODEX_AUDITOR_MODEL };
-    // Llamada cruda para ver TODO: status, incomplete_details, longitud de salida
-    try {
-      const big = 'x'.repeat(2000);
-      const r = await fetch('https://api.openai.com/v1/responses', {
-        method:'POST', headers:{'Authorization':`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},
-        body: JSON.stringify({ model: CODEX_AUDITOR_MODEL, input:[{role:'system',content:'Eres un asistente. Responde en una frase.'},{role:'user',content:'Resume esto en una frase: '+big}], max_output_tokens: 3000 })
-      });
-      const p = await r.json().catch(()=>({}));
-      out.httpStatus = r.status;
-      out.apiError = p.error?.message || null;
-      out.respStatus = p.status || null;
-      out.incomplete = p.incomplete_details || null;
-      out.outputTextLen = (p.output_text||'').length;
-      out.outputArrayTypes = (p.output||[]).map(o=>o.type);
-      // Estructura cruda del primer message para ver dónde está el texto
-      const msg = (p.output||[]).find(o=>o.type==='message') || (p.output||[])[0] || null;
-      out.msgKeys = msg ? Object.keys(msg) : null;
-      out.contentDump = msg && Array.isArray(msg.content) ? msg.content.map(c=>({type:c.type, keys:Object.keys(c), textSample:(c.text||c.output_text||c.value||'').slice(0,60)})) : msg?.content;
-      out.usage = p.usage || null;
-    } catch(e) { out.fetchError = e.message; }
-    // Test 2: aiComplete REAL como lo usa Marta (contexto grande + 2500 tokens)
-    try {
-      const rep = computeOpsAgentReport();
-      const cc = await getAgentCompanyContext({ includeOdoo: true });
-      const t0 = Date.now();
-      const ans = await aiComplete({
-        system: 'Eres la Gerente de Operaciones de Altri Tempi. Responde en una frase cálida. ' + AGENT_HUMAN_TONE,
-        user: 'Contexto:\n```json\n' + JSON.stringify(cc, null, 1).slice(0, 25000) + '\n```\n\nOperativo:\n```json\n' + JSON.stringify(rep, null, 1).slice(0, 35000) + '\n```\n\nSaluda y di cómo vamos.',
-        maxTokens: 2500
-      });
-      out.martaTest = { ms: Date.now()-t0, len: ans.length, sample: ans.slice(0, 120) };
-    } catch(e) { out.martaTest = { error: e.message }; }
-    res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(out));
-    return;
-  }
-
   // GET /api/wwp/ops-agent — agente gerente de operaciones (admin)
   if (reqPath === '/api/wwp/ops-agent' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
@@ -5440,8 +5399,8 @@ const server = http.createServer(async (req, res) => {
 
       const brief = await aiComplete({
         system: systemPrompt + ' ' + AGENT_HUMAN_TONE,
-        user: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nReporte operativo de hoy (' + new Date().toISOString().slice(0, 10) + '):\n```json\n' + JSON.stringify(report, null, 1) + '\n```\nRedacta el parte del día.',
-        maxTokens: 4000
+        user: 'Contexto de empresa (resumen):\n```json\n' + JSON.stringify(companyContext, null, 0).slice(0, 6000) + '\n```\n\nReporte operativo de hoy (' + new Date().toISOString().slice(0, 10) + '):\n```json\n' + JSON.stringify(report, null, 0).slice(0, 9000) + '\n```\nRedacta el parte del día.',
+        maxTokens: 1500
       });
       if (!brief) throw new Error('respuesta vacía de IA');
       _opsBriefCache = { hash: dataHash, brief, generatedAt: Date.now() };
@@ -5591,8 +5550,8 @@ const server = http.createServer(async (req, res) => {
         try {
           answer = await aiComplete({
             system: systemPrompt,
-            user: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nContexto operativo actual:\n```json\n' + JSON.stringify(report, null, 1).slice(0, 35000) + '\n```\n\nSolicitud de Gabriel:\n' + text,
-            maxTokens: 2500
+            user: 'Contexto de empresa/Odoo (resumen):\n```json\n' + JSON.stringify(companyContext, null, 0).slice(0, 6000) + '\n```\n\nResumen operativo:\n```json\n' + JSON.stringify(report.summary || report, null, 0).slice(0, 6000) + '\n```\n\nSolicitud de Gabriel:\n' + text,
+            maxTokens: 1200
           });
           if (!answer) throw new Error('respuesta vacía de IA');
         } catch(e) {
@@ -5726,19 +5685,18 @@ const server = http.createServer(async (req, res) => {
             'El campo "learn" es un array de strings (puede ir vacio) con lo aprendido en este intercambio para recordar siempre.',
             'Los participantIds deben incluir coordinator y los agentes consultados.'
           ].join(' ');
+          // Payload compacto para no agotar el límite de tokens del proveedor.
+          // El systemPrompt ya codifica las reglas; aquí solo va lo esencial del momento.
           const payloadContext = {
             request: text,
             isConversational: isConversationalAgentMessage(text),
-            agents,
-            preferences: state.agentGroup.preferences,
-            learnings: state.agentGroup.learnings,
-            knowledgePack: state.agentGroup.knowledgePack,
-            fullKnowledgeBase: getAgentCompanyKnowledgeBase(),
-            recentChat: state.agentGroup.chat.slice(-8),
-            companyContext,
+            agents: agents.map(a => ({ id:a.id, name:a.name, specialty:a.specialty })),
+            preferences: (state.agentGroup.preferences || []).slice(-8),
+            learnings: (state.agentGroup.learnings || []).slice(-25),
+            recentChat: state.agentGroup.chat.slice(-5).map(m => ({ role:m.role, text:(m.text||'').slice(0,400) })),
+            odooAvailable: !!(companyContext && companyContext.odoo && companyContext.odoo.ok),
             specialReports,
             opsSummary: Object.keys(specialReports).length ? null : report.summary,
-            opsDecisions: Object.keys(specialReports).length ? [] : (report.decisions || []).slice(0, 12),
             currentDate: new Date().toISOString()
           };
           const response = await fetch('https://api.openai.com/v1/responses', {
@@ -5751,9 +5709,9 @@ const server = http.createServer(async (req, res) => {
               model: CODEX_AUDITOR_MODEL,
               input: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: JSON.stringify(payloadContext, null, 2).slice(0, 50000) }
+                { role: 'user', content: JSON.stringify(payloadContext).slice(0, 12000) }
               ],
-              max_output_tokens: 4500
+              max_output_tokens: 1800
             })
           });
           const payload = await response.json().catch(() => ({}));
