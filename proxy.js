@@ -279,6 +279,32 @@ const anthropicClient = (Anthropic && ANTHROPIC_KEY) ? new Anthropic({ apiKey: A
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const CODEX_AUDITOR_MODEL = process.env.CODEX_AUDITOR_MODEL || process.env.OPENAI_MODEL || 'gpt-5.4-mini';
 
+// ── Cerebro de IA unificado ───────────────────────────────────────────────────
+// Hoy TODO corre con OpenAI (una sola clave). Más adelante se puede volver a Anthropic.
+// Bandera única que usan todos los agentes para saber si hay IA disponible.
+const AI_ENABLED = !!OPENAI_API_KEY || !!anthropicClient;
+// Completa un prompt con OpenAI (Responses API) y devuelve solo el texto.
+async function aiComplete({ system, user, maxTokens = 2500 }) {
+  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY no configurada');
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: CODEX_AUDITOR_MODEL,
+      input: [
+        { role: 'system', content: String(system || '') },
+        { role: 'user', content: String(user || '').slice(0, 50000) }
+      ],
+      max_output_tokens: maxTokens
+    })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || `OpenAI API error ${response.status}`);
+  return (payload.output_text
+    || (payload.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('\n').trim()
+    || '').trim();
+}
+
 // Cache del parte del día (evita llamar a Claude en cada carga del dashboard).
 // Se invalida cuando cambian los datos (hash) o al pasar el TTL.
 let _opsBriefCache = { hash: '', brief: null, generatedAt: 0 };
@@ -5331,19 +5357,19 @@ const server = http.createServer(async (req, res) => {
     const state = loadProcessAuditorState();
     if (!state.opsChats) state.opsChats = { manager: [], assistant: [] };
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, generatedAt: new Date().toISOString(), aiEnabled: !!anthropicClient, companyContext, chats: state.opsChats, ...report }));
+    res.end(JSON.stringify({ ok: true, generatedAt: new Date().toISOString(), aiEnabled: AI_ENABLED, companyContext, chats: state.opsChats, ...report }));
     return;
   }
 
-  // GET /api/wwp/ops-agent/brief — parte del día redactado por Claude (admin)
+  // GET /api/wwp/ops-agent/brief — parte del día redactado por IA (admin)
   // Toma el reporte heurístico como insumo y genera un análisis en lenguaje natural.
   // Cache server-side: 30 min o hasta que cambien los datos. ?refresh=1 fuerza regeneración.
   if (reqPath === '/api/wwp/ops-agent/brief' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
     if (!requireAgentOwner(jp, res)) return;
-    if (!anthropicClient) {
+    if (!AI_ENABLED) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, reason: 'no_api_key', message: 'Configura ANTHROPIC_API_KEY para activar el análisis con IA.' }));
+      res.end(JSON.stringify({ ok: false, reason: 'no_api_key', message: 'Configura OPENAI_API_KEY para activar el análisis con IA.' }));
       return;
     }
     try {
@@ -5371,29 +5397,21 @@ const server = http.createServer(async (req, res) => {
         '- Si la operación está sana, dilo claramente y felicita en una línea.\n' +
         '- Máximo ~250 palabras en total.';
 
-      const response = await anthropicClient.messages.create({
-        model: 'claude-opus-4-8',
-        max_tokens: 4000,
-        thinking: { type: 'adaptive' },
-        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-        messages: [{
-          role: 'user',
-          content: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nReporte operativo de hoy (' + new Date().toISOString().slice(0, 10) + '):\n```json\n' + JSON.stringify(report, null, 1) + '\n```\nRedacta el parte del día.'
-        }]
+      const brief = await aiComplete({
+        system: systemPrompt + ' ' + AGENT_HUMAN_TONE,
+        user: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nReporte operativo de hoy (' + new Date().toISOString().slice(0, 10) + '):\n```json\n' + JSON.stringify(report, null, 1) + '\n```\nRedacta el parte del día.',
+        maxTokens: 4000
       });
-
-      const brief = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      if (!brief) throw new Error('respuesta vacía de IA');
       _opsBriefCache = { hash: dataHash, brief, generatedAt: Date.now() };
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, cached: false, generatedAt: new Date().toISOString(), brief,
-        usage: { input: response.usage.input_tokens, output: response.usage.output_tokens, cacheRead: response.usage.cache_read_input_tokens || 0 } }));
+      res.end(JSON.stringify({ ok: true, cached: false, generatedAt: new Date().toISOString(), brief }));
     } catch (e) {
       // Errores de la API (rate limit, overload, key inválida): degradar con gracia — el panel
-      // heurístico sigue funcionando. Mensajes claros por tipo sin romper el dashboard.
-      let reason = 'api_error', msg = e.message || 'Error llamando a Claude';
-      if (Anthropic && e instanceof Anthropic.AuthenticationError) { reason = 'bad_api_key'; msg = 'La ANTHROPIC_API_KEY no es válida.'; }
-      else if (Anthropic && e instanceof Anthropic.RateLimitError) { reason = 'rate_limited'; msg = 'Límite de uso alcanzado; intenta en unos minutos.'; }
-      else if (Anthropic && e.status === 529) { reason = 'overloaded'; msg = 'Claude está saturado; intenta en unos minutos.'; }
+      // heurístico sigue funcionando.
+      let reason = 'api_error', msg = e.message || 'Error llamando a la IA';
+      if (/api key|apikey|401|invalid_api_key/i.test(msg)) { reason = 'bad_api_key'; msg = 'La OPENAI_API_KEY no es válida.'; }
+      else if (/rate limit|429/i.test(msg)) { reason = 'rate_limited'; msg = 'Límite de uso alcanzado; intenta en unos minutos.'; }
       console.error('[ops-brief]', reason, e.message);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, reason, message: msg }));
@@ -5527,20 +5545,15 @@ const server = http.createServer(async (req, res) => {
         + ' ' + AGENT_HUMAN_TONE + _learnBlock;
 
       let answer = '';
-      let ai = !!anthropicClient;
-      if (anthropicClient) {
+      let ai = !!OPENAI_API_KEY;
+      if (OPENAI_API_KEY) {
         try {
-          const response = await anthropicClient.messages.create({
-            model: 'claude-opus-4-8',
-            max_tokens: 2500,
-            thinking: { type: 'adaptive' },
+          answer = await aiComplete({
             system: systemPrompt,
-            messages: [{
-              role: 'user',
-              content: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nContexto operativo actual:\n```json\n' + JSON.stringify(report, null, 1).slice(0, 35000) + '\n```\n\nSolicitud de Gabriel:\n' + text
-            }]
+            user: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nContexto operativo actual:\n```json\n' + JSON.stringify(report, null, 1).slice(0, 35000) + '\n```\n\nSolicitud de Gabriel:\n' + text,
+            maxTokens: 2500
           });
-          answer = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+          if (!answer) throw new Error('respuesta vacía de IA');
         } catch(e) {
           ai = false;
           answer = `${agentName}: No pude consultar IA ahora mismo, pero revisando el contexto operativo debes priorizar vencidas, tareas sin avance, responsables sobrecargados y evidencias pendientes. Solicitud recibida: ${text}`;
