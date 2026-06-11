@@ -15,6 +15,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "nodemailer": "^6.10.1"
   },
   "notes": {

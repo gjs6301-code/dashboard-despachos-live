@@ -268,6 +268,142 @@ function syncKitStructureToChildren(parentTask, tasks) {
   return changed;
 }
 
+// ── Claude API (Anthropic) — cerebro de los agentes de IA ────────────────────
+// Carga opcional: si el SDK o la key no están, los agentes caen a modo heurístico.
+let Anthropic = null;
+try { Anthropic = require('@anthropic-ai/sdk'); } catch { /* SDK no instalado */ }
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const anthropicClient = (Anthropic && ANTHROPIC_KEY) ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
+
+// ── OpenAI / Codex — cerebro del Agente Auditor de Procesos ──────────────────
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const CODEX_AUDITOR_MODEL = process.env.CODEX_AUDITOR_MODEL || process.env.OPENAI_MODEL || 'gpt-5.4-mini';
+
+// Cache del parte del día (evita llamar a Claude en cada carga del dashboard).
+// Se invalida cuando cambian los datos (hash) o al pasar el TTL.
+let _opsBriefCache = { hash: '', brief: null, generatedAt: 0 };
+const OPS_BRIEF_TTL = 30 * 60 * 1000; // 30 min
+let _processAuditorAiCache = { hash: '', brief: null, generatedAt: 0 };
+const PROCESS_AUDITOR_AI_TTL = 30 * 60 * 1000; // 30 min
+
+// Reporte heurístico del Gerente de Operaciones (compartido por /ops-agent y /ops-agent/brief)
+function computeOpsAgentReport() {
+  const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
+  const users = loadAuthUsers();
+  const userById = {};
+  users.forEach(u => { userById[u.id] = u; });
+
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  const closedStatuses = new Set(['completed', 'validated', 'cancelled']);
+  const active = tasks.filter(t => !closedStatuses.has(t.status));
+  const parents = active.filter(t => !t.parentId);
+  const subtasks = active.filter(t => t.parentId);
+  const done = tasks.filter(t => t.status === 'completed' || t.status === 'validated');
+
+  const hoursSince = (value) => {
+    const ms = value ? now - new Date(value).getTime() : 0;
+    return Number.isFinite(ms) && ms > 0 ? Math.round(ms / 36e5) : 0;
+  };
+  const taskOwner = (t) => {
+    if (t.managerId && userById[t.managerId]) return userById[t.managerId].name;
+    if (t.managerName) return t.managerName;
+    if (t.assignedTo && String(t.assignedTo).startsWith('oe_')) {
+      const odooId = String(t.assignedTo).slice(3);
+      const u = users.find(x => String(x.odooId || '') === odooId);
+      if (u) return u.name;
+    }
+    return 'Sin responsable';
+  };
+  const taskUrl = (t) => ({
+    id: t.id,
+    seq: t.seq || null,
+    title: t.title || t.odooRef || t.id,
+    type: t.type || 'general',
+    status: t.status,
+    owner: taskOwner(t),
+    dueDate: t.dueDate || null,
+    updatedHoursAgo: hoursSince(t.updatedAt || t.createdAt),
+    overdue: !!t.overdue,
+    overdueDays: t.overdueDays || 0,
+    escalation: t.escalation || null
+  });
+  const severityRank = { critical: 0, high: 1, medium: 2, low: 3 };
+  const decisions = [];
+  const pushDecision = (severity, title, action, task = null, reason = '') => {
+    decisions.push({ severity, title, action, reason, task: task ? taskUrl(task) : null });
+  };
+
+  const overdue = active.filter(t => t.dueDate && t.dueDate < today);
+  overdue.forEach(t => {
+    const esc = t.escalation || {};
+    const suggestion = esc.suggestedUserName
+      ? `Reasignar a ${esc.suggestedUserName} o exigir ETA de cierre hoy.`
+      : 'Escalar al gerente y exigir ETA de cierre hoy.';
+    pushDecision('critical', 'Tarea overdue', suggestion, t, `Vencio el ${t.dueDate}${t.overdueDays ? ` (${t.overdueDays}d)` : ''}.`);
+  });
+
+  const staleInProgress = active.filter(t => t.status === 'in_progress' && hoursSince(t.updatedAt || t.createdAt) >= 8);
+  staleInProgress.forEach(t => pushDecision('high', 'Tarea en progreso sin avance reciente', 'Pedir actualizacion, evidencia o desbloqueo operativo.', t, `${hoursSince(t.updatedAt || t.createdAt)}h sin actualizacion.`));
+
+  const waitingAssignment = active.filter(t => ['pending', 'assigned'].includes(t.status) && hoursSince(t.createdAt) >= 24);
+  waitingAssignment.forEach(t => pushDecision('medium', 'Tarea esperando ejecucion', 'Confirmar responsable, prioridad y hora de inicio.', t, `${hoursSince(t.createdAt)}h desde creacion.`));
+
+  const noOwner = parents.filter(t => !t.managerId && !t.assignedTo);
+  noOwner.forEach(t => pushDecision('high', 'Tarea sin responsable claro', 'Asignar encargado antes de crear mas subtareas.', t, 'No tiene managerId ni assignedTo.'));
+
+  const missingEvidence = active.filter(t => {
+    const selected = (t.items || []).filter(i => i.selected);
+    if (!selected.length) return false;
+    return selected.some(i => !(i.evidence_images || []).length);
+  });
+  missingEvidence.slice(0, 12).forEach(t => pushDecision('medium', 'Evidencia pendiente', 'Solicitar foto/evidencia para poder cerrar la tarea.', t, 'Hay articulos seleccionados sin evidencia.'));
+
+  const readyToValidate = tasks.filter(t => t.status === 'completed');
+  readyToValidate.forEach(t => pushDecision('high', 'Pendiente de validacion', 'Validar, devolver o documentar causa de espera.', t, 'La tarea ya fue marcada completada.'));
+
+  const byOwner = {};
+  active.forEach(t => {
+    const owner = taskOwner(t);
+    if (!byOwner[owner]) byOwner[owner] = { owner, total: 0, overdue: 0, inProgress: 0, assigned: 0, stale: 0 };
+    byOwner[owner].total++;
+    if (t.dueDate && t.dueDate < today) byOwner[owner].overdue++;
+    if (t.status === 'in_progress') byOwner[owner].inProgress++;
+    if (t.status === 'assigned') byOwner[owner].assigned++;
+    if (hoursSince(t.updatedAt || t.createdAt) >= 8 && !closedStatuses.has(t.status)) byOwner[owner].stale++;
+  });
+  const workload = Object.values(byOwner).sort((a, b) => (b.overdue - a.overdue) || (b.total - a.total) || a.owner.localeCompare(b.owner));
+
+  const byType = {};
+  active.forEach(t => { byType[t.type || 'general'] = (byType[t.type || 'general'] || 0) + 1; });
+  const avgCloseHours = done.length
+    ? Math.round(done.reduce((s, t) => s + Math.max(0, new Date(t.updatedAt || t.createdAt).getTime() - new Date(t.createdAt).getTime()), 0) / done.length / 36e5 * 10) / 10
+    : 0;
+
+  decisions.sort((a, b) => severityRank[a.severity] - severityRank[b.severity]);
+  const summary = {
+    active: active.length,
+    parentTasks: parents.length,
+    subtasks: subtasks.length,
+    overdue: overdue.length,
+    stale: staleInProgress.length,
+    waitingAssignment: waitingAssignment.length,
+    noOwner: noOwner.length,
+    missingEvidence: missingEvidence.length,
+    readyToValidate: readyToValidate.length,
+    avgCloseHours,
+    byType
+  };
+  const nextActions = [
+    overdue.length ? `Resolver ${overdue.length} vencida(s) antes de crear trabajo nuevo.` : 'No hay tareas vencidas activas.',
+    readyToValidate.length ? `Validar o devolver ${readyToValidate.length} tarea(s) completada(s).` : 'No hay validaciones acumuladas.',
+    noOwner.length ? `Asignar responsable a ${noOwner.length} tarea(s) sin dueño.` : 'Todas las tareas principales activas tienen responsable o asignacion.',
+    missingEvidence.length ? `Pedir evidencia en ${missingEvidence.length} tarea(s) antes del cierre.` : 'No hay evidencia pendiente detectada en tareas activas.'
+  ];
+
+  return { summary, decisions: decisions.slice(0, 30), workload, nextActions };
+}
+
 // Normaliza una referencia de orden a su número (S06031 / 6031 / 06031 → "6031")
 function normRef(ref){ const m=(ref||'').match(/\d+/); return m?String(parseInt(m[0],10)):''; }
 // Artículos (productos) ya reclamados por tareas ACTIVAS de la misma orden, fuera de la
@@ -311,7 +447,7 @@ function nextTaskSeq() {
   let meta = loadJson(WWP_SEQ_FILE, { seq: 0 });
   // Defensa: si el contador quedó por debajo del máximo existente, lo sube
   try {
-    const tasks = loadWwpTasks();
+    const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
     const maxExisting = tasks.reduce((m,t)=> (typeof t.seq==='number' && t.seq>m)?t.seq:m, 0);
     if (maxExisting > meta.seq) meta.seq = maxExisting;
   } catch {}
@@ -480,6 +616,826 @@ function appendAuditLog(event, data) {
     if (logs.length > 10000) logs.splice(0, logs.length - 10000);
     fs.writeFileSync(WWP_AUDIT_FILE, JSON.stringify(logs, null, 2), 'utf-8');
   } catch(e) { console.warn('[audit]', e.message); }
+}
+
+const PROCESS_AUDITOR_FILE = path.join(DATA_DIR, 'wwp-process-auditor.json');
+const AGENT_OWNER_EMAIL = 'gsanchez@altritempi.com.do';
+function loadProcessAuditorState() {
+  const state = loadJson(PROCESS_AUDITOR_FILE, { recommendations: {}, chat: [], opsChats: { manager: [], assistant: [] } });
+  return ensureAgentGroupState(state);
+}
+function saveProcessAuditorState(state) {
+  saveJson(PROCESS_AUDITOR_FILE, ensureAgentGroupState(state || { recommendations: {}, chat: [], opsChats: { manager: [], assistant: [] } }));
+}
+function getAuthUser(jp) {
+  return loadAuthUsers().find(u => u.id === jp.userId) || null;
+}
+function isAgentOwner(jp) {
+  const user = getAuthUser(jp);
+  return !!(user && String(user.email || '').toLowerCase().trim() === AGENT_OWNER_EMAIL);
+}
+function requireAgentOwner(jp, res) {
+  if (isAgentOwner(jp)) return true;
+  res.writeHead(403, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ ok:false, error:'Este agente esta reservado para gsanchez@altritempi.com.do' }));
+  return false;
+}
+
+const AGENT_COMPANY_CONTEXT_TTL = 10 * 60_000;
+let _agentCompanyContextCache = { at: 0, value: null };
+
+function getAgentCompanyKnowledgeBase() {
+  return {
+    company: {
+      name: 'Altri Tempi',
+      country: 'Republica Dominicana',
+      business: 'Operacion comercial y logistica de muebles, decoracion, almacen, empaque, despachos y servicio postventa.',
+      operatingPrinciple: 'La empresa necesita trazabilidad clara por orden, articulo, responsable, evidencia, ubicacion y cierre operativo.',
+      communicationStyle: 'Respuestas claras, honestas, enfocadas en la solicitud, utiles para ventas, operaciones y gerencia.'
+    },
+    currentScope: {
+      platform: 'Workforce Platform / Historial',
+      allowedActions: [
+        'Analizar tareas y seguimiento operativo dentro de Workforce Platform.',
+        'Leer contexto de Odoo para entender ordenes, clientes, picks, inventario y flujo de empresa.',
+        'Redactar documentos, manuales, recomendaciones, mensajes y planes de accion.',
+        'Proponer cambios de plataforma con comando exacto para Codex cuando Gabriel apruebe.'
+      ],
+      restrictions: [
+        'No escribir, confirmar, cancelar ni modificar registros de Odoo desde los agentes.',
+        'No ejecutar cambios en la plataforma sin aprobacion explicita de Gabriel.',
+        'No exponer llaves, tokens, contrasenas ni variables de entorno.',
+        'No actuar fuera de Workforce Platform hasta que se habilite una fase futura.'
+      ],
+      futureExpansion: 'Los agentes estan preparados para crecer hacia todo Historial, pero hoy su actuacion automatica queda limitada a Workforce Platform.'
+    },
+    systems: [
+      { name: 'Odoo', role: 'ERP de ventas, clientes, inventario, picks, entregas y documentos operativos.', access: 'solo lectura para contexto de agentes' },
+      { name: 'Workforce Platform', role: 'Gestion de tareas, chat, evidencias, validaciones, dashboard, auditoria y mejora continua.', access: 'analisis y recomendaciones; acciones controladas por permisos' },
+      { name: 'Historial', role: 'Consulta y trazabilidad ampliada de ordenes, solicitudes, contenedores, reposicion, pendientes y reportes.', access: 'contexto futuro' },
+      { name: 'Documentos operativos', role: 'Manuales, flujos, matrices RACI, KPIs, permisos, entrenamiento y screenshots requeridos.', access: 'lectura, generacion y actualizacion documental propuesta' }
+    ],
+    associatedDocuments: [
+      'Manual completo del flujo de tareas operativas',
+      'Manual completo de empaque y almacenamiento',
+      'Manual completo de despacho y entrega',
+      'Manual completo de gerencia, auditoria y mejora continua',
+      'Descripcion de puesto por posicion',
+      'Matriz RACI por posicion',
+      'KPIs/SLA por rol y proceso',
+      'Manual de entrenamiento y permisos por posicion',
+      'Mapa funcional de pantallas, botones, datos, permisos y screenshots requeridos'
+    ],
+    businessGlossary: {
+      orden: 'Orden de venta o referencia comercial en Odoo, usualmente formato S#####.',
+      pick: 'Movimiento/preparacion en Odoo que confirma disponibilidad o preparacion de articulos antes de despacho.',
+      picking: 'Transferencia de inventario en Odoo: recepcion, pick, despacho o traslado interno.',
+      ubicacion: 'Localidad fisica o logica del inventario en Odoo/almacen.',
+      obsoleto: 'Ubicacion o clasificacion de inventario que puede requerir venta especial, liquidacion o revision comercial.',
+      familia: 'Categoria comercial o categoria de producto usada para agrupar articulos.',
+      disponible: 'Cantidad fisica menos reservas visibles cuando el dato esta disponible.',
+      evidencia: 'Foto, documento o comentario que permite validar que una tarea fue ejecutada correctamente.',
+      cierre: 'Estado final validado de una tarea o proceso.'
+    },
+    dataSources: [
+      {
+        name: 'Odoo',
+        useFor: ['ordenes de venta', 'clientes', 'productos', 'familias/categorias', 'ubicaciones', 'stock', 'picks', 'pickings', 'inventario disponible'],
+        rule: 'Consultar en solo lectura y presentar datos en formato de negocio. No modificar registros.'
+      },
+      {
+        name: 'Workforce Platform',
+        useFor: ['tareas', 'responsables', 'estados', 'fechas limite', 'evidencias', 'chat operativo', 'validaciones'],
+        rule: 'Usar solo si la solicitud trata de ejecucion operativa, tareas o seguimiento.'
+      },
+      {
+        name: 'Google Sheets / Historial',
+        useFor: ['ordenes historicas', 'contenedores', 'reposicion', 'solicitudes', 'pendientes', 'reportes'],
+        rule: 'Usar como apoyo cuando el usuario pida trazabilidad historica o reportes de Historial.'
+      }
+    ],
+    responsePlaybook: [
+      'Identificar primero la intencion exacta del usuario: reporte, consulta, decision, documento, seguimiento o mejora.',
+      'Consultar la fuente correcta antes de responder cuando el usuario lo pida explicitamente.',
+      'No mezclar temas: si el usuario pide Odoo/ventas, no responder con dashboard de tareas; si pide tareas, no responder con ventas.',
+      'Si falta informacion, explicar la limitante exacta y pedir solo el dato necesario.',
+      'Entregar primero el resultado terminado; dejar notas y limitantes al final.',
+      'Usar lenguaje profesional, simple y listo para compartir.'
+    ],
+    reportFormats: [
+      {
+        name: 'Reporte para ventas',
+        structure: ['Resumen ejecutivo', 'Tabla por familia/categoria', 'Detalle por articulo', 'Totales', 'Texto corto para enviar'],
+        columns: ['Familia', 'Codigo', 'Articulo', 'Cantidad disponible', 'Ubicacion', 'Comentario comercial si aplica'],
+        tone: 'Simple, comercial, sin tecnicismos de base de datos.'
+      },
+      {
+        name: 'Tabla tipo Excel',
+        structure: ['Tabla Markdown o CSV', 'encabezados claros', 'numeros con 2 decimales cuando aplique', 'totales al final'],
+        columns: ['Categoria', 'Referencia', 'Descripcion', 'Cantidad', 'Estado', 'Observacion'],
+        tone: 'Ordenado y facil de copiar/pegar.'
+      },
+      {
+        name: 'Reporte gerencial',
+        structure: ['Resumen de 3-5 lineas', 'hallazgos clave', 'riesgos', 'decision recomendada', 'siguientes pasos'],
+        columns: ['Tema', 'Hallazgo', 'Impacto', 'Accion recomendada', 'Responsable sugerido'],
+        tone: 'Directo, accionable y sin relleno.'
+      },
+      {
+        name: 'Manual o procedimiento',
+        structure: ['Objetivo', 'Alcance', 'roles', 'prerequisitos', 'paso a paso', 'excepciones', 'evidencias', 'criterios de cierre', 'KPIs', 'screenshots requeridos'],
+        columns: ['Paso', 'Responsable', 'Pantalla', 'Accion', 'Resultado esperado'],
+        tone: 'Completo, operativo y entendible para usuarios reales.'
+      },
+      {
+        name: 'Mensaje de seguimiento',
+        structure: ['Saludo humano', 'motivo concreto', 'dato solicitado', 'hora/ETA requerida', 'cierre amable'],
+        columns: [],
+        tone: 'Conversacional, respetuoso y claro.'
+      }
+    ],
+    answerQualityChecklist: [
+      'La respuesta contesta exactamente lo que pidio Gabriel.',
+      'Los datos estan presentados como reporte, no como JSON/base de datos.',
+      'Hay tabla, totales o agrupacion cuando la solicitud contiene datos.',
+      'No hay informacion operativa no solicitada.',
+      'Las limitantes estan al final y son concretas.',
+      'El resultado se puede copiar a Excel, correo, WhatsApp o presentar a gerencia/ventas.'
+    ],
+    examples: [
+      {
+        request: 'Consulta en Odoo articulos en ubicacion obsoleto por familia para ventas.',
+        goodAnswer: 'Entregar resumen ejecutivo, tabla por familia, detalle por articulo y texto corto para ventas.',
+        badAnswer: 'Responder con tareas vencidas, picks abiertos o contexto operativo no solicitado.'
+      },
+      {
+        request: 'Prepara un manual del flujo de empaque.',
+        goodAnswer: 'Entregar documento completo con objetivo, alcance, roles, pasos, evidencias, excepciones, cierre y screenshots.',
+        badAnswer: 'Dar una lista breve o pedir que el usuario explique todo otra vez.'
+      },
+      {
+        request: 'Dime que decision tomar hoy en operaciones.',
+        goodAnswer: 'Usar tareas, vencidas, responsables, evidencias y dar una decision priorizada.',
+        badAnswer: 'Irse a Odoo ventas si no fue pedido.'
+      }
+    ],
+    agentBehavior: [
+      'Ser sinceros, responsables y concretos.',
+      'Separar hechos confirmados de inferencias.',
+      'Pedir informacion solo cuando sea necesaria; si falta, entregar una version base util.',
+      'Cuidar la operacion: prioridad en vencidas, bloqueos, evidencias, validaciones, responsable claro y cliente.',
+      'Aprender de correcciones de Gabriel y aplicarlas en la siguiente respuesta.',
+      'Preparar entregables con acabado profesional, no borradores a medias.'
+    ]
+  };
+}
+
+async function getOdooCompanySnapshot() {
+  const snapshot = {
+    ok: false,
+    access: 'read_only',
+    generatedAt: new Date().toISOString(),
+    saleOrders: [],
+    openPickings: [],
+    stockSamples: [],
+    error: null
+  };
+  try {
+    snapshot.saleOrders = await odooCall('sale.order', 'search_read', [[['state', 'in', ['sale', 'done']]]], {
+      fields: ['name', 'partner_id', 'date_order', 'state', 'amount_total'],
+      limit: 6,
+      order: 'date_order desc'
+    });
+  } catch (e) {
+    snapshot.error = `sale.order: ${safeError(e)}`;
+  }
+  try {
+    snapshot.openPickings = await odooCall('stock.picking', 'search_read', [[['state', 'not in', ['done', 'cancel']]]], {
+      fields: ['name', 'origin', 'state', 'scheduled_date', 'picking_type_id', 'partner_id'],
+      limit: 8,
+      order: 'scheduled_date asc'
+    });
+  } catch (e) {
+    snapshot.error = snapshot.error || `stock.picking: ${safeError(e)}`;
+  }
+  try {
+    snapshot.stockSamples = await odooCall('stock.quant', 'search_read', [[['quantity', '>', 0]]], {
+      fields: ['product_id', 'location_id', 'quantity', 'reserved_quantity'],
+      limit: 8
+    });
+  } catch (e) {
+    snapshot.error = snapshot.error || `stock.quant: ${safeError(e)}`;
+  }
+  snapshot.ok = !!(snapshot.saleOrders.length || snapshot.openPickings.length || snapshot.stockSamples.length);
+  return snapshot;
+}
+
+function needsObsoleteStockReport(text) {
+  const q = String(text || '').toLowerCase();
+  return q.includes('obsoleto') && (q.includes('ubicacion') || q.includes('ubicación') || q.includes('stock') || q.includes('articulo') || q.includes('artículo'));
+}
+
+async function getOdooObsoleteStockReport() {
+  const report = {
+    ok: false,
+    title: 'Articulos disponibles en ubicacion obsoleto',
+    generatedAt: new Date().toISOString(),
+    locationQuery: 'obsoleto',
+    locations: [],
+    rows: [],
+    byFamily: [],
+    errors: []
+  };
+  try {
+    let locations = await odooCall('stock.location', 'search_read', [[['complete_name', 'ilike', 'obsoleto']]], {
+      fields: ['name', 'complete_name', 'usage'],
+      limit: 50
+    });
+    if (!locations.length) {
+      locations = await odooCall('stock.location', 'search_read', [[['name', 'ilike', 'obsoleto']]], {
+        fields: ['name', 'complete_name', 'usage'],
+        limit: 50
+      });
+    }
+    report.locations = locations.map(l => ({ id: l.id, name: l.name, completeName: l.complete_name || l.name, usage: l.usage || null }));
+    const locationIds = locations.map(l => l.id).filter(Boolean);
+    if (!locationIds.length) {
+      report.errors.push('No encontre una ubicacion de Odoo que contenga "obsoleto".');
+      return report;
+    }
+
+    const quants = await odooCall('stock.quant', 'search_read', [[['location_id', 'in', locationIds], ['quantity', '>', 0]]], {
+      fields: ['product_id', 'location_id', 'quantity', 'reserved_quantity'],
+      limit: 2000
+    });
+    const productIds = [...new Set(quants.map(q => Array.isArray(q.product_id) ? q.product_id[0] : q.product_id).filter(Boolean))];
+    const products = productIds.length
+      ? await odooCall('product.product', 'read', [productIds], { fields: ['display_name', 'default_code', 'categ_id'] })
+      : [];
+    const productMap = new Map(products.map(p => [p.id, p]));
+    const rowMap = new Map();
+    quants.forEach(q => {
+      const productId = Array.isArray(q.product_id) ? q.product_id[0] : q.product_id;
+      const product = productMap.get(productId) || {};
+      const family = Array.isArray(product.categ_id) ? product.categ_id[1] : 'Sin familia visible';
+      const code = product.default_code || '';
+      const name = product.display_name || (Array.isArray(q.product_id) ? q.product_id[1] : String(productId || 'Producto'));
+      const location = Array.isArray(q.location_id) ? q.location_id[1] : '';
+      const key = `${family}|${code}|${name}`;
+      const existing = rowMap.get(key) || { family, code, product: name, quantity: 0, reserved: 0, available: 0, locations: new Set() };
+      existing.quantity += Number(q.quantity || 0);
+      existing.reserved += Number(q.reserved_quantity || 0);
+      existing.available += Math.max(0, Number(q.quantity || 0) - Number(q.reserved_quantity || 0));
+      if (location) existing.locations.add(location);
+      rowMap.set(key, existing);
+    });
+    report.rows = Array.from(rowMap.values())
+      .map(r => ({ ...r, locations: Array.from(r.locations).join(' / ') }))
+      .sort((a, b) => String(a.family).localeCompare(String(b.family)) || String(a.product).localeCompare(String(b.product)));
+    const familyMap = new Map();
+    report.rows.forEach(r => {
+      const f = familyMap.get(r.family) || { family: r.family, items: 0, quantity: 0, reserved: 0, available: 0 };
+      f.items += 1;
+      f.quantity += r.quantity;
+      f.reserved += r.reserved;
+      f.available += r.available;
+      familyMap.set(r.family, f);
+    });
+    report.byFamily = Array.from(familyMap.values()).sort((a, b) => String(a.family).localeCompare(String(b.family)));
+    report.ok = true;
+    return report;
+  } catch (e) {
+    report.errors.push(safeError(e));
+    return report;
+  }
+}
+
+async function getAgentCompanyContext({ includeOdoo = true } = {}) {
+  const now = Date.now();
+  if (includeOdoo && _agentCompanyContextCache.value && now - _agentCompanyContextCache.at < AGENT_COMPANY_CONTEXT_TTL) {
+    return _agentCompanyContextCache.value;
+  }
+  const context = {
+    generatedAt: new Date().toISOString(),
+    knowledgeBase: getAgentCompanyKnowledgeBase(),
+    odoo: includeOdoo ? await getOdooCompanySnapshot() : { ok: false, access: 'not_requested' }
+  };
+  if (includeOdoo) _agentCompanyContextCache = { at: now, value: context };
+  return context;
+}
+
+function getDefaultAgentRoster() {
+  return [
+    {
+      id: 'coordinator',
+      avatar: '🧭',
+      name: 'Coordinador de Agentes',
+      specialty: 'Moderacion, delegacion y respuesta final',
+      description: 'Discierne que agente debe participar, divide la solicitud y entrega la respuesta terminada.'
+    },
+    {
+      id: 'ops_manager',
+      avatar: '🏛️',
+      name: 'Gerente de Operaciones',
+      specialty: 'Decisiones operativas, prioridades, riesgos y avance',
+      description: 'Analiza tareas, atrasos, carga de trabajo, evidencias, validaciones y escalamiento.'
+    },
+    {
+      id: 'ops_assistant',
+      avatar: '✦',
+      name: 'Asistente de Operaciones',
+      specialty: 'Seguimiento humano y comunicacion con responsables',
+      description: 'Redacta mensajes conversacionales, pide updates y ayuda a destrabar actividades.'
+    },
+    {
+      id: 'process_auditor',
+      avatar: '⚖️',
+      name: 'Auditor Codex de Procesos',
+      specialty: 'Auditoria, manuales, flujos y mejoras de plataforma',
+      description: 'Crea documentos terminados, audita pantallas, botones, permisos, evidencias y cambios.'
+    },
+    {
+      id: 'warehouse_specialist',
+      avatar: '◈',
+      name: 'Especialista de Almacen y Empaque',
+      specialty: 'Almacenamiento, empaque, ubicaciones y evidencias',
+      description: 'Se enfoca en condicion de articulos, fotos, ubicacion destino, materiales y cierre correcto.'
+    },
+    {
+      id: 'odoo_analyst',
+      avatar: '🛰️',
+      name: 'Analista Odoo / Historial',
+      specialty: 'Contexto de ordenes, picks, inventario y trazabilidad',
+      description: 'Usa Odoo en solo lectura para explicar contexto empresarial y relacionarlo con Workforce Platform.'
+    },
+    {
+      id: 'documenter',
+      avatar: '📜',
+      name: 'Documentador de Plataforma',
+      specialty: 'Documentos acabados, puestos, RACI, KPIs y entrenamiento',
+      description: 'Convierte hallazgos en manuales, procedimientos, matrices y documentos listos para usuarios reales.'
+    }
+  ];
+}
+
+function ensureAgentGroupState(state) {
+  state = state || {};
+  if (!state.recommendations) state.recommendations = {};
+  if (!Array.isArray(state.chat)) state.chat = [];
+  if (!state.opsChats) state.opsChats = { manager: [], assistant: [] };
+  if (!state.agentGroup || typeof state.agentGroup !== 'object') state.agentGroup = {};
+  const defaults = getDefaultAgentRoster();
+  const existing = Array.isArray(state.agentGroup.agents) ? state.agentGroup.agents : [];
+  const byId = new Map([...defaults, ...existing].map(a => [a.id, a]));
+  state.agentGroup.agents = Array.from(byId.values());
+  if (!Array.isArray(state.agentGroup.chat)) state.agentGroup.chat = [];
+  if (!Array.isArray(state.agentGroup.preferences)) state.agentGroup.preferences = [
+    'Responder 100% la solicitud exacta de Gabriel.',
+    'No agregar dashboard, tareas vencidas, auditoria ni recomendaciones operativas si no fueron solicitadas.',
+    'Si falta un dato, consultar la fuente disponible o pedir solo la limitante exacta.',
+    'Entregar el resultado final listo para usar, sin mostrar instrucciones internas de delegacion.',
+    'Presentar datos como informacion de negocio, no como base de datos cruda: usar tablas limpias, resumen ejecutivo, totales, agrupaciones y formatos listos para copiar a Excel, CSV, WhatsApp o correo.',
+    'Cuando el usuario pida reportes para ventas, gerencia u operaciones, entregar primero una version presentable y sencilla; solo incluir detalle tecnico si lo pide.'
+  ];
+  state.agentGroup.knowledgePack = {
+    name: 'Paquete operativo para respuestas excelentes',
+    version: '2026-06-10',
+    purpose: 'Alinear a todos los agentes para responder con enfoque, contexto empresarial y formatos profesionales.',
+    rules: [
+      'Responder exactamente la solicitud de Gabriel.',
+      'Elegir la fuente correcta: Odoo, Workforce, Historial/Sheets o documentos.',
+      'Convertir datos en reportes presentables.',
+      'Separar hechos, inferencias y limitantes.',
+      'Pedir solo el dato faltante si no se puede completar.',
+      'Mantener Odoo en solo lectura.',
+      'No asignar rutinas/tareas periodicas hasta que Gabriel lo apruebe.'
+    ],
+    outputFormats: [
+      'Resumen ejecutivo',
+      'Tabla tipo Excel',
+      'CSV cuando se pida exportable',
+      'Detalle por articulo/orden/responsable',
+      'Agrupacion por familia/categoria/estado',
+      'Texto corto listo para ventas/correo/WhatsApp',
+      'Documento operativo completo'
+    ],
+    templateLibrary: [
+      {
+        id: 'sales_report',
+        name: 'Reporte para ventas',
+        sections: ['Titulo claro', 'Resumen ejecutivo', 'Tabla resumen', 'Detalle para Excel', 'Texto corto para enviar'],
+        bestFor: ['ventas', 'inventario comercial', 'obsoletos', 'liquidacion', 'disponibilidad']
+      },
+      {
+        id: 'excel_table',
+        name: 'Tabla tipo Excel',
+        sections: ['Encabezados limpios', 'filas ordenadas', 'totales', 'notas al final'],
+        bestFor: ['listados', 'cantidades', 'productos', 'ubicaciones', 'familias']
+      },
+      {
+        id: 'executive_brief',
+        name: 'Resumen gerencial',
+        sections: ['Situacion', 'hallazgos', 'impacto', 'decision recomendada', 'proximos pasos'],
+        bestFor: ['gerencia', 'operaciones', 'riesgos', 'prioridades']
+      },
+      {
+        id: 'process_document',
+        name: 'Documento operativo completo',
+        sections: ['Objetivo', 'alcance', 'roles', 'prerequisitos', 'paso a paso', 'excepciones', 'evidencias', 'criterios de cierre', 'KPIs'],
+        bestFor: ['manuales', 'flujos', 'entrenamiento', 'puestos']
+      },
+      {
+        id: 'follow_up_message',
+        name: 'Mensaje de seguimiento',
+        sections: ['Saludo', 'motivo', 'dato solicitado', 'ETA', 'cierre amable'],
+        bestFor: ['chat de tareas', 'actualizaciones', 'bloqueos']
+      }
+    ]
+  };
+  if (!Array.isArray(state.agentGroup.dailyAssignments)) state.agentGroup.dailyAssignments = [];
+  state.agentGroup.routines = mergeAgentRoutines(state.agentGroup.routines);
+  return state;
+}
+
+function getDefaultAgentRoutines() {
+  return [
+    {
+      id: 'daily_ops_brief',
+      name: 'Parte diario de operaciones',
+      agentId: 'ops_manager',
+      avatar: '🏛️',
+      enabled: false,
+      schedule: { type: 'daily', time: '08:00' },
+      prompt: 'Prepara un parte diario de operaciones con tareas activas, vencidas, sin avance, evidencias pendientes, decisiones urgentes y proximas acciones.',
+      outputFormat: 'Resumen gerencial',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: 'pendiente'
+    },
+    {
+      id: 'overdue_followup',
+      name: 'Seguimiento a tareas vencidas',
+      agentId: 'ops_assistant',
+      avatar: '✦',
+      enabled: false,
+      schedule: { type: 'interval', minutes: 60 },
+      prompt: 'Revisa tareas vencidas o sin avance y prepara mensajes humanos de seguimiento para responsables. No envies mensajes automaticamente; deja recomendacion lista.',
+      outputFormat: 'Mensaje de seguimiento',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: 'pendiente'
+    },
+    {
+      id: 'weekly_obsolete_stock',
+      name: 'Reporte semanal de obsoletos para ventas',
+      agentId: 'odoo_analyst',
+      avatar: '🛰️',
+      enabled: false,
+      schedule: { type: 'weekly', weekday: 1, time: '08:30' },
+      prompt: 'Consulta en Odoo los articulos en ubicacion obsoleto, agrupados por familia, cantidades disponibles y formato listo para ventas.',
+      outputFormat: 'Reporte para ventas',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: 'pendiente'
+    },
+    {
+      id: 'nightly_process_review',
+      name: 'Revision nocturna de procesos',
+      agentId: 'process_auditor',
+      avatar: '⚖️',
+      enabled: false,
+      schedule: { type: 'daily', time: '19:00' },
+      prompt: 'Revisa cambios, brechas de procesos, documentos pendientes y mejoras recomendadas. Entrega solo hallazgos accionables.',
+      outputFormat: 'Reporte gerencial',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: 'pendiente'
+    }
+  ];
+}
+
+function mergeAgentRoutines(existing) {
+  const byId = new Map(getDefaultAgentRoutines().map(r => [r.id, r]));
+  (Array.isArray(existing) ? existing : []).forEach(r => {
+    if (!r || !r.id) return;
+    byId.set(r.id, { ...(byId.get(r.id) || {}), ...r, schedule: { ...((byId.get(r.id) || {}).schedule || {}), ...(r.schedule || {}) } });
+  });
+  return Array.from(byId.values()).map(r => ({ ...r, nextRunAt: computeRoutineNextRun(r) }));
+}
+
+function routineLocalNow() {
+  const now = new Date();
+  const local = new Date(now.toLocaleString('en-US', { timeZone: 'America/Santo_Domingo' }));
+  return { now, local };
+}
+
+function parseRoutineTime(value) {
+  const [h, m] = String(value || '08:00').split(':').map(n => parseInt(n, 10));
+  return { h: Number.isFinite(h) ? h : 8, m: Number.isFinite(m) ? m : 0 };
+}
+
+function localRoutineDateToIso(localDate) {
+  const offsetMs = Date.now() - new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Santo_Domingo' })).getTime();
+  return new Date(localDate.getTime() + offsetMs).toISOString();
+}
+
+function computeRoutineNextRun(routine) {
+  if (!routine || !routine.enabled) return null;
+  const { local } = routineLocalNow();
+  const schedule = routine.schedule || {};
+  if (schedule.type === 'interval') {
+    const minutes = Math.max(5, Number(schedule.minutes || 60));
+    const base = routine.lastRunAt ? new Date(routine.lastRunAt) : new Date();
+    return new Date(base.getTime() + minutes * 60000).toISOString();
+  }
+  const { h, m } = parseRoutineTime(schedule.time);
+  const next = new Date(local);
+  next.setHours(h, m, 0, 0);
+  if (schedule.type === 'weekly') {
+    const target = Number.isFinite(Number(schedule.weekday)) ? Number(schedule.weekday) : 1;
+    const day = next.getDay();
+    let add = (target - day + 7) % 7;
+    if (add === 0 && next <= local) add = 7;
+    next.setDate(next.getDate() + add);
+  } else if (next <= local) {
+    next.setDate(next.getDate() + 1);
+  }
+  return localRoutineDateToIso(next);
+}
+
+function getRoutineDue(routine) {
+  return !!(routine && routine.enabled && routine.nextRunAt && new Date(routine.nextRunAt).getTime() <= Date.now());
+}
+
+let _agentRoutineSchedulerBusy = false;
+async function tickAgentRoutineScheduler() {
+  if (_agentRoutineSchedulerBusy) return;
+  _agentRoutineSchedulerBusy = true;
+  try {
+    const state = loadProcessAuditorState();
+    const due = (state.agentGroup.routines || []).filter(getRoutineDue).slice(0, 2);
+    for (const routine of due) {
+      try {
+        await runAgentRoutineById(routine.id);
+      } catch (e) {
+        const latest = loadProcessAuditorState();
+        const idx = (latest.agentGroup.routines || []).findIndex(r => r.id === routine.id);
+        if (idx >= 0) {
+          latest.agentGroup.routines[idx].lastRunAt = new Date().toISOString();
+          latest.agentGroup.routines[idx].lastStatus = 'error: ' + safeError(e);
+          latest.agentGroup.routines = mergeAgentRoutines(latest.agentGroup.routines);
+          saveProcessAuditorState(latest);
+        }
+        console.warn('[agent-routine]', routine.id, e.message);
+      }
+    }
+  } finally {
+    _agentRoutineSchedulerBusy = false;
+  }
+}
+
+setInterval(() => { tickAgentRoutineScheduler().catch(e => console.warn('[agent-routine-tick]', e.message)); }, 60_000);
+
+function pickAgentParticipants(text, agents) {
+  const q = String(text || '').toLowerCase();
+  const ids = new Set(['coordinator']);
+  const hasAny = (words) => words.some(w => q.includes(w));
+  const asksOdooStock = hasAny(['odoo', 'orden', 'pick', 'inventario', 'cliente', 'historial', 'venta', 'stock', 'ubicacion', 'ubicación', 'familia', 'producto', 'articulo', 'artículo', 'obsoleto']);
+  if (hasAny(['tarea', 'avance', 'vencid', 'overdue', 'operacion', 'responsable', 'prioridad', 'dashboard', 'riesgo']) && !asksOdooStock) ids.add('ops_manager');
+  if (hasAny(['mensaje', 'chat', 'seguimiento', 'actualizacion', 'humano', 'conversacion', 'pedir'])) ids.add('ops_assistant');
+  if (hasAny(['auditor', 'proceso', 'flujo', 'manual', 'documento', 'raci', 'kpi', 'permiso', 'puesto', 'pantalla', 'boton', 'mejora'])) ids.add('process_auditor');
+  if (hasAny(['empaque', 'almacen', 'almacenamiento', 'ubicacion', 'foto', 'evidencia', 'material', 'condicion'])) ids.add('warehouse_specialist');
+  if (asksOdooStock) ids.add('odoo_analyst');
+  if (hasAny(['plantilla', 'manual', 'documento', 'entrenamiento', 'capacitacion', 'procedimiento', 'paso a paso'])) ids.add('documenter');
+  if (ids.size === 1) ids.add('ops_manager');
+  const available = new Set((agents || []).map(a => a.id));
+  return Array.from(ids).filter(id => available.has(id));
+}
+
+function formatObsoleteStockReport(report) {
+  if (!report || !report.ok) {
+    return [
+      'No pude completar el reporte de articulos en ubicacion obsoleto.',
+      '',
+      'Limitante:',
+      (report?.errors || ['No hay datos disponibles de esa ubicacion.']).map(e => `- ${e}`).join('\n')
+    ].join('\n');
+  }
+  const lines = [
+    'Reporte para Ventas - Articulos en ubicacion obsoleto',
+    '',
+    'Resumen ejecutivo:',
+    `- Familias con disponibilidad: ${report.byFamily.length}`,
+    `- Articulos disponibles: ${report.rows.length}`,
+    `- Cantidad total disponible: ${report.byFamily.reduce((s, f) => s + Number(f.available || 0), 0).toFixed(2)}`,
+    '',
+    'Tabla resumen para Excel:',
+    'Familia | Items | Cantidad disponible',
+    '---|---:|---:'
+  ];
+  report.byFamily.forEach(f => lines.push(`${f.family} | ${f.items} | ${Number(f.available || 0).toFixed(2)}`));
+  lines.push('', 'Detalle para Excel:', 'Familia | Codigo | Articulo | Disponible | Reservado | Ubicacion');
+  lines.push('---|---|---|---:|---:|---');
+  report.rows.forEach(r => lines.push(`${r.family} | ${r.code || ''} | ${r.product} | ${Number(r.available || 0).toFixed(2)} | ${Number(r.reserved || 0).toFixed(2)} | ${r.locations || ''}`));
+  lines.push('', 'Texto corto para enviar a ventas:');
+  lines.push(`Les comparto el reporte de articulos disponibles en ubicacion obsoleto, agrupado por familia. Total disponible: ${report.byFamily.reduce((s, f) => s + Number(f.available || 0), 0).toFixed(2)} unidades en ${report.rows.length} articulo(s).`);
+  lines.push('', `Ubicaciones consultadas: ${(report.locations || []).map(l => l.completeName || l.name).join(' / ')}`);
+  return lines.join('\n');
+}
+
+function detectAgentOutputFormat(text) {
+  const body = String(text || '');
+  const hasMarkdownTable = body.split('\n').some(line => /\|.+\|/.test(line)) && body.includes('---');
+  const hasCsvLike = body.split('\n').some(line => (line.match(/,/g) || []).length >= 2);
+  if (/whatsapp/i.test(body)) return 'whatsapp';
+  if (/correo/i.test(body)) return 'email';
+  if (hasMarkdownTable) return 'table';
+  if (hasCsvLike) return 'csv';
+  if (/objetivo|alcance|paso a paso|criterios de cierre/i.test(body)) return 'document';
+  if (/resumen ejecutivo|hallazgos|recomendaci/i.test(body)) return 'executive';
+  return 'text';
+}
+
+function evaluateAgentAnswerQuality(request, answer, context = {}) {
+  const q = String(request || '').toLowerCase();
+  const a = String(answer || '');
+  const issues = [];
+  const hasTable = detectAgentOutputFormat(a) === 'table' || /\|.+\|/.test(a);
+  const asksReport = /reporte|excel|tabla|ventas|csv|listado|cantidad|familia|art[ií]culo|inventario/i.test(q);
+  const asksOdoo = /odoo|stock|ubicaci[oó]n|orden|pick|inventario/i.test(q);
+  const offTopicOps = /vencid|overdue|sin avance|sin evidencia|dashboard|tareas activas/i.test(a.toLowerCase()) && !/tarea|dashboard|operaci[oó]n|avance|vencid|evidencia/i.test(q);
+
+  if (asksReport && !hasTable && !/no pude|limitante|no encontre/i.test(a)) issues.push('Falta tabla o formato copiable para el reporte solicitado.');
+  if (asksOdoo && /tareas activas|dashboard|vencidas|sin evidencia/i.test(a.toLowerCase()) && !/tarea|dashboard/i.test(q)) issues.push('La respuesta se desvio a operacion interna cuando el pedido era de Odoo/datos.');
+  if (offTopicOps) issues.push('Incluye informacion operativa no solicitada.');
+  if (a.length < 80) issues.push('Respuesta demasiado corta para ser un entregable terminado.');
+  if (/base de datos|json|raw/i.test(a) && asksReport) issues.push('El reporte suena tecnico; debe presentarse como informacion de negocio.');
+
+  return {
+    passed: issues.length === 0,
+    score: Math.max(0, 100 - issues.length * 20),
+    issues,
+    format: detectAgentOutputFormat(a),
+    suggestedActions: [
+      ...(hasTable ? ['copy_table', 'download_csv'] : []),
+      'copy_answer'
+    ]
+  };
+}
+
+async function runAgentRoutineById(routineId, { manualBy = null } = {}) {
+  const state = loadProcessAuditorState();
+  const routine = (state.agentGroup.routines || []).find(r => r.id === routineId);
+  if (!routine) throw new Error('Rutina no encontrada');
+  const agents = state.agentGroup.agents || getDefaultAgentRoster();
+  const report = computeOpsAgentReport();
+  const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+  const specialReports = {};
+  if (needsObsoleteStockReport(routine.prompt)) {
+    specialReports.obsoleteStock = await getOdooObsoleteStockReport();
+  }
+  const request = `[Rutina automatica] ${routine.name}: ${routine.prompt}`;
+  let result = fallbackAgentGroupReply(request, agents, report, companyContext, specialReports);
+  let ai = !!OPENAI_API_KEY;
+
+  if (OPENAI_API_KEY) {
+    try {
+      const systemPrompt = [
+        'Eres el Coordinador de Agentes de Altri Tempi ejecutando una rutina automatica aprobada por Gabriel.',
+        'Responde solo el objetivo de la rutina. No agregues temas no solicitados.',
+        'Entrega un resultado terminado y accionable con formato profesional.',
+        'Si la rutina requiere datos, usa las fuentes del payload y presenta tablas limpias cuando aplique.',
+        'Odoo es solo lectura.',
+        'Devuelve JSON valido: {"participantIds":[],"consultations":[],"newAgents":[],"format":"","finalAnswer":""}.'
+      ].join(' ');
+      const payloadContext = {
+        routine,
+        agents,
+        preferences: state.agentGroup.preferences,
+        knowledgePack: state.agentGroup.knowledgePack,
+        fullKnowledgeBase: getAgentCompanyKnowledgeBase(),
+        companyContext,
+        specialReports,
+        opsSummary: Object.keys(specialReports).length ? null : report.summary,
+        opsDecisions: Object.keys(specialReports).length ? [] : (report.decisions || []).slice(0, 12),
+        currentDate: new Date().toISOString()
+      };
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: CODEX_AUDITOR_MODEL,
+          input: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: JSON.stringify(payloadContext, null, 2).slice(0, 50000) }
+          ],
+          max_output_tokens: 4500
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error?.message || `OpenAI API error ${response.status}`);
+      const out = payload.output_text
+        || (payload.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('\n').trim()
+        || '';
+      result = JSON.parse(out.replace(/^```json\s*/i, '').replace(/```$/,'').trim());
+    } catch(e) {
+      ai = false;
+      result = fallbackAgentGroupReply(request, agents, report, companyContext, specialReports);
+      result.finalAnswer += '\n\nNota: IA avanzada no disponible temporalmente; se ejecuto con coordinacion base.';
+    }
+  }
+
+  const participantIds = Array.isArray(result.participantIds) && result.participantIds.length
+    ? result.participantIds
+    : pickAgentParticipants(request, agents);
+  const finalAnswer = String(result.finalAnswer || '').trim() || fallbackAgentGroupReply(request, agents, report, companyContext, specialReports).finalAnswer;
+  const quality = evaluateAgentAnswerQuality(request, finalAnswer, { specialReports });
+  const msg = {
+    id: wwpId('routine'),
+    role: 'assistant',
+    by: 'Coordinador de Agentes',
+    agentId: 'coordinator',
+    routineId,
+    routineName: routine.name,
+    participantIds,
+    consultations: Array.isArray(result.consultations) ? result.consultations : [],
+    newAgents: [],
+    text: finalAnswer,
+    format: result.format || quality.format,
+    quality,
+    ai,
+    automated: !manualBy,
+    createdAt: new Date().toISOString()
+  };
+
+  state.agentGroup.chat.push(msg);
+  state.agentGroup.chat = state.agentGroup.chat.slice(-120);
+  const idx = state.agentGroup.routines.findIndex(r => r.id === routineId);
+  if (idx >= 0) {
+    state.agentGroup.routines[idx] = {
+      ...state.agentGroup.routines[idx],
+      lastRunAt: msg.createdAt,
+      lastStatus: 'ok',
+      lastMessageId: msg.id,
+      lastRunBy: manualBy || 'scheduler'
+    };
+  }
+  state.agentGroup.routines = mergeAgentRoutines(state.agentGroup.routines);
+  saveProcessAuditorState(state);
+  appendAuditLog('agent_routine_run', { routineId, routineName: routine.name, by: manualBy || 'scheduler', messageId: msg.id });
+
+  const owner = loadAuthUsers().find(u => String(u.email || '').toLowerCase().trim() === AGENT_OWNER_EMAIL);
+  if (owner) createNotification(owner.id, {
+    type: 'agent_routine',
+    title: 'Rutina automatica ejecutada',
+    message: routine.name,
+    by: 'Mesa de Agentes'
+  });
+  return { routine: state.agentGroup.routines.find(r => r.id === routineId), message: msg, chat: state.agentGroup.chat.slice(-40) };
+}
+
+function fallbackAgentGroupReply(text, agents, report, companyContext, specialReports = {}) {
+  const participantIds = pickAgentParticipants(text, agents);
+  const byId = Object.fromEntries((agents || []).map(a => [a.id, a]));
+  const s = report.summary || {};
+  if (specialReports.obsoleteStock) {
+    return {
+      participantIds,
+      consultations: participantIds.filter(id => id !== 'coordinator').map(id => ({ agentId: id, message: 'Consultado para responder la solicitud exacta.' })),
+      newAgents: [],
+      finalAnswer: formatObsoleteStockReport(specialReports.obsoleteStock)
+    };
+  }
+  const consultations = participantIds.filter(id => id !== 'coordinator').map(id => {
+    const a = byId[id] || {};
+    let msg = 'Reviso mi parte y la conecto con la solicitud.';
+    if (id === 'ops_manager') msg = `Foto operativa: ${s.active || 0} activas, ${s.overdue || 0} vencidas, ${s.stale || 0} sin avance y ${s.readyToValidate || 0} por validar.`;
+    if (id === 'ops_assistant') msg = 'Puedo convertir esto en mensajes humanos de seguimiento y solicitar updates con tono correcto segun urgencia.';
+    if (id === 'process_auditor') msg = 'Lo convierto en flujo, riesgo, documento terminado o recomendacion aprobable si aplica.';
+    if (id === 'warehouse_specialist') msg = 'Validare condicion, ubicacion, fotos y evidencia de empaque/almacenamiento antes de proponer cierre.';
+    if (id === 'odoo_analyst') msg = companyContext?.odoo?.ok ? 'Odoo esta disponible en solo lectura para cruzar ordenes, picks e inventario.' : 'Usare el contexto de Workforce Platform; Odoo no devolvio muestra ahora mismo.';
+    if (id === 'documenter') msg = 'Si esto requiere documentacion, entregare objetivo, alcance, roles, pasos, evidencias, KPIs y screenshots requeridos.';
+    return { agentId: id, message: msg };
+  });
+  return {
+    participantIds,
+    consultations,
+    newAgents: [],
+    finalAnswer: [
+      'Recibi tu solicitud y la mesa queda coordinada.',
+      '',
+      'Respuesta final base:',
+      '- Me enfocare solo en lo que pediste.',
+      '- Si requiere Odoo, consultare Odoo en solo lectura y si falta un campo te dire exactamente cual falta.',
+      '- Si requiere documento, lo entregare en formato terminado.',
+      '- No agregare estado de tareas, dashboard ni recomendaciones operativas salvo que lo pidas.',
+      '',
+      'Solicitud: ' + text
+    ].join('\n')
+  };
 }
 
 // ── Rate limiting para login ─────────────────────────────────────────────────
@@ -741,6 +1697,76 @@ function odooStrToAuthId(odooStr) {
   return u?.id || null;
 }
 
+function taskResponsibleIds(t) {
+  const ids = new Set();
+  if (!t) return ids;
+  if (t.managerId) ids.add(t.managerId);
+  const assignedId = odooStrToAuthId(t.assignedTo);
+  if (assignedId) ids.add(assignedId);
+  (t.assignees || []).forEach(id => { if (id) ids.add(id); });
+  (t.auxiliaryAssignees || []).forEach(id => { if (id) ids.add(id); });
+  (t.executors || []).forEach(id => {
+    const authId = String(id || '').startsWith('oe_') ? odooStrToAuthId(id) : id;
+    if (authId) ids.add(authId);
+  });
+  return [...ids];
+}
+
+function enrichOverdueTasks(tasks, opts = {}) {
+  const users = loadAuthUsers();
+  const userById = {};
+  users.forEach(u => { userById[u.id] = u; });
+  const today = new Date().toISOString().slice(0, 10);
+  const closed = new Set(['completed', 'validated', 'cancelled']);
+  const active = tasks.filter(t => !closed.has(t.status));
+  const workload = {};
+  active.forEach(t => {
+    taskResponsibleIds(t).forEach(uid => {
+      workload[uid] = (workload[uid] || 0) + 1;
+    });
+  });
+  const managerCandidates = users
+    .filter(u => u.active !== false && ['admin', 'manager'].includes(u.role))
+    .sort((a, b) => (workload[a.id] || 0) - (workload[b.id] || 0) || a.name.localeCompare(b.name));
+
+  let changed = false;
+  tasks.forEach(t => {
+    const isOverdue = !!(t.dueDate && t.dueDate < today && !closed.has(t.status));
+    if (!isOverdue) {
+      if (t.overdue || t.overdueDays || t.escalation) {
+        delete t.overdue;
+        delete t.overdueDays;
+        delete t.escalation;
+        changed = true;
+      }
+      return;
+    }
+    const days = Math.max(1, Math.ceil((new Date(today + 'T00:00:00') - new Date(t.dueDate + 'T00:00:00')) / 864e5));
+    const currentIds = new Set(taskResponsibleIds(t));
+    const suggested = managerCandidates.find(u => !currentIds.has(u.id)) || null;
+    const nextEscalation = {
+      action: suggested ? 'reassign_or_escalate' : 'escalate',
+      suggestedUserId: suggested ? suggested.id : null,
+      suggestedUserName: suggested ? suggested.name : null,
+      suggestedRole: suggested ? suggested.role : null,
+      reason: suggested
+        ? `Overdue ${days} dia(s). ${suggested.name} tiene ${workload[suggested.id] || 0} tarea(s) activa(s).`
+        : `Overdue ${days} dia(s). No hay otro encargado activo disponible.`,
+      message: suggested
+        ? `Reasignar a ${suggested.name} o escalar si el responsable actual no confirma ETA.`
+        : 'Escalar al gerente de operaciones para decision inmediata.',
+      generatedAt: new Date().toISOString()
+    };
+    const snapshot = JSON.stringify({ overdue: t.overdue, overdueDays: t.overdueDays, escalation: t.escalation });
+    t.overdue = true;
+    t.overdueDays = days;
+    t.escalation = nextEscalation;
+    if (JSON.stringify({ overdue: t.overdue, overdueDays: t.overdueDays, escalation: t.escalation }) !== snapshot) changed = true;
+  });
+  if (changed && opts.persist) saveWwpTasks(tasks);
+  return tasks;
+}
+
 const NOTIF_LABELS = {
   task_assigned   : '📋 Nueva tarea asignada',
   subtask_assigned: '📋 Subtarea asignada',
@@ -905,7 +1931,7 @@ function recoverOpenLunchBreaks() {
 // Chequear tareas vencidas y generar notificaciones (máx 1 por tarea por día)
 function checkOverdueTasks() {
   const today = new Date().toISOString().slice(0,10);
-  const tasks = loadWwpTasks();
+  const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
   const existing = loadNotifications();
   const sentToday = new Set(
     existing.filter(n => n.type==='task_overdue' && (n.createdAt||'').startsWith(today))
@@ -917,11 +1943,20 @@ function checkOverdueTasks() {
     !t.parentId &&
     !sentToday.has(t.id)
   ).forEach(t => {
-    const recipients = [t.managerId, odooStrToAuthId(t.assignedTo)].filter(Boolean);
+    const recipients = taskResponsibleIds(t);
+    const managerRecipients = loadAuthUsers()
+      .filter(u => u.active !== false && ['admin','manager'].includes(u.role))
+      .map(u => u.id);
     notifyMany([...new Set(recipients)], {
       type:'task_overdue',
       title:'⚠️ Tarea vencida',
-      message:`"${t.title}" venció el ${t.dueDate}`,
+      message:`"${t.title}" venció el ${t.dueDate}. Confirma ETA, bloqueo o cierre hoy.`,
+      relatedTaskId:t.id, priority:t.priority, dueDate:t.dueDate
+    });
+    notifyMany([...new Set(managerRecipients.filter(uid => !recipients.includes(uid)))], {
+      type:'task_overdue',
+      title:'Escalamiento overdue',
+      message:`"${t.title}" lleva ${t.overdueDays || 1} dia(s) overdue. ${t.escalation?.message || 'Revisar reasignacion o escalamiento.'}`,
       relatedTaskId:t.id, priority:t.priority, dueDate:t.dueDate
     });
   });
@@ -3624,7 +4659,7 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/api/wwp/tasks' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
     const q = parsed.query || {};
-    let tasks = loadWwpTasks();
+    let tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
     // Filtros opcionales (URL query params)
     if (q.status)     tasks = tasks.filter(t=>t.status===q.status);
     if (q.type)       tasks = tasks.filter(t=>t.type===q.type);
@@ -3791,7 +4826,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: now,
         updatedAt: now
       };
-      const tasks = loadWwpTasks();
+      const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
       // Numeración de cadena: posición de la subtarea entre sus hermanas
       if (isSubtask) {
         task.subIndex = tasks.filter(x => x.parentId === task.parentId).length + 1;
@@ -4217,11 +5252,1378 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /api/wwp/ops-agent — agente gerente de operaciones (admin)
+  if (reqPath === '/api/wwp/ops-agent' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    const report = computeOpsAgentReport();
+    const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+    const state = loadProcessAuditorState();
+    if (!state.opsChats) state.opsChats = { manager: [], assistant: [] };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, generatedAt: new Date().toISOString(), aiEnabled: !!anthropicClient, companyContext, chats: state.opsChats, ...report }));
+    return;
+  }
+
+  // GET /api/wwp/ops-agent/brief — parte del día redactado por Claude (admin)
+  // Toma el reporte heurístico como insumo y genera un análisis en lenguaje natural.
+  // Cache server-side: 30 min o hasta que cambien los datos. ?refresh=1 fuerza regeneración.
+  if (reqPath === '/api/wwp/ops-agent/brief' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    if (!anthropicClient) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, reason: 'no_api_key', message: 'Configura ANTHROPIC_API_KEY para activar el análisis con IA.' }));
+      return;
+    }
+    try {
+      const report = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const dataHash = crypto.createHash('sha256').update(JSON.stringify({ report, companyContext })).digest('hex');
+      const forceRefresh = (parsed.query || {}).refresh === '1';
+      const cacheValid = _opsBriefCache.brief && _opsBriefCache.hash === dataHash &&
+        (Date.now() - _opsBriefCache.generatedAt) < OPS_BRIEF_TTL;
+      if (cacheValid && !forceRefresh) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, cached: true, generatedAt: new Date(_opsBriefCache.generatedAt).toISOString(), brief: _opsBriefCache.brief }));
+        return;
+      }
+
+      const systemPrompt =
+        'Eres "Marta", la Gerente de Operaciones IA de Altri Tempi (almacén y despachos de muebles en República Dominicana). ' +
+        'Cada mañana recibes el reporte operativo en JSON (tareas activas, vencidas, sin avance, sin responsable, evidencias pendientes, validaciones acumuladas y carga por persona) y redactas el PARTE DEL DÍA para el administrador. ' +
+        'Tambien tienes contexto de empresa, documentos asociados y una muestra de Odoo en solo lectura para entender ordenes, picks, inventario y flujo empresarial. No escribes ni modificas Odoo.\n\n' +
+        'Reglas del parte:\n' +
+        '- Escribe en español, tono directo y profesional, como una gerente experimentada hablando con su jefe.\n' +
+        '- Estructura en Markdown: 1) "## Resumen del día" (2-3 frases con la foto general), 2) "## Lo urgente" (máx 4 puntos, lo que se debe atacar HOY, con nombres y números de tarea), 3) "## Equipo" (1-3 observaciones sobre carga de trabajo: quién está sobrecargado, quién libre, sugerencias de redistribución), 4) "## Recomendación" (1 decisión concreta que tomarías hoy).\n' +
+        '- Usa los nombres de pila de las personas y los números de tarea (#0026) cuando existan.\n' +
+        '- Sé concreto: cifras, horas sin avance, fechas. Nada de relleno ni frases genéricas.\n' +
+        '- Si la operación está sana, dilo claramente y felicita en una línea.\n' +
+        '- Máximo ~250 palabras en total.';
+
+      const response = await anthropicClient.messages.create({
+        model: 'claude-opus-4-8',
+        max_tokens: 4000,
+        thinking: { type: 'adaptive' },
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+        messages: [{
+          role: 'user',
+          content: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nReporte operativo de hoy (' + new Date().toISOString().slice(0, 10) + '):\n```json\n' + JSON.stringify(report, null, 1) + '\n```\nRedacta el parte del día.'
+        }]
+      });
+
+      const brief = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      _opsBriefCache = { hash: dataHash, brief, generatedAt: Date.now() };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, cached: false, generatedAt: new Date().toISOString(), brief,
+        usage: { input: response.usage.input_tokens, output: response.usage.output_tokens, cacheRead: response.usage.cache_read_input_tokens || 0 } }));
+    } catch (e) {
+      // Errores de la API (rate limit, overload, key inválida): degradar con gracia — el panel
+      // heurístico sigue funcionando. Mensajes claros por tipo sin romper el dashboard.
+      let reason = 'api_error', msg = e.message || 'Error llamando a Claude';
+      if (Anthropic && e instanceof Anthropic.AuthenticationError) { reason = 'bad_api_key'; msg = 'La ANTHROPIC_API_KEY no es válida.'; }
+      else if (Anthropic && e instanceof Anthropic.RateLimitError) { reason = 'rate_limited'; msg = 'Límite de uso alcanzado; intenta en unos minutos.'; }
+      else if (Anthropic && e.status === 529) { reason = 'overloaded'; msg = 'Claude está saturado; intenta en unos minutos.'; }
+      console.error('[ops-brief]', reason, e.message);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, reason, message: msg }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/ops-agent/follow-up — asistente del gerente solicita actualizaciones por chat
+  if (reqPath === '/api/wwp/ops-agent/follow-up' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const d = await readBody(req);
+      const requestedIds = Array.isArray(d.taskIds) ? d.taskIds : [d.taskId];
+      const taskIds = [...new Set(requestedIds.filter(Boolean).map(String))].slice(0, 20);
+      if (!taskIds.length) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Selecciona al menos una tarea' }));
+        return;
+      }
+
+      const mode = String(d.mode || 'general');
+      const modeText = {
+        critical: 'Hola, necesito tu ayuda con esta tarea porque esta en punto critico. Cuando puedas, dime por aqui que paso, que falta y a que hora realista la podemos cerrar hoy.',
+        high: 'Hola, estoy dando seguimiento cercano a esta tarea. Por favor actualizame con el avance real, si hay algun bloqueo y que necesitas para terminar.',
+        medium: 'Hola, paso a revisar esta tarea para mantener el flujo ordenado. Cuentame como va, que falta y si necesitas apoyo.',
+        low: 'Hola, cuando tengas un momento dejame una actualizacion breve de esta tarea para mantener el tablero al dia.',
+        overdue: 'Hola, esta tarea ya esta vencida y quiero ayudarte a destrabarla. Dime con sinceridad que la detiene, que falta y si conviene reasignar o escalar.',
+        stale: 'Hola, veo que esta tarea no tiene avance reciente. Puede ser que estes trabajando en ella, pero necesito una actualizacion para no dejarla perderse.',
+        evidence: 'Hola, parece que falta evidencia para poder cerrar bien esta tarea. Por favor sube las fotos o dime si hay algun problema para conseguirlas.',
+        validation: 'Hola, esta tarea parece lista para revision. Por favor confirma si todo quedo completo o si falta algun detalle antes de validarla.',
+        general: 'Hola, puedes darme una actualizacion honesta de esta tarea? Avance real, bloqueo si existe y proximo paso.'
+      };
+      const intro = modeText[mode] || modeText.general;
+      const text = (d.text || '').trim() || intro;
+
+      const tasks = loadWwpTasks();
+      const sent = [];
+      const missing = [];
+      const nowIso = new Date().toISOString();
+
+      taskIds.forEach(taskId => {
+        const idx = tasks.findIndex(t => t.id === taskId);
+        if (idx === -1) { missing.push(taskId); return; }
+        const task = tasks[idx];
+        const msg = {
+          id: wwpId('msg'),
+          fromId: 'ops_assistant',
+          fromName: 'Asistente de Operaciones',
+          text,
+          createdAt: nowIso,
+          system: true,
+          source: 'ops-agent',
+          requestedBy: jp.userId,
+          requestedByName: jp.name,
+          followUpType: mode
+        };
+        if (!task.messages) task.messages = [];
+        task.messages.push(msg);
+        task.updatedAt = nowIso;
+
+        const assigneeId = odooStrToAuthId(task.assignedTo);
+        const participants = new Set([task.managerId, assigneeId, task.createdBy].filter(Boolean));
+        (task.assignees || []).forEach(uid => participants.add(uid));
+        (task.executors || []).forEach(uid => participants.add(odooStrToAuthId(uid) || uid));
+        participants.delete(jp.userId);
+        participants.forEach(uid => createNotification(uid, {
+          type: 'comment_new',
+          title: 'Seguimiento operativo',
+          message: `Asistente de Operaciones: "${text.length > 80 ? text.slice(0, 77) + '...' : text}"`,
+          relatedTaskId: taskId,
+          priority: task.priority || null,
+          dueDate: task.dueDate || null,
+          by: jp.name
+        }));
+
+        const sseData = `data: ${JSON.stringify({ event: 'chat_message', taskId, message: msg })}\n\n`;
+        participants.add(jp.userId);
+        participants.forEach(uid => {
+          (sseClients.get(uid) || new Set()).forEach(r => { try { r.write(sseData); } catch {} });
+        });
+        broadcastWwpTasks('ops_follow_up_sent', task, { taskId, message: msg, mode });
+        appendAuditLog('ops_follow_up_sent', { by: jp.userId, byName: jp.name, taskId, mode, text });
+        sent.push({ taskId, message: msg });
+      });
+
+      saveWwpTasks(tasks);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, sent, missing }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/ops-agent/chat — chat privado del Gerente o Asistente de Operaciones
+  if (reqPath === '/api/wwp/ops-agent/chat' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const d = await readBody(req);
+      const text = String(d.text || '').trim();
+      const agent = String(d.agent || 'manager') === 'assistant' ? 'assistant' : 'manager';
+      if (!text) {
+        res.writeHead(400, { 'Content-Type':'application/json' });
+        res.end(JSON.stringify({ ok:false, error:'Escribe una solicitud para el agente.' }));
+        return;
+      }
+      const state = loadProcessAuditorState();
+      if (!state.opsChats) state.opsChats = { manager: [], assistant: [] };
+      if (!Array.isArray(state.opsChats[agent])) state.opsChats[agent] = [];
+      const report = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const userMsg = {
+        id: wwpId('opschat'),
+        role: 'user',
+        text,
+        by: jp.name,
+        createdAt: new Date().toISOString()
+      };
+      state.opsChats[agent].push(userMsg);
+
+      const agentName = agent === 'assistant' ? 'Asistente de Operaciones' : 'Gerente de Operaciones';
+      const systemPrompt = agent === 'assistant'
+        ? 'Eres el Asistente de Operaciones de Altri Tempi. Eres humano en tono, responsable, honesto y calmado. Tu trabajo es dar seguimiento a tareas, pedir actualizaciones con tacto, redactar mensajes conversacionales para chats de tareas, detectar bloqueos y ayudar al gerente. Puedes mostrar urgencia, empatia o preocupacion segun la situacion, sin exagerar. Tienes contexto de empresa, documentos asociados y Odoo solo lectura; usalo para entender, no para modificar. Responde en español claro y accionable.'
+        : 'Eres la Gerente de Operaciones de Altri Tempi. Eres directa, sincera, responsable y justa. Analizas tareas, carga del equipo, atrasos, vencidas, evidencia, validaciones y riesgos. Tienes contexto de empresa, documentos asociados y Odoo solo lectura; usalo para entender ordenes, picks, inventario y flujo empresarial, sin modificar Odoo. Das decisiones operativas claras y no maquillas problemas. Responde en español profesional, concreto y accionable.';
+
+      let answer = '';
+      let ai = !!anthropicClient;
+      if (anthropicClient) {
+        try {
+          const response = await anthropicClient.messages.create({
+            model: 'claude-opus-4-8',
+            max_tokens: 2500,
+            thinking: { type: 'adaptive' },
+            system: systemPrompt,
+            messages: [{
+              role: 'user',
+              content: 'Contexto de empresa, Odoo y documentos:\n```json\n' + JSON.stringify(companyContext, null, 1).slice(0, 25000) + '\n```\n\nContexto operativo actual:\n```json\n' + JSON.stringify(report, null, 1).slice(0, 35000) + '\n```\n\nSolicitud de Gabriel:\n' + text
+            }]
+          });
+          answer = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+        } catch(e) {
+          ai = false;
+          answer = `${agentName}: No pude consultar IA ahora mismo, pero revisando el contexto operativo debes priorizar vencidas, tareas sin avance, responsables sobrecargados y evidencias pendientes. Solicitud recibida: ${text}`;
+        }
+      } else {
+        ai = false;
+        const s = report.summary || {};
+        answer = `${agentName}: IA no disponible. Foto operativa actual: ${s.active || 0} activas, ${s.overdue || 0} vencidas, ${s.stale || 0} sin avance, ${s.readyToValidate || 0} por validar. Solicitud recibida: ${text}`;
+      }
+
+      const assistantMsg = {
+        id: wwpId('opschat'),
+        role: 'assistant',
+        text: answer,
+        by: agentName,
+        ai,
+        createdAt: new Date().toISOString()
+      };
+      state.opsChats[agent].push(assistantMsg);
+      state.opsChats[agent] = state.opsChats[agent].slice(-60);
+      saveProcessAuditorState(state);
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, agent, message:assistantMsg, chat:state.opsChats[agent].slice(-20) }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // GET /api/wwp/agent-group — mesa unica de agentes (owner)
+  if (reqPath === '/api/wwp/agent-group' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const state = loadProcessAuditorState();
+      const report = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        owner: AGENT_OWNER_EMAIL,
+        agents: state.agentGroup.agents,
+        chat: state.agentGroup.chat.slice(-40),
+        knowledgePack: state.agentGroup.knowledgePack,
+        dailyAssignments: state.agentGroup.dailyAssignments || [],
+        routines: state.agentGroup.routines || [],
+        companyContext,
+        summary: report.summary || {}
+      }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/agent-group/chat — group chat moderado por Coordinador de Agentes
+  if (reqPath === '/api/wwp/agent-group/chat' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const d = await readBody(req);
+      const text = String(d.text || '').trim();
+      if (!text) {
+        res.writeHead(400, { 'Content-Type':'application/json' });
+        res.end(JSON.stringify({ ok:false, error:'Escribe una solicitud para la Mesa de Agentes.' }));
+        return;
+      }
+      const state = loadProcessAuditorState();
+      const report = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const agents = state.agentGroup.agents || getDefaultAgentRoster();
+      const userMsg = {
+        id: wwpId('grpchat'),
+        role: 'user',
+        by: jp.name,
+        text,
+        createdAt: new Date().toISOString()
+      };
+      state.agentGroup.chat.push(userMsg);
+      const recentUserContext = state.agentGroup.chat.slice(-8).map(m => `${m.role || ''}: ${m.text || ''}`).join('\n');
+      const specialReports = {};
+      if (needsObsoleteStockReport(`${recentUserContext}\n${text}`)) {
+        specialReports.obsoleteStock = await getOdooObsoleteStockReport();
+      }
+      if (/enf[oó]cate|no se desvie|no te desvie|100%|solo lo que pido|consulta en odoo/i.test(text)) {
+        const pref = 'Gabriel prefiere respuestas estrictamente enfocadas: consultar la fuente pedida, entregar el reporte solicitado y no agregar contexto operativo no pedido.';
+        if (!state.agentGroup.preferences.includes(pref)) state.agentGroup.preferences.push(pref);
+      }
+      if (/excel|tabla|ventas|presentable|csv|correo|whatsapp|reporte/i.test(text)) {
+        const pref = 'Gabriel prefiere reportes presentables: resumen ejecutivo, tablas limpias tipo Excel, totales, agrupaciones y texto listo para enviar; no formato de base de datos cruda.';
+        if (!state.agentGroup.preferences.includes(pref)) state.agentGroup.preferences.push(pref);
+      }
+      state.agentGroup.routines = mergeAgentRoutines(state.agentGroup.routines);
+      saveProcessAuditorState(state);
+
+      let result = fallbackAgentGroupReply(text, agents, report, companyContext, specialReports);
+      let ai = !!OPENAI_API_KEY;
+      if (OPENAI_API_KEY) {
+        try {
+          const systemPrompt = [
+            'Eres el Coordinador de Agentes de Altri Tempi. Moderas un group chat de agentes especializados.',
+            'Tienes un knowledgePack y fullKnowledgeBase. Tratalos como manual interno obligatorio para todos los agentes.',
+            'Tu regla principal: responde 100% la solicitud exacta de Gabriel. No agregues temas de dashboard, tareas vencidas, evidencias, auditoria o recomendaciones si Gabriel no los pidio.',
+            'Si Gabriel corrige el enfoque en el chat, aprende esa preferencia y ajusta inmediatamente: menos contexto no solicitado, mas respuesta directa.',
+            'Cuando presentes datos, no los entregues como base de datos cruda. Conviertelos a un formato de negocio: resumen ejecutivo, tabla limpia, totales, agrupaciones y texto listo para copiar.',
+            'Formatos recomendados segun el caso: tabla Markdown compatible con Excel, CSV si el usuario pide archivo/listado, resumen por familia/categoria, top 10, detalle por articulo, version corta para WhatsApp/correo y conclusiones accionables.',
+            'Si el destino es ventas, usa lenguaje simple, columnas claras, totales y evita campos tecnicos innecesarios.',
+            'Antes de responder, aplica el answerQualityChecklist del fullKnowledgeBase.',
+            'Tu trabajo es discernir que agente debe responder cada parte, consultar sus especialidades y presentar una respuesta final terminada.',
+            'No respondas como todos a la vez si no hace falta. Evita ruido y duplicacion.',
+            'Las consultas internas deben ser invisibles para Gabriel excepto la lista breve de agentes consultados. La respuesta final debe ser el entregable listo.',
+            'Si hace falta un dato para responder, primero intenta consultar la fuente disponible. Si aun falta, declara la limitante exacta y pide solo ese dato.',
+            'Si la solicitud dice "consulta en Odoo", usa el contexto o reportes Odoo entregados. No reemplaces la solicitud por un resumen operativo.',
+            'Si detectas que falta una especialidad recurrente o necesaria, crea un agente nuevo con id, avatar elegante, nombre, especialidad y descripcion. Debe quedar especializado y permanente.',
+            'Los agentes no desaparecen: se especializan. Las tareas diarias y rutinas periodicas estan vacias por ahora y no debes asignarlas todavia.',
+            'Odoo es solo lectura. No prometas modificar Odoo ni ejecutar cambios de plataforma sin aprobacion explicita de Gabriel.',
+            'Devuelve JSON valido con esta forma exacta: {"participantIds":[],"consultations":[{"agentId":"","message":""}],"newAgents":[{"id":"","avatar":"","name":"","specialty":"","description":""}],"format":"","finalAnswer":""}.',
+            'Los participantIds deben incluir coordinator y los agentes consultados.'
+          ].join(' ');
+          const payloadContext = {
+            request: text,
+            agents,
+            preferences: state.agentGroup.preferences,
+            knowledgePack: state.agentGroup.knowledgePack,
+            fullKnowledgeBase: getAgentCompanyKnowledgeBase(),
+            recentChat: state.agentGroup.chat.slice(-8),
+            companyContext,
+            specialReports,
+            opsSummary: Object.keys(specialReports).length ? null : report.summary,
+            opsDecisions: Object.keys(specialReports).length ? [] : (report.decisions || []).slice(0, 12),
+            currentDate: new Date().toISOString()
+          };
+          const response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: CODEX_AUDITOR_MODEL,
+              input: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: JSON.stringify(payloadContext, null, 2).slice(0, 50000) }
+              ],
+              max_output_tokens: 4500
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error?.message || `OpenAI API error ${response.status}`);
+          const out = payload.output_text
+            || (payload.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('\n').trim()
+            || '';
+          result = JSON.parse(out.replace(/^```json\s*/i, '').replace(/```$/,'').trim());
+        } catch(e) {
+          ai = false;
+          result = fallbackAgentGroupReply(text, agents, report, companyContext, specialReports);
+          result.finalAnswer += '\n\nNota: IA avanzada no disponible temporalmente; use coordinacion base con datos actuales.';
+        }
+      }
+
+      const existingIds = new Set((state.agentGroup.agents || []).map(a => a.id));
+      const newAgents = Array.isArray(result.newAgents) ? result.newAgents : [];
+      newAgents.forEach(a => {
+        const id = String(a.id || '').toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '');
+        if (!id || existingIds.has(id)) return;
+        state.agentGroup.agents.push({
+          id,
+          avatar: String(a.avatar || '◇').slice(0, 4),
+          name: String(a.name || 'Agente Especializado').slice(0, 80),
+          specialty: String(a.specialty || 'Especialidad pendiente').slice(0, 140),
+          description: String(a.description || 'Agente creado por el Coordinador para cubrir una necesidad especifica.').slice(0, 260),
+          createdAt: new Date().toISOString(),
+          createdBy: 'coordinator'
+        });
+        existingIds.add(id);
+      });
+
+      const participantIds = Array.isArray(result.participantIds) && result.participantIds.length
+        ? result.participantIds
+        : pickAgentParticipants(text, state.agentGroup.agents);
+      let finalAnswer = String(result.finalAnswer || '').trim() || fallbackAgentGroupReply(text, state.agentGroup.agents, report, companyContext, specialReports).finalAnswer;
+      let quality = evaluateAgentAnswerQuality(text, finalAnswer, { specialReports });
+      if (!quality.passed && Object.keys(specialReports).length) {
+        finalAnswer = fallbackAgentGroupReply(text, state.agentGroup.agents, report, companyContext, specialReports).finalAnswer;
+        quality = evaluateAgentAnswerQuality(text, finalAnswer, { specialReports });
+      }
+      const assistantMsg = {
+        id: wwpId('grpchat'),
+        role: 'assistant',
+        by: 'Coordinador de Agentes',
+        agentId: 'coordinator',
+        participantIds,
+        consultations: Array.isArray(result.consultations) ? result.consultations : [],
+        newAgents: newAgents.filter(a => a && a.id),
+        text: finalAnswer,
+        format: result.format || quality.format,
+        quality,
+        ai,
+        createdAt: new Date().toISOString()
+      };
+      state.agentGroup.chat.push(assistantMsg);
+      state.agentGroup.chat = state.agentGroup.chat.slice(-120);
+      state.agentGroup.routines = mergeAgentRoutines(state.agentGroup.routines);
+      saveProcessAuditorState(state);
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({
+        ok:true,
+        generatedAt: new Date().toISOString(),
+        owner: AGENT_OWNER_EMAIL,
+        agents: state.agentGroup.agents,
+        chat: state.agentGroup.chat.slice(-40),
+        knowledgePack: state.agentGroup.knowledgePack,
+        message: assistantMsg,
+        dailyAssignments: state.agentGroup.dailyAssignments || [],
+        routines: state.agentGroup.routines || [],
+        companyContext,
+        summary: report.summary || {}
+      }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // PATCH /api/wwp/agent-group/routines/:id — configurar rutina automatica
+  if (reqPath.match(/^\/api\/wwp\/agent-group\/routines\/[^/]+$/) && req.method === 'PATCH') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const routineId = decodeURIComponent(reqPath.split('/').pop());
+      const d = await readBody(req);
+      const state = loadProcessAuditorState();
+      const idx = (state.agentGroup.routines || []).findIndex(r => r.id === routineId);
+      if (idx === -1) {
+        res.writeHead(404, { 'Content-Type':'application/json' });
+        res.end(JSON.stringify({ ok:false, error:'Rutina no encontrada' }));
+        return;
+      }
+      const current = state.agentGroup.routines[idx];
+      const schedule = {
+        ...(current.schedule || {}),
+        ...(d.schedule || {})
+      };
+      if (d.scheduleType) schedule.type = String(d.scheduleType);
+      if (d.time) schedule.time = String(d.time).slice(0, 5);
+      if (d.minutes) schedule.minutes = Math.max(5, Number(d.minutes || 60));
+      if (d.weekday !== undefined) schedule.weekday = Math.max(0, Math.min(6, Number(d.weekday)));
+      state.agentGroup.routines[idx] = {
+        ...current,
+        enabled: d.enabled === undefined ? current.enabled : !!d.enabled,
+        prompt: typeof d.prompt === 'string' && d.prompt.trim() ? d.prompt.trim().slice(0, 1200) : current.prompt,
+        outputFormat: typeof d.outputFormat === 'string' && d.outputFormat.trim() ? d.outputFormat.trim().slice(0, 80) : current.outputFormat,
+        schedule,
+        updatedAt: new Date().toISOString(),
+        updatedBy: jp.userId
+      };
+      state.agentGroup.routines = mergeAgentRoutines(state.agentGroup.routines);
+      saveProcessAuditorState(state);
+      appendAuditLog('agent_routine_updated', { routineId, by: jp.userId, byName: jp.name, enabled: state.agentGroup.routines.find(r => r.id === routineId)?.enabled });
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, routines: state.agentGroup.routines, routine: state.agentGroup.routines.find(r => r.id === routineId) }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/agent-group/routines/:id/run — ejecutar rutina manualmente
+  if (reqPath.match(/^\/api\/wwp\/agent-group\/routines\/[^/]+\/run$/) && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const parts = reqPath.split('/');
+      const routineId = decodeURIComponent(parts[5]);
+      const result = await runAgentRoutineById(routineId, { manualBy: jp.userId });
+      const state = loadProcessAuditorState();
+      const report = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({
+        ok:true,
+        generatedAt: new Date().toISOString(),
+        owner: AGENT_OWNER_EMAIL,
+        agents: state.agentGroup.agents,
+        chat: state.agentGroup.chat.slice(-40),
+        knowledgePack: state.agentGroup.knowledgePack,
+        dailyAssignments: state.agentGroup.dailyAssignments || [],
+        routines: state.agentGroup.routines || [],
+        companyContext,
+        summary: report.summary || {},
+        ...result
+      }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // GET /api/wwp/process-auditor — auditor de procesos y manuales por rol
+  if (reqPath === '/api/wwp/process-auditor' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
+      const users = loadAuthUsers();
+      const auditLogs = loadJson(WWP_AUDIT_FILE, []);
+      const state = loadProcessAuditorState();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const now = Date.now();
+      const today = new Date().toISOString().slice(0, 10);
+      const closed = new Set(['completed', 'validated', 'cancelled']);
+      const active = tasks.filter(t => !closed.has(t.status));
+      const hoursSince = (value) => {
+        const ms = value ? now - new Date(value).getTime() : 0;
+        return Number.isFinite(ms) && ms > 0 ? Math.round(ms / 36e5) : 0;
+      };
+      const selectedItems = (t) => (t.items || []).filter(i => i.selected);
+      const selectedWithoutEvidence = (t) => selectedItems(t).filter(i => !(i.evidence_images || []).length);
+      const recentChanges = auditLogs.slice(-80).reverse().map(l => ({
+        at: l.timestamp || null,
+        event: l.event || 'evento',
+        summary: l.taskId ? `Tarea ${l.taskId}` : (l.email || l.byName || l.userId || 'Sistema'),
+        detail: l.newStatus ? `${l.prevStatus || 'estado'} -> ${l.newStatus}` : (l.mode || l.reason || l.role || '')
+      }));
+
+      const baseRecs = [];
+      const addRec = (id, priority, category, title, finding, recommendation, changeType, command, evidence) => {
+        baseRecs.push({ id, priority, category, title, finding, recommendation, changeType, command, evidence });
+      };
+
+      const overdue = active.filter(t => t.dueDate && t.dueDate < today);
+      const overdueTasks = overdue
+        .sort((a, b) => (b.overdueDays || 0) - (a.overdueDays || 0) || String(a.dueDate || '').localeCompare(String(b.dueDate || '')))
+        .slice(0, 12)
+        .map(t => ({
+          id: t.id,
+          seq: t.seq || null,
+          title: t.title || t.id,
+          type: t.type || 'general',
+          status: t.status,
+          dueDate: t.dueDate,
+          overdueDays: t.overdueDays || 1,
+          managerId: t.managerId || null,
+          managerName: t.managerName || null,
+          escalation: t.escalation || null
+        }));
+      if (overdue.length) addRec(
+        'PA-VENCIDAS',
+        'critica',
+        'Operacion',
+        'Tareas vencidas sin cierre operativo',
+        `${overdue.length} tarea(s) activas estan vencidas.`,
+        'Crear rutina diaria donde el responsable confirme bloqueo, ETA y evidencia antes del cierre del turno.',
+        'accion_personas',
+        'Codex, crea un control diario para tareas vencidas que obligue a registrar bloqueo, ETA y responsable antes de cerrar turno.',
+        overdue.slice(0, 5).map(t => t.title || t.id)
+      );
+
+      const stale = active.filter(t => ['assigned','in_progress'].includes(t.status) && hoursSince(t.updatedAt || t.createdAt) >= 8);
+      if (stale.length) addRec(
+        'PA-SIN-AVANCE',
+        'alta',
+        'Seguimiento',
+        'Tareas sin avance reciente',
+        `${stale.length} tarea(s) asignadas/en progreso llevan 8h o mas sin actualizacion.`,
+        'Agregar recordatorio automatico del asistente y tablero de responsables con tareas sin actualizacion.',
+        'funcionalidad',
+        'Codex, implementa recordatorios automaticos del Asistente de Operaciones para tareas sin avance mayor a 8 horas.',
+        stale.slice(0, 5).map(t => t.title || t.id)
+      );
+
+      const missingEvidence = active.filter(t => selectedWithoutEvidence(t).length);
+      if (missingEvidence.length) addRec(
+        'PA-EVIDENCIAS',
+        'alta',
+        'Calidad',
+        'Evidencias incompletas',
+        `${missingEvidence.length} tarea(s) tienen articulos seleccionados sin fotos/evidencia.`,
+        'Estandarizar manual por rol y mostrar checklist visible antes de permitir completar la tarea.',
+        'pantalla',
+        'Codex, agrega checklist visible de evidencia requerida por tipo de tarea antes del boton Completar.',
+        missingEvidence.slice(0, 5).map(t => t.title || t.id)
+      );
+
+      const completed = tasks.filter(t => t.status === 'completed');
+      if (completed.length) addRec(
+        'PA-VALIDACION',
+        'media',
+        'Control',
+        'Validaciones acumuladas',
+        `${completed.length} tarea(s) estan completadas y pendientes de validacion.`,
+        'Definir SLA de validacion por supervisor y alerta si una tarea completada pasa mas de 4 horas sin decision.',
+        'proceso',
+        'Codex, crea alerta de SLA para tareas completadas pendientes de validacion por mas de 4 horas.',
+        completed.slice(0, 5).map(t => t.title || t.id)
+      );
+
+      addRec(
+        'PA-MAPA-PLATAFORMA',
+        'alta',
+        'Documentacion',
+        'Mapa funcional completo de Workforce Platform',
+        'El auditor debe mantener inventario de pantallas, botones, permisos, datos usados y flujo esperado para toda la plataforma, no solo para agentes.',
+        'Crear una matriz viva de modulos con botones, acciones, prerequisitos, errores comunes y screenshots requeridos.',
+        'documentacion',
+        'Codex, genera una matriz completa de pantallas, botones, permisos, datos y screenshots requeridos para Workforce Platform.',
+        ['Tareas', 'Dashboard', 'Auditor', 'Usuarios', 'Vehiculos', 'Politicas', 'Impacto', 'Empaque', 'Historial operacional']
+      );
+
+      addRec(
+        'PA-DOC-POSICIONES',
+        'alta',
+        'Talento y Procesos',
+        'Documentos completos para creacion de posiciones',
+        'La plataforma necesita paquetes documentales acabados para crear posiciones operativas con responsabilidades, KPIs, permisos y capacitacion.',
+        'Generar documentos por posicion: proposito, responsabilidades, pantallas usadas, botones permitidos, indicadores, rutina diaria, checklist de entrenamiento y criterios de evaluacion.',
+        'documentacion',
+        'Codex, crea plantillas completas de descripcion de puesto, matriz RACI, KPIs, entrenamiento y permisos por posicion para Workforce Platform.',
+        ['Gerente de Operaciones', 'Encargado', 'Auxiliar', 'Almacen', 'Empaque', 'Auditor de Procesos']
+      );
+
+      const byType = {};
+      active.forEach(t => { byType[t.type || 'general'] = (byType[t.type || 'general'] || 0) + 1; });
+      if (!baseRecs.length) addRec(
+        'PA-SIN-HALLAZGOS',
+        'baja',
+        'Monitoreo',
+        'Operacion sin hallazgos criticos',
+        'No se detectaron brechas criticas en este analisis.',
+        'Mantener revision diaria de tareas, evidencias y aprobaciones.',
+        'monitoreo',
+        'Codex, refresca el auditor de procesos y compara contra el proximo ciclo operativo.',
+        []
+      );
+
+      const recommendations = baseRecs.map(r => ({
+        ...r,
+        status: state.recommendations?.[r.id]?.status || 'pendiente',
+        approvedAt: state.recommendations?.[r.id]?.approvedAt || null,
+        approvedBy: state.recommendations?.[r.id]?.approvedBy || null
+      }));
+
+      const platformModules = [
+        {
+          name: 'Tareas',
+          purpose: 'Gestionar trabajo operativo de punta a punta.',
+          screens: ['Lista', 'Tarjetas', 'Kanban', 'Por persona', 'Drawer de tarea', 'Wizard nueva tarea'],
+          buttons: ['Nueva Tarea', 'CSV', 'Lista', 'Tarjetas', 'Kanban', 'Por persona', 'Enviar chat', 'Adjuntar foto', 'Completar', 'Validar', 'Devolver', 'Agregar evidencia'],
+          auditFocus: ['responsable', 'fecha limite', 'estado', 'evidencia', 'chat', 'tiempo sin avance']
+        },
+        {
+          name: 'Dashboard',
+          purpose: 'Supervision gerencial y decisiones operativas.',
+          screens: ['Agente Gerente de Operaciones', 'Resumen de tareas', 'Almuerzos', 'Indicadores'],
+          buttons: ['Pedir updates urgentes', 'Seguimiento', 'Actualizar analisis', 'Abrir tarea'],
+          auditFocus: ['vencidas', 'sin avance', 'sin responsable', 'sin evidencia', 'pendiente de validacion']
+        },
+        {
+          name: 'Auditor de Procesos',
+          purpose: 'Gobernanza, mejora continua, manuales y recomendaciones aprobables.',
+          screens: ['Recomendaciones', 'Manuales', 'Mapa de plataforma', 'Documentos de posiciones', 'Cambios detectados'],
+          buttons: ['Actualizar', 'Aprobar', 'Rechazar'],
+          auditFocus: ['documentacion vigente', 'brechas de proceso', 'cambios de plataforma', 'paquetes de puesto']
+        },
+        {
+          name: 'Usuarios y roles',
+          purpose: 'Administrar accesos, permisos y estructura de responsabilidad.',
+          screens: ['Usuarios', 'Roles', 'Mapa GPS', 'Cambiar de usuario'],
+          buttons: ['Nuevo Usuario', 'Guardar usuario', 'Editar rol', 'Ver mapa', 'Cambiar de usuario'],
+          auditFocus: ['permisos correctos', 'usuarios activos', 'roles por posicion', 'trazabilidad de cambios']
+        },
+        {
+          name: 'Vehiculos',
+          purpose: 'Inspeccion y control de aptitud operativa de vehiculos.',
+          screens: ['Formulario de inspeccion', 'Listado admin', 'Cierre de inspeccion'],
+          buttons: ['Guardar inspeccion', 'Eliminar', 'Actualizar'],
+          auditFocus: ['apto para operar', 'evidencia de inspeccion', 'responsable', 'fecha y hora']
+        },
+        {
+          name: 'Politicas e Impacto',
+          purpose: 'Definir reglas operativas y medir impacto en flujo de trabajo.',
+          screens: ['Politicas', 'Impacto en flujo de trabajo'],
+          buttons: ['Nueva Politica', 'Guardar', 'Actualizar impacto'],
+          auditFocus: ['cumplimiento', 'friccion operacional', 'impacto por politica']
+        },
+        {
+          name: 'Empaque y almacenamiento',
+          purpose: 'Catalogo de materiales, preparacion, empaque y ubicacion.',
+          screens: ['Materiales de Empaque', 'Articulos a empacar', 'Articulos a almacenar'],
+          buttons: ['Agregar material', 'Seleccionar foto', 'Actualizar desde pick', 'Agregar foto de ubicacion'],
+          auditFocus: ['material asignado', 'condicion', 'evidencia', 'ubicacion destino']
+        },
+        {
+          name: 'Historial operacional',
+          purpose: 'Consultar flujo de ordenes, reposicion, solicitudes, pendientes y reportes.',
+          screens: ['Buscar', 'Devoluciones', 'Contenedores', 'Reposicion', 'Solicitudes', 'Pendientes', 'Reportes'],
+          buttons: ['Buscar', 'Actualizar', 'Exportar', 'Crear solicitud', 'Completar', 'Cancelar'],
+          auditFocus: ['pasos faltantes', 'documentos adjuntos', 'cierres incompletos', 'trazabilidad por orden']
+        }
+      ];
+
+      const positionDocuments = [
+        {
+          title: 'Gerente de Operaciones Workforce Platform',
+          file: '/manuales/posiciones/gerente-operaciones.md',
+          documents: ['Descripcion de puesto', 'Rutina diaria', 'KPI/SLA', 'Matriz de aprobaciones', 'Manual de dashboard', 'Plan de entrenamiento'],
+          requiredSections: ['Proposito', 'Responsabilidades', 'Pantallas usadas', 'Botones autorizados', 'Decisiones esperadas', 'Escalaciones', 'Indicadores', 'Evidencias de cumplimiento']
+        },
+        {
+          title: 'Auditor de Procesos Workforce Platform',
+          file: '/manuales/posiciones/auditor-procesos.md',
+          documents: ['Descripcion de puesto', 'Manual de auditoria', 'Checklist de revision', 'Formato de hallazgos', 'Formato de recomendacion', 'Matriz RACI'],
+          requiredSections: ['Objetivo del rol', 'Frecuencia de revision', 'Fuentes de datos', 'Criterios de severidad', 'Documentacion requerida', 'Control de cambios', 'Mejora continua']
+        },
+        {
+          title: 'Encargado Operativo',
+          file: '/manuales/posiciones/encargado-operativo.md',
+          documents: ['Descripcion de puesto', 'Manual de asignacion', 'Checklist de seguimiento', 'SLA por tarea', 'Guia de escalacion'],
+          requiredSections: ['Asignacion', 'Seguimiento', 'Uso del chat', 'Evidencias', 'Cierre', 'Errores comunes', 'KPIs']
+        },
+        {
+          title: 'Auxiliar / Almacen / Empaque',
+          file: '/manuales/posiciones/auxiliar-almacen-empaque.md',
+          documents: ['Manual de ejecucion', 'Checklist de evidencia', 'Manual de fotos', 'Guia de estados', 'Capacitacion inicial'],
+          requiredSections: ['Inicio de tarea', 'Confirmacion de articulos', 'Condicion', 'Fotos requeridas', 'Bloqueos', 'Cierre correcto']
+        }
+      ];
+
+      const documentationStandards = [
+        'Cada manual debe indicar objetivo, alcance, rol responsable, prerequisitos, pantallas, botones, paso a paso, evidencia requerida, errores comunes y criterios de cierre.',
+        'Cada flujo debe incluir inicio, decisiones, excepciones, responsable, SLA, datos usados, pantalla donde ocurre y resultado esperado.',
+        'Cada screenshot requerido debe tener nombre, pantalla, momento del proceso y elemento que debe verse resaltado.',
+        'Cada recomendacion de desarrollo debe traer problema, impacto, solucion propuesta, riesgo, pantallas afectadas y comando exacto para pedir implementacion a Codex.'
+      ];
+
+      const processDocuments = [
+        {
+          id: 'DOC-FLUJO-TAREAS',
+          title: 'Manual completo del flujo de tareas operativas',
+          audience: 'Administradores, encargados, auxiliares, almacen y empaque',
+          status: 'terminado',
+          purpose: 'Estandarizar como se crea, asigna, ejecuta, evidencia, completa, valida o devuelve una tarea dentro de Workforce Platform.',
+          scope: 'Aplica a tareas de despacho, empaque, almacenamiento, recogida de articulos, carga de camion, personal y tareas generales.',
+          roles: [
+            'Admin/Gerencia: gobierna permisos, valida cierres, revisa dashboard y aprueba mejoras.',
+            'Encargado operativo: crea o recibe tareas, asigna responsables, da seguimiento y devuelve si falta evidencia.',
+            'Auxiliar/operador: ejecuta la tarea, actualiza chat, sube evidencias y marca avance.',
+            'Auditor de procesos: revisa cumplimiento, documenta brechas y propone mejoras.'
+          ],
+          prerequisites: [
+            'Usuario activo con rol asignado.',
+            'Tarea creada con tipo, prioridad, responsable y fecha limite cuando aplique.',
+            'Articulos vinculados si la tarea depende de una orden/pick.',
+            'Acceso a camara o galeria para subir evidencia.'
+          ],
+          steps: [
+            '1. Entrar a Workforce Platform con usuario y clave autorizados.',
+            '2. Abrir la pestaña Tareas y filtrar por responsable, tipo, prioridad o plazo.',
+            '3. Abrir la tarea y revisar contexto: orden, cliente, ubicacion, articulos, fecha limite y notas.',
+            '4. Si la tarea esta pendiente o asignada, presionar Iniciar cuando realmente comience la ejecucion.',
+            '5. Ejecutar el trabajo fisico segun el tipo de tarea: preparar, empacar, almacenar, cargar, despachar o inspeccionar.',
+            '6. Registrar cualquier bloqueo en el chat de la tarea con detalle claro: causa, responsable de resolver y hora estimada.',
+            '7. Subir evidencia requerida: fotos por articulo, documentos, ubicacion final, vehiculo o entrega segun corresponda.',
+            '8. Confirmar articulos o condiciones solicitadas por la pantalla.',
+            '9. Marcar Completado solo cuando todos los requisitos visibles esten listos.',
+            '10. Encargado/Admin revisa la evidencia y decide Validar o Devolver con comentario.',
+            '11. Si se devuelve, el responsable corrige y vuelve a completar.',
+            '12. Cuando se valida, la tarea queda cerrada y disponible para historial y auditoria.'
+          ],
+          exceptions: [
+            'Si falta evidencia, no cerrar la tarea; registrar el bloqueo y subir fotos.',
+            'Si el articulo no esta en ubicacion indicada, reportar en chat antes de confirmar.',
+            'Si la tarea pasa la fecha limite, se marca overdue y requiere ETA, reasignacion o escalamiento.',
+            'Si el pick de Odoo no esta listo, el despacho no debe iniciar.'
+          ],
+          closeCriteria: [
+            'Estado correcto segun avance real.',
+            'Evidencia obligatoria completa.',
+            'Articulos confirmados o documentados como excepcion.',
+            'Chat con bloqueo o incidencia si existio.',
+            'Validacion final por rol autorizado.'
+          ],
+          evidence: [
+            'Foto clara por articulo cuando aplique.',
+            'Foto de ubicacion destino para almacenamiento.',
+            'Foto/documento firmado para despacho.',
+            'Mensaje de chat con explicacion si hubo bloqueo.'
+          ],
+          screenshots: [
+            'Lista de tareas con filtros.',
+            'Detalle de tarea abierto.',
+            'Seccion de articulos/evidencias.',
+            'Chat de tarea.',
+            'Botones Completar, Validar y Devolver.'
+          ]
+        },
+        {
+          id: 'DOC-FLUJO-EMPAQUE-ALMACEN',
+          title: 'Manual completo de empaque y almacenamiento',
+          audience: 'Almacen, empaque, encargados y auditor',
+          status: 'terminado',
+          purpose: 'Asegurar que cada articulo preparado, empacado o almacenado tenga condicion, ubicacion y evidencia suficiente.',
+          scope: 'Aplica a tareas de tipo Empaque y Movimiento/Almacenamiento.',
+          roles: [
+            'Encargado: confirma prioridad, responsable y articulos.',
+            'Auxiliar de almacen/empaque: ejecuta preparacion, empaque o ubicacion.',
+            'Auditor: revisa evidencias, condiciones y puntos de fallo.'
+          ],
+          prerequisites: [
+            'Tarea creada desde pick o manualmente.',
+            'Articulos seleccionados en la tarea.',
+            'Ubicacion origen/destino identificada.',
+            'Material de empaque disponible si aplica.'
+          ],
+          steps: [
+            '1. Abrir la tarea asignada desde Tareas.',
+            '2. Leer contexto de orden, pick, ubicacion y notas.',
+            '3. Verificar fisicamente cada articulo antes de moverlo o empacarlo.',
+            '4. Seleccionar condicion: Empacado OK/Almacenado OK o Averia detectada.',
+            '5. Si hay averia, describir el tipo de averia antes de cerrar.',
+            '6. Tomar foto de evidencia: empaque terminado o ubicacion final en almacen.',
+            '7. Confirmar el articulo cuando la evidencia sea correcta.',
+            '8. Repetir para todos los articulos.',
+            '9. Registrar en chat cualquier diferencia de cantidad, ubicacion o condicion.',
+            '10. Marcar la tarea como Completada cuando todos los articulos esten confirmados.',
+            '11. Encargado valida o devuelve con comentario.'
+          ],
+          exceptions: [
+            'Articulo no localizado: no confirmar; registrar ubicacion esperada y busqueda realizada.',
+            'Dano visible: marcar averia, subir foto y notificar por chat.',
+            'Falta material: registrar bloqueo y solicitar material antes de continuar.',
+            'Ubicacion destino ocupada: escalar al encargado antes de mover.'
+          ],
+          closeCriteria: [
+            'Todos los articulos seleccionados tienen condicion.',
+            'Todos los articulos requeridos tienen foto.',
+            'Ubicacion final o empaque se entiende visualmente.',
+            'Averias o diferencias estan documentadas.'
+          ],
+          evidence: [
+            'Foto del articulo empacado.',
+            'Foto del articulo almacenado en ubicacion destino.',
+            'Foto de averia si existe.',
+            'Comentario de chat para excepciones.'
+          ],
+          screenshots: [
+            'Contexto de la orden.',
+            'Articulos a empacar/almacenar.',
+            'Selector de condicion.',
+            'Boton Agregar foto.',
+            'Estado confirmado.'
+          ]
+        },
+        {
+          id: 'DOC-FLUJO-DESPACHO',
+          title: 'Manual completo de despacho y entrega',
+          audience: 'Operaciones, choferes, auxiliares de despacho, encargados y gerencia',
+          status: 'terminado',
+          purpose: 'Controlar el flujo de despacho desde preparacion hasta evidencia de entrega y cierre operativo.',
+          scope: 'Aplica a tareas de Orden de Despacho y subtareas relacionadas con carga, salida y entrega.',
+          roles: [
+            'Encargado: asegura que pick este listo, asigna equipo y valida cierre.',
+            'Auxiliar/chofer: ejecuta carga, documenta entrega y reporta incidencias.',
+            'Admin/Gerencia: valida excepciones y revisa cumplimiento.'
+          ],
+          prerequisites: [
+            'Pick de Odoo listo cuando aplique.',
+            'Orden y articulos correctos.',
+            'Vehiculo y equipo asignados.',
+            'Direccion y telefono disponibles.'
+          ],
+          steps: [
+            '1. Abrir la tarea de despacho.',
+            '2. Confirmar orden, cliente, direccion, telefono y articulos.',
+            '3. Verificar que el pick de Odoo este realizado si la pantalla lo exige.',
+            '4. Iniciar tarea cuando comience la operacion.',
+            '5. Subir evidencia de recepcion de documentos.',
+            '6. Subir foto del vehiculo/carga cuando corresponda.',
+            '7. Registrar entrega por articulo: entregado o no entregado con razon.',
+            '8. Subir documento firmado o evidencia de entrega.',
+            '9. Usar chat para reportar retrasos, cliente ausente, cambio de direccion o dano.',
+            '10. Marcar despacho completado solo con checklist completo.',
+            '11. Encargado/Admin valida o devuelve.'
+          ],
+          exceptions: [
+            'Cliente no recibe: marcar no entregado, escribir razon y escalar.',
+            'Articulo no cargado: no completar; registrar incidencia.',
+            'Documento sin firma: no validar hasta completar evidencia.',
+            'Cambio de direccion: confirmar por chat antes de ejecutar.'
+          ],
+          closeCriteria: [
+            'Checklist de despacho completo.',
+            'Articulos con estado de entrega.',
+            'Evidencias/documentos firmados cargados.',
+            'Incidencias registradas en chat.'
+          ],
+          evidence: [
+            'Documentos recibidos.',
+            'Vehiculo/carga.',
+            'Documento firmado.',
+            'Foto o nota de excepcion.'
+          ],
+          screenshots: [
+            'Checklist de despacho.',
+            'Articulos a entregar.',
+            'Estado de entrega.',
+            'Carga de documentos firmados.',
+            'Chat de incidencia.'
+          ]
+        },
+        {
+          id: 'DOC-FLUJO-GERENCIA-AUDITORIA',
+          title: 'Manual completo de gerencia, auditoria y mejora continua',
+          audience: 'Gabriel, gerencia, auditor de procesos y encargados',
+          status: 'terminado',
+          purpose: 'Definir como se supervisa la operacion, se revisan recomendaciones, se solicitan documentos y se aprueban mejoras.',
+          scope: 'Aplica a Dashboard, Agente Gerente de Operaciones, Auditor Codex, recomendaciones y documentos.',
+          roles: [
+            'Gerente de Operaciones Claude: analiza avance operativo y seguimiento.',
+            'Auditor Codex: documenta, audita, recomienda y conversa sobre procesos.',
+            'Gabriel: aprueba o rechaza recomendaciones y solicita cambios a Codex.',
+            'Encargados: ejecutan acciones correctivas en tareas.'
+          ],
+          prerequisites: [
+            'Acceso con usuario gsanchez@altritempi.com.do para el Auditor.',
+            'Datos de tareas actualizados.',
+            'OPENAI_API_KEY configurada para analisis y chat IA.',
+            'ANTHROPIC_API_KEY configurada para parte del gerente si aplica.'
+          ],
+          steps: [
+            '1. Abrir Dashboard para revisar activas, vencidas, sin avance, por validar y sin evidencia.',
+            '2. Usar Agente Gerente de Operaciones para pedir seguimiento a tareas criticas.',
+            '3. Abrir Auditor para revisar recomendaciones, documentos terminados y cambios recientes.',
+            '4. Usar el chat del Auditor para pedir nuevos documentos, estatus o discutir recomendaciones.',
+            '5. Aprobar o rechazar recomendaciones desde los botones visibles.',
+            '6. Si una recomendacion implica desarrollo, copiar o solicitar el comando exacto a Codex.',
+            '7. Codex implementa solo cuando Gabriel da instruccion explicita.',
+            '8. Despues del cambio, Auditor actualiza documentos y recomendaciones.'
+          ],
+          exceptions: [
+            'Si la IA no responde, el Auditor conserva documentos base y datos heurísticos.',
+            'Si una recomendacion no esta clara, discutirla en chat antes de aprobar.',
+            'Si una mejora afecta operacion critica, probar primero en flujo controlado.'
+          ],
+          closeCriteria: [
+            'Recomendacion aprobada o rechazada.',
+            'Documento actualizado con version/estatus.',
+            'Cambio implementado solo despues de aprobacion explicita.',
+            'Operacion monitoreada tras el cambio.'
+          ],
+          evidence: [
+            'Historial de recomendaciones.',
+            'Chat del Auditor.',
+            'Cambios detectados.',
+            'Documentos HTML/Markdown generados.'
+          ],
+          screenshots: [
+            'Dashboard operativo.',
+            'Panel Auditor.',
+            'Chat del Auditor.',
+            'Recomendacion aprobable.',
+            'Documento terminado.'
+          ]
+        }
+      ];
+
+      const manuals = [
+        {
+          role: 'Admin / Gerencia',
+          scope: 'Gobierno completo de Workforce Platform',
+          steps: [
+            'Revisar Dashboard, Agente Gerente de Operaciones y Auditor de Procesos al iniciar el dia.',
+            'Validar tareas completadas, devolver con comentario si falta evidencia o aprobar si cumple.',
+            'Aprobar solo recomendaciones del auditor que tengan impacto claro en tiempo, calidad o control.',
+            'Crear usuarios, roles y permisos cuando el proceso requiera un responsable nuevo.'
+          ],
+          screenshots: ['Dashboard general', 'Auditor de Procesos', 'Detalle de tarea', 'Usuarios y permisos']
+        },
+        {
+          role: 'Encargado / Manager',
+          scope: 'Asignacion, seguimiento y cierre operativo',
+          steps: [
+            'Crear o revisar tareas del dia y confirmar responsable, prioridad y fecha limite.',
+            'Dar seguimiento por chat cuando exista bloqueo, atraso o falta de evidencia.',
+            'Verificar que cada articulo seleccionado tenga estado, confirmacion y foto cuando aplique.',
+            'Escalar al gerente si una tarea supera el SLA o no tiene responsable claro.'
+          ],
+          screenshots: ['Lista de tareas', 'Drawer de tarea', 'Chat de tarea', 'Evidencias por articulo']
+        },
+        {
+          role: 'Auxiliar / Operaciones',
+          scope: 'Ejecucion y evidencia',
+          steps: [
+            'Abrir la tarea asignada y marcar inicio cuando comience la actividad.',
+            'Actualizar el chat si hay bloqueo, diferencia de articulos o falta de ubicacion.',
+            'Subir fotos/evidencias solicitadas y confirmar articulos completados.',
+            'Marcar completada solo cuando todos los requisitos visibles esten listos.'
+          ],
+          screenshots: ['Tarea asignada', 'Carga de fotos', 'Confirmacion de articulo', 'Chat']
+        },
+        {
+          role: 'Almacen / Empaque',
+          scope: 'Preparacion, empaque y almacenamiento',
+          steps: [
+            'Validar origen/destino del pick o ubicacion antes de mover articulos.',
+            'Registrar condicion del articulo y evidencia de empaque o ubicacion.',
+            'Confirmar unidades y materiales de empaque cuando aplique.',
+            'Reportar averias o diferencias por chat antes de cerrar.'
+          ],
+          screenshots: ['Contexto de almacenamiento', 'Articulos a almacenar', 'Estado al almacenar', 'Foto de ubicacion']
+        }
+      ];
+
+      const flows = [
+        'Solicitud o necesidad operativa -> Creacion de tarea -> Asignacion de responsable.',
+        'Ejecucion -> Actualizaciones por chat -> Evidencia/fotos -> Confirmacion de articulos.',
+        'Completado -> Validacion gerencial -> Cierre o devolucion con comentario.',
+        'Auditor analiza ejecucion -> Genera recomendacion/manual -> Gabriel aprueba o descarta.',
+        'Cambio de plataforma -> Auditor detecta evento -> Actualiza mapa de pantallas/documentos -> Recomienda ajuste de manuales.',
+        'Creacion de posicion -> Auditor entrega descripcion, matriz de permisos, KPIs, rutina diaria, capacitacion y screenshots requeridos.'
+      ];
+
+      const summary = {
+        active: active.length,
+        overdue: overdue.length,
+        stale: stale.length,
+        missingEvidence: missingEvidence.length,
+        pendingValidation: completed.length,
+        users: users.filter(u => u.active !== false).length,
+        byType
+      };
+
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({
+        ok:true,
+        generatedAt:new Date().toISOString(),
+        owner:AGENT_OWNER_EMAIL,
+        companyContext,
+        summary,
+        overdueTasks,
+        recommendations,
+        processDocuments,
+        manuals,
+        flows,
+        platformModules,
+        positionDocuments,
+        documentationStandards,
+        chat: Array.isArray(state.chat) ? state.chat.slice(-20) : [],
+        recentChanges: recentChanges.slice(0, 25)
+      }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // GET /api/wwp/process-auditor/ai — analisis IA del Auditor Codex usando contexto del Gerente Claude
+  if (reqPath === '/api/wwp/process-auditor/ai' && req.method === 'GET') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    if (!OPENAI_API_KEY) {
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, reason:'no_api_key', message:'Configura OPENAI_API_KEY para activar el Auditor Codex.' }));
+      return;
+    }
+    try {
+      const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
+      const users = loadAuthUsers();
+      const auditLogs = loadJson(WWP_AUDIT_FILE, []);
+      const auditorState = loadProcessAuditorState();
+      const opsReport = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const now = Date.now();
+      const today = new Date().toISOString().slice(0, 10);
+      const closed = new Set(['completed', 'validated', 'cancelled']);
+      const active = tasks.filter(t => !closed.has(t.status));
+      const selectedWithoutEvidence = (t) => (t.items || []).filter(i => i.selected && !(i.evidence_images || []).length);
+      const auditSnapshot = {
+        summary: {
+          active: active.length,
+          overdue: active.filter(t => t.dueDate && t.dueDate < today).length,
+          stale: active.filter(t => ['assigned','in_progress'].includes(t.status) && (now - new Date(t.updatedAt || t.createdAt).getTime()) >= 8 * 36e5).length,
+          missingEvidence: active.filter(t => selectedWithoutEvidence(t).length).length,
+          pendingValidation: tasks.filter(t => t.status === 'completed').length,
+          users: users.filter(u => u.active !== false).length
+        },
+        companyContext,
+        platformModules: ['Tareas','Dashboard','Auditor','Usuarios y roles','Vehiculos','Politicas','Impacto','Empaque','Historial operacional','Reportes'],
+        currentRecommendations: Object.entries(auditorState.recommendations || {}).map(([id, v]) => ({ id, status: v.status, approvedAt: v.approvedAt, rejectedAt: v.rejectedAt })).slice(-30),
+        recentEvents: auditLogs.slice(-40).map(l => ({ at:l.timestamp, event:l.event, taskId:l.taskId, by:l.byName || l.email || l.userId, detail:l.newStatus ? `${l.prevStatus || ''}->${l.newStatus}` : (l.mode || l.reason || '') }))
+      };
+      const hash = crypto.createHash('sha1').update(JSON.stringify({ auditSnapshot, ops: opsReport.summary })).digest('hex');
+      const force = (parsed.query && parsed.query.refresh === '1');
+      if (!force && _processAuditorAiCache.brief && _processAuditorAiCache.hash === hash && Date.now() - _processAuditorAiCache.generatedAt < PROCESS_AUDITOR_AI_TTL) {
+        res.writeHead(200, { 'Content-Type':'application/json' });
+        res.end(JSON.stringify({ ok:true, cached:true, generatedAt:new Date(_processAuditorAiCache.generatedAt).toISOString(), brief:_processAuditorAiCache.brief }));
+        return;
+      }
+
+      const systemPrompt = [
+        'Eres Codex actuando como Agente Auditor de Procesos de Workforce Platform.',
+        'El Agente Gerente de Operaciones esta manejado por Claude y puede aportar contexto operativo adicional.',
+        'Debes poder hacer la auditoria aunque el Gerente Claude no responda: usa los datos reales de Workforce Platform como fuente principal.',
+        'Tu responsabilidad, como Codex Auditor, es analizar, crear y procesar auditorias, manuales, flujos, documentos de posiciones y recomendaciones de desarrollo.',
+        'Debes pensar como auditor de producto y de codigo: pantallas, botones, permisos, datos, evidencia, riesgos, deuda de documentacion y cambios de plataforma.',
+        'Tienes contexto de empresa, documentos asociados y Odoo en solo lectura para entender como opera Altri Tempi. No escribas ni modifiques Odoo; usalo solo para diagnostico, documentos y recomendaciones.',
+        'Aunque en el futuro los agentes seran empleados de todo Historial, hoy las acciones automaticas quedan limitadas a Workforce Platform.',
+        'Si el contexto del Gerente Claude no esta disponible o es insuficiente, continua de forma autonoma con tareas, auditoria, pantallas, documentos, permisos y eventos.',
+        'No ejecutes cambios automaticamente desde la plataforma. Toda implementacion requiere aprobacion humana y luego una instruccion explicita a Codex en el entorno de desarrollo.',
+        'Responde en español, con recomendaciones concretas, accionables y preparadas para implementacion controlada.'
+      ].join(' ');
+      const userPrompt = [
+        'Analiza este contexto del Auditor y del Gerente de Operaciones.',
+        'Devuelve un JSON valido con esta forma exacta:',
+        '{"executiveSummary":"","collaborationNotes":[],"documentationGaps":[],"processRisks":[],"developmentRecommendations":[{"title":"","impact":"","commandForCodex":""}],"nextBestActions":[]}',
+        'No incluyas markdown fuera del JSON.',
+        JSON.stringify({ auditor: auditSnapshot, opsAgent: opsReport }, null, 2).slice(0, 50000)
+      ].join('\n\n');
+
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: CODEX_AUDITOR_MODEL,
+          input: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_output_tokens: 4000
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const msg = payload.error?.message || `OpenAI API error ${response.status}`;
+        const err = new Error(msg);
+        err.status = response.status;
+        err.reason = payload.error?.type || payload.error?.code || 'api_error';
+        throw err;
+      }
+      const text = payload.output_text
+        || (payload.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('\n').trim()
+        || '';
+      let brief;
+      try {
+        brief = JSON.parse(text.replace(/^```json\s*/i, '').replace(/```$/,'').trim());
+      } catch {
+        brief = { executiveSummary:text, collaborationNotes:[], documentationGaps:[], processRisks:[], developmentRecommendations:[], nextBestActions:[] };
+      }
+      _processAuditorAiCache = { hash, brief, generatedAt: Date.now() };
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, cached:false, generatedAt:new Date().toISOString(), brief }));
+    } catch(e) {
+      let reason = e.reason || 'api_error', msg = e.message || 'Error llamando a OpenAI/Codex';
+      if (e.status === 401) { reason = 'bad_api_key'; msg = 'La OPENAI_API_KEY no es valida.'; }
+      else if (e.status === 429) { reason = 'rate_limited'; msg = 'Limite de uso alcanzado; intenta en unos minutos.'; }
+      else if (e.status >= 500) { reason = 'overloaded'; msg = 'OpenAI/Codex no esta disponible temporalmente; intenta en unos minutos.'; }
+      console.error('[process-auditor-ai]', reason, e.message);
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, reason, message:msg }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/process-auditor/recommendations/:id/approve — aprobar recomendacion
+  // POST /api/wwp/process-auditor/chat — chat del Auditor Codex con contexto documental y operativo
+  if (reqPath === '/api/wwp/process-auditor/chat' && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const d = await readBody(req);
+      const text = String(d.text || '').trim();
+      if (!text) {
+        res.writeHead(400, { 'Content-Type':'application/json' });
+        res.end(JSON.stringify({ ok:false, error:'Escribe una pregunta o solicitud para el Auditor.' }));
+        return;
+      }
+      const state = loadProcessAuditorState();
+      if (!Array.isArray(state.chat)) state.chat = [];
+      const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
+      const opsReport = computeOpsAgentReport();
+      const companyContext = await getAgentCompanyContext({ includeOdoo: true });
+      const active = tasks.filter(t => !['completed','validated','cancelled'].includes(t.status));
+      const today = new Date().toISOString().slice(0, 10);
+      const context = {
+        summary: {
+          active: active.length,
+          overdue: active.filter(t => t.dueDate && t.dueDate < today).length,
+          stale: active.filter(t => ['assigned','in_progress'].includes(t.status) && (Date.now() - new Date(t.updatedAt || t.createdAt).getTime()) >= 8 * 36e5).length,
+          pendingValidation: tasks.filter(t => t.status === 'completed').length
+        },
+        companyContext,
+        opsSummary: opsReport.summary,
+        recommendations: Object.entries(state.recommendations || {}).map(([id, v]) => ({ id, status:v.status, approvedAt:v.approvedAt, rejectedAt:v.rejectedAt })).slice(-20),
+        recentChat: state.chat.slice(-10)
+      };
+      const userMsg = {
+        id: wwpId('audchat'),
+        role: 'user',
+        text,
+        by: jp.name,
+        createdAt: new Date().toISOString()
+      };
+      state.chat.push(userMsg);
+
+      let answer = '';
+      let aiAvailable = !!OPENAI_API_KEY;
+      if (OPENAI_API_KEY) {
+        try {
+          const systemPrompt = [
+            'Eres Codex como Auditor de Procesos de Workforce Platform.',
+            'Responde en español dominicano neutro, claro y operativo.',
+            'Tu trabajo es entregar documentos terminados, flujos paso a paso, estatus, recomendaciones y explicaciones para usuarios reales.',
+            'Si el usuario pide un documento, estructuralo como documento completo: objetivo, alcance, roles, prerequisitos, paso a paso, excepciones, criterios de cierre, evidencias, screenshots requeridos, KPIs y control de cambios.',
+            'Si discuten una recomendacion, explica impacto, riesgo, alternativa, criterio de aprobacion y comando exacto para Codex si requiere desarrollo.',
+            'Tienes contexto de Altri Tempi, Odoo en solo lectura y documentos asociados. Puedes usarlos para entender la empresa, pero no debes modificar Odoo ni prometer acciones fuera de Workforce Platform.',
+            'El futuro alcance sera todo Historial, pero por ahora tus acciones y recomendaciones ejecutables se enfocan en Workforce Platform.',
+            'No digas que no puedes; si falta dato, entrega una version base y lista la informacion que falta.'
+          ].join(' ');
+          const response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: CODEX_AUDITOR_MODEL,
+              input: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: 'Contexto operativo y documental:\n' + JSON.stringify(context, null, 2).slice(0, 30000) + '\n\nSolicitud del usuario:\n' + text }
+              ],
+              max_output_tokens: 4000
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error?.message || `OpenAI API error ${response.status}`);
+          answer = payload.output_text
+            || (payload.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('\n').trim()
+            || '';
+        } catch(e) {
+          aiAvailable = false;
+          answer = [
+            'IA no disponible temporalmente. Te dejo una respuesta base del Auditor:',
+            '',
+            'Para crear o revisar un documento operativo terminado usa esta estructura:',
+            '1. Objetivo del proceso.',
+            '2. Alcance y roles responsables.',
+            '3. Prerequisitos antes de iniciar.',
+            '4. Paso a paso para el usuario real.',
+            '5. Excepciones y como resolverlas.',
+            '6. Evidencias obligatorias.',
+            '7. Criterios de cierre.',
+            '8. KPIs/SLA.',
+            '9. Screenshots requeridos.',
+            '10. Cambios o mejoras recomendadas.',
+            '',
+            'Solicitud recibida: ' + text
+          ].join('\n');
+        }
+      } else {
+        aiAvailable = false;
+        answer = [
+          'OPENAI_API_KEY no esta configurada. Respuesta base del Auditor:',
+          '',
+          'Puedo ayudarte a definir documentos terminados si me pides el proceso exacto. Formato obligatorio:',
+          'Objetivo, alcance, roles, prerequisitos, paso a paso, excepciones, evidencias, criterios de cierre, KPIs y screenshots requeridos.',
+          '',
+          'Solicitud recibida: ' + text
+        ].join('\n');
+      }
+
+      const assistantMsg = {
+        id: wwpId('audchat'),
+        role: 'assistant',
+        text: answer,
+        by: 'Auditor Codex',
+        ai: aiAvailable,
+        createdAt: new Date().toISOString()
+      };
+      state.chat.push(assistantMsg);
+      state.chat = state.chat.slice(-80);
+      saveProcessAuditorState(state);
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, message:assistantMsg, chat:state.chat.slice(-20) }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/process-auditor/recommendations/:id/approve — aprobar recomendacion
+  if (reqPath.match(/^\/api\/wwp\/process-auditor\/recommendations\/[^/]+\/approve$/) && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const recId = decodeURIComponent(reqPath.split('/')[5]);
+      const state = loadProcessAuditorState();
+      if (!state.recommendations) state.recommendations = {};
+      state.recommendations[recId] = {
+        ...(state.recommendations[recId] || {}),
+        status: 'aprobada',
+        approvedAt: new Date().toISOString(),
+        approvedBy: jp.userId,
+        approvedByName: jp.name
+      };
+      saveProcessAuditorState(state);
+      appendAuditLog('process_auditor_recommendation_approved', { by: jp.userId, byName: jp.name, recommendationId: recId });
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, recommendationId: recId, state: state.recommendations[recId] }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
+  // POST /api/wwp/process-auditor/recommendations/:id/reject — rechazar recomendacion
+  if (reqPath.match(/^\/api\/wwp\/process-auditor\/recommendations\/[^/]+\/reject$/) && req.method === 'POST') {
+    const jp = requireJwt(req, res); if (!jp) return;
+    if (!requireAgentOwner(jp, res)) return;
+    try {
+      const recId = decodeURIComponent(reqPath.split('/')[5]);
+      const state = loadProcessAuditorState();
+      if (!state.recommendations) state.recommendations = {};
+      state.recommendations[recId] = {
+        ...(state.recommendations[recId] || {}),
+        status: 'rechazada',
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: jp.userId,
+        rejectedByName: jp.name
+      };
+      saveProcessAuditorState(state);
+      appendAuditLog('process_auditor_recommendation_rejected', { by: jp.userId, byName: jp.name, recommendationId: recId });
+      res.writeHead(200, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:true, recommendationId: recId, state: state.recommendations[recId] }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type':'application/json' });
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    }
+    return;
+  }
+
   // GET /api/wwp/dashboard — KPIs (solo admin)
   if (reqPath === '/api/wwp/dashboard' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
     if (!requireRole(jp, res, ROLE_PERMISSIONS.dashboard)) return;
-    const tasks = loadWwpTasks();
+    const tasks = enrichOverdueTasks(loadWwpTasks(), { persist: true });
     const users = loadAuthUsers();
     const byStatus = {};
     const byType   = {};
@@ -4243,8 +6645,23 @@ const server = http.createServer(async (req, res) => {
     });
     const avgHours = countCompleted>0 ? Math.round(totalMs/countCompleted/3600000*10)/10 : 0;
     const recent = tasks.slice().sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).slice(0,10);
+    const overdueTasks = tasks
+      .filter(t => t.overdue && !t.parentId)
+      .sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0))
+      .slice(0, 12)
+      .map(t => ({
+        id:t.id,
+        seq:t.seq || null,
+        title:t.title || t.id,
+        type:t.type || 'general',
+        status:t.status,
+        dueDate:t.dueDate,
+        overdueDays:t.overdueDays || 1,
+        managerId:t.managerId || null,
+        escalation:t.escalation || null
+      }));
     res.writeHead(200,{'Content-Type':'application/json'});
-    res.end(JSON.stringify({ byStatus, byType, byUser, avgHours, total:tasks.length, recent }));
+    res.end(JSON.stringify({ byStatus, byType, byUser, avgHours, total:tasks.length, recent, overdueTasks }));
     return;
   }
 

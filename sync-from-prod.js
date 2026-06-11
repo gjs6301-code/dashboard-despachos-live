@@ -60,11 +60,12 @@ async function main() {
   // 1. Login para obtener token
   console.log('🔐 Iniciando sesión en producción...');
   const email    = env.ODOO_USER;
-  const password = process.argv[2]; // pasar contraseña como argumento
+  const password = process.argv[2] || process.env.RENDER_WWP_PASSWORD; // argumento o variable temporal
 
   if (!password) {
     console.error('❌ Debes pasar tu contraseña como argumento:');
     console.error('   node sync-from-prod.js TU_CONTRASEÑA');
+    console.error('   O usar RENDER_WWP_PASSWORD como variable temporal.');
     process.exit(1);
   }
 

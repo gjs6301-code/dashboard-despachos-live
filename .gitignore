@@ -36,8 +36,14 @@ backups/
 # ── Herramientas de desarrollo ────────────────────────────────────────────────
 .claude/
 .netlify/
+.railway-ssh/
 
 # ── Entorno local de desarrollo ───────────────────────────────────────────────
 .env
 data-local/
 stress-test.js
+
+# Runtime/scratch local
+wwp-audit.json
+proxy.js.tmp.*
+.compare-render/
