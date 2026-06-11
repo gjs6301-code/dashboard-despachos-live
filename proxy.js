@@ -5352,11 +5352,23 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/api/wwp/ai-diag' && req.method === 'GET') {
     const jp = requireJwt(req, res); if (!jp) return;
     if (!requireAgentOwner(jp, res)) return;
-    const out = { hasKey: !!OPENAI_API_KEY, keyPrefix: (OPENAI_API_KEY||'').slice(0,8), model: CODEX_AUDITOR_MODEL };
+    const out = { model: CODEX_AUDITOR_MODEL };
+    // Llamada cruda para ver TODO: status, incomplete_details, longitud de salida
     try {
-      out.reply = await aiComplete({ system: 'Responde solo: OK', user: 'di OK', maxTokens: 20 });
-      out.ok = true;
-    } catch(e) { out.ok = false; out.error = e.message; }
+      const big = 'x'.repeat(2000);
+      const r = await fetch('https://api.openai.com/v1/responses', {
+        method:'POST', headers:{'Authorization':`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},
+        body: JSON.stringify({ model: CODEX_AUDITOR_MODEL, input:[{role:'system',content:'Eres un asistente. Responde en una frase.'},{role:'user',content:'Resume esto en una frase: '+big}], max_output_tokens: 3000 })
+      });
+      const p = await r.json().catch(()=>({}));
+      out.httpStatus = r.status;
+      out.apiError = p.error?.message || null;
+      out.respStatus = p.status || null;
+      out.incomplete = p.incomplete_details || null;
+      out.outputTextLen = (p.output_text||'').length;
+      out.outputArrayTypes = (p.output||[]).map(o=>o.type);
+      out.usage = p.usage || null;
+    } catch(e) { out.fetchError = e.message; }
     res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(out));
     return;
   }
