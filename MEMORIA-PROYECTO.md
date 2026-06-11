@@ -4,10 +4,11 @@
 > Última actualización: sesión de rediseño del flujo de tareas (jun 2026).
 
 ## URLs y deploy
-- **Producción (Render): `https://dashboard-despachos.onrender.com`** (NO `altritempi-operaciones`, da 404).
+- **Producción ACTUAL (Railway): `https://dashboard-despachos-production.up.railway.app`** (desde jun 2026).
+  - Render (`dashboard-despachos.onrender.com`) fue la producción anterior — ya no se le aplican cambios.
 - Local: `http://localhost:3000` (correr con `DATA_DIR=<ruta>/data-local node proxy.js`).
-- Deploy: Render sirve desde rama `master`. Flujo: commit en `dev` → merge a `master` → push → volver a `dev`. ~2-3 min.
-- Datos: producción en disco `/data`; local en `data-local/`.
+- Deploy: Railway sirve desde rama `master` (GitHub). Flujo: commit en `dev` → merge a `master` → push → volver a `dev`.
+- Datos: producción en disco persistente (env `DATA_DIR`); local en `data-local/`.
 - Convención: librerías LOCALES, nunca CDN (lucide.min.js, leaflet.js, leaflet.css).
 
 ## Modelo de tareas (WWP) — conceptos clave
