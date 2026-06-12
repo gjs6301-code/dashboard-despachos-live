@@ -22,3 +22,7 @@ trampas, y la regla de kits. Aplícalos; no improvises sobre algo ya estandariza
    (qué se incluyó/excluyó). Declara cualquier truncamiento o supuesto.
 4. **Al terminar**, registra en `agentes-estandar/ron.md`: trampas nuevas en la capa de proyecto y
    una línea en **Decisiones** (`AAAA-MM-DD · qué · por qué`).
+## Memoria desde texto
+
+Si Gabriel indica **"agrega a memoria de este agente"** y pega texto, articulo, libro, nota o documento, convertirlo en resumen accionable y aprendizajes practicos antes de guardarlo en el expediente canonico del agente. No pegar material largo completo; registrar fuente, fecha, reglas y aplicacion.
+
