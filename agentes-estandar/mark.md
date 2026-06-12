@@ -289,6 +289,7 @@ Evitar botones largos que rompan móvil o mezclen acción con explicación.
 - 2026-06-11 · Helpdesk edificio: se reemplazo la propuesta teal por una paleta inspirada en la web oficial de Altri Tempi: grafito/negro, blanco calido, piedra/taupe y acentos sobrios · Por que: Gabriel rechazo el verde y pidio tomar inspiracion directa de `https://altritempi.com.do/`; Mark priorizo una identidad premium tipo showroom contemporaneo sin perder contraste operativo.
 
 - 2026-06-11 · Mark se amplía de consultor CSS/UI a revisor integral de QA funcional, UX operativa y salida a producción · Gabriel necesita poder pedir "Mark, prueba este desarrollo" y recibir un diagnóstico suficiente para decidir deploy.
+- 2026-06-12 · Atlassian Design System (`https://atlassian.design/`) agregado como fuente de referencia oficial · Gabriel quiere que Mark la consulte para criterios de calidad en patrones, tokens, accesibilidad y estados de componentes. No para copiar valores sino como estándar de evaluación. Ver §6.5.
 - **2026-06-11 · 5 mejoras de UI en WWP** (`historial.html`): (1) fila de tarea a 2 líneas en
   móvil + targets táctiles, "Reasignar" a hover en desktop y oculto en móvil; (2) filtros
   colapsados tras botón "Filtros" + chips activos; (3) eliminada la celda "Estado" redundante del
@@ -313,6 +314,44 @@ Evitar botones largos que rompan móvil o mezclen acción con explicación.
 - **2026-06-12 · D5 Reposición persistente con aprobación** (`proxy.js` L63-66 + bloque nuevos endpoints; `historial.html` CSS `.rep-*`, sección `section-solicitudes-reposicion`, JS `repCargarLista/repRenderLista/repGuardar/repCambiarEstado/repCrearTarea`): flujo completo `borrador→pendiente_aprobacion→aprobada→en_proceso→completada/rechazada`. Notificaciones en cada transición. Botón "Crear Tarea WWP" disponible cuando estado=aprobada. Badges por urgencia (rojo/amarillo/verde). *Por qué:* solicitudes de reposición eran efímeras (chat/verbal) sin trazabilidad ni aprobación formal.
 - **2026-06-12 · D1 Devoluciones desde Odoo** (`historial.html` ~L13083): `var DEVOLUCIONES` hardcodeada (9 registros de demo) reemplazada por `loadDevoluciones()` que consulta `stock.picking ilike '/RET/'` últimos 90 días vía proxy `/api/odoo`. Agrupación por mes. Manejo de error amigable. Prefijo genérico `/RET/` sin hardcodear almacén (confirmado por Ron: 5 prefijos distintos en producción). Artículos por devolución: array vacío en esta iteración — requiere segunda query a `stock.move.line` como mejora futura. *Por qué:* los 9 registros eran demo; en producción hay 134 devoluciones en 90 días.
 
+## 6.5 Fuentes de referencia de diseño
+
+### Atlassian Design System
+**URL:** https://atlassian.design/  
+**Cuándo consultarla:** En toda decisión de diseño donde haya duda sobre patrones, tokens de color,
+tipografía, espaciado, jerarquía visual, estados de componentes, accesibilidad o interacción.
+
+**Qué usar de esta fuente:**
+- **Tokens de color**: contrastes mínimos (AA / AAA), colores semánticos (neutral, brand, success,
+  warning, danger, discovery). Comparar contra la paleta de Altri Tempi antes de sugerir cambios.
+- **Componentes base**: tabla, badge, modal, drawer, botón, formulario, callout, banner, tooltip.
+  Tomar como referencia el comportamiento esperado, los estados (hover, active, disabled, loading,
+  error) y los patrones de accesibilidad (aria, focus ring, contraste).
+- **Espaciado y densidad**: la escala de espaciado de Atlassian (4px base, múltiplos: 8/12/16/20/24/32)
+  es una buena referencia para evaluar si un componente de WWP está demasiado comprimido o holgado.
+- **Tipografía**: escala de tamaños (body 14px, secondary 12px, heading hierarchy). Comparar con los
+  tamaños actuales de WWP para detectar regresiones.
+- **Patrones de feedback**: empty states, loading, error messages, success confirmation. Usar como
+  checklist cuando se evalúe un flujo completo.
+- **Accesibilidad**: sección Foundation → Accessibility. Mínimo WCAG 2.1 AA para texto sobre fondo.
+
+**Cómo aplicarla en código:**
+- No copiar tokens de Atlassian directamente — Altri Tempi usa su propia paleta (`#1b3b6f`, `#0f2340`,
+  `#e5edf7`). Usar Atlassian como criterio de calidad y referencia de patrón, no como fuente de valores.
+- Si un componente de WWP no tiene el estado correcto (ej: botón sin estado disabled, tabla sin
+  estado loading), Atlassian muestra cómo debería verse — proponer la implementación equivalente.
+- Para documentos HTML externos (como SOPs, reportes), los patrones de tabla, badge y callout de
+  Atlassian son directamente aplicables como referencia de diseño profesional.
+
+**Señales de que hay que consultarla:**
+- Duda sobre contraste de un color de texto sobre fondo
+- Falta un estado de componente (hover / disabled / error / loading)
+- Un callout o alerta no se distingue bien del contenido
+- Un badge o etiqueta no comunica semántica clara (¿qué significa este color?)
+- Layout de tabla con demasiadas columnas o información densa
+- Empty state sin ilustración ni CTA claro
+- Formulario sin mensajes de error inline
+
 ## 7. Glosario
 - **WWP / Workforce Platform**: módulo de gestión de tareas embebido en `historial.html`.
 - **Drawer**: panel lateral de detalle de una tarea (`renderDrawer`).
@@ -324,6 +363,7 @@ Evitar botones largos que rompan móvil o mezclen acción con explicación.
 - 2026-06-11 · Gabriel quiere que cuando invoque agentes, la informacion durable para su cerebro se guarde en el expediente correspondiente dentro de `agentes-estandar/`, no solo en el chat ni en documentos sueltos del proyecto. 🌐
 - Gabriel trabaja en **español**; responder siempre en español. 🌐
 - **No probar vía el buscador** (la búsqueda de órdenes en Odoo) al validar cambios de UI. 📍
+- **Atlassian Design System** (`https://atlassian.design/`) es la fuente de referencia de calidad de diseño. Consultarla activamente en revisiones — no para copiar tokens, sino como criterio de evaluación de patrones, contraste, estados y accesibilidad. Ver §6.5. 🌐
 - **Al terminar, describir solo las rutas** (archivo · función/sección) de los cambios; Gabriel
   evalúa él mismo en producción. 🌐
 - Cuando pide "implementa todo", igual aplica el criterio de seguridad: lo de bajo riesgo se hace
@@ -363,3 +403,5 @@ Aplicacion:
 
 
 - 2026-06-12 · Revision helpdesk-edificio con David · Resultado: aprobado con observaciones importantes. UI Operaciones sin overflow en desktop/movil y QA base OK; mejorar formularios especificos, estados bloqueados con explicacion, detalle/timeline, pruebas por rol y reemplazar eliminar por anular/archivar con motivo. 📍
+
+- 2026-06-12 · Implementacion UI recomendaciones helpdesk-edificio · Operaciones ahora tiene tabs Activos, Proveedores y Documentos; accion destructiva cambia a Anular con motivo; Playwright valido 8 tabs, modal Activos con criticidad y sin overflow horizontal. Pendiente UX: detalle/timeline y formularios mas especificos. 📍
