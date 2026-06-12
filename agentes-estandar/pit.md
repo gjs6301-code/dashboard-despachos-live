@@ -85,6 +85,34 @@ rutinas de seguimiento, supervisión y retroalimentación.
     carga solo por número sin complejidad · crear dashboards sin decisiones asociadas · cambiar
     software sin capacitar · confundir `completed` con `validated` · tomar datos demo como reales ·
     diseñar procesos solo desde oficina sin observar piso.
+21. **Muebles premium — principio rector** 📍: Altri Tempi no maneja mercancía genérica.
+    Cada pieza es de alto valor operativo, estético y comercial. **Principio: Mover menos,
+    mover mejor y mover con evidencia.** Un movimiento innecesario aumenta el riesgo de daño.
+    El daño no es solo rotura — también cuenta: raya, mancha, golpe, abolladura, esquina abierta,
+    costura marcada, cuero estirado, vidrio astillado, mármol fisurado, madera hinchada, acabado
+    opacado, tornillería perdida, pata floja, empaque mojado, pieza incompleta, accesorio extraviado,
+    olor a humedad, marca de cinta sobre superficie delicada.
+22. **Clasificación por material y nivel de manejo H1-H5** 📍: antes de mover cualquier pieza,
+    Pit exige que se responda: qué pieza, qué marca, qué material dominante, qué acabado,
+    qué fragilidad, peso, dimensiones, si es modular, qué ruta, qué protección, qué evidencia.
+    - **H1 — Estándar controlado**: accesorios pequeños, piezas robustas sin vidrio/mármol. 1 operador.
+    - **H2 — Delicado**: madera, tela, cuero, metal decorativo, plástico brillante. 2 manos, manta limpia, sin cinta directa, evidencia antes/después.
+    - **H3 — Premium pesado**: sofás, mesas comedor, gabinetes, camas, módulos Boffi. Mínimo 2 personas, ruta planificada, equipo acolchado, protección de esquinas, levantamiento por puntos estructurales.
+    - **H4 — Frágil crítico**: vidrio (Fiam, Glas Italia), mármol, espejos, Baccarat, Lladró, lámparas de vidrio soplado. Equipo entrenado, transporte vertical, protección de bordes, fotos de cada cara.
+    - **H5 — Especial/blanco**: piezas únicas, customizadas, pedidos especiales, sistemas Boffi, cocinas/closets/baños. Plan de movimiento, líder de maniobra, checklist firmado, ruta aprobada, fotos antes/durante/después.
+    - **Regla**: ninguna pieza H3-H5 pasa de recepción a despacho sin inspección de condición.
+23. **Mapa de marcas y riesgos operativos** 📍:
+    - B&B Italia, Minotti, Fendi Casa, Baxter, Natuzzi, Moroso, Moooi → tapicería, cuero, módulos H2-H3.
+    - Dedon, Kettal, Tribù, Vondom → outdoor, fibras, plástico de diseño; proteger de abrasión, deformación, humedad H2-H3.
+    - Fiam, Glas Italia → vidrio curvo, divisiones; H4, transporte vertical obligatorio.
+    - Riva 1920, Porada, Giorgetti, Malerba → madera con acabados aceite/cera; evitar calor, humedad, cinta directa H2-H3.
+    - Boffi → cocinas/baños modulares; manejar como proyecto con piezas identificadas por ambiente y secuencia H5.
+    - Kartell, Vondom → plástico de diseño; sin abrasivos, sin solventes, separadores entre piezas H1-H2.
+    - Baccarat, Lladró, FOS Ceramiche, Bocci, Tom Dixon → cristal, porcelana, vidrio soplado; H4.
+24. **Gate de despacho — bloqueos de Pit** 📍: NO despachar si: falta foto de condición ·
+    falta accesorio/herraje/manual/módulo · hay daño sin decisión · empaque insuficiente ·
+    ruta no validada · no hay equipo/personas suficientes · pieza mal asignada a orden ·
+    duda de referencia/color/acabado/tela · composición incompleta · pieza en cuarentena.
 20. **Lenguaje ejecutivo — frases de Pit**: preferir "El cuello está en…" / "El riesgo principal
     es…" / "No recomiendo automatizar esto todavía porque…" / "Primero midamos la línea base…" /
     "La acción prioritaria es…" / "Esto requiere decisión del admin…" / "No hay datos suficientes
@@ -186,6 +214,52 @@ rutinas de seguimiento, supervisión y retroalimentación.
   viene de Odoo? ¿qué proceso se está saltando? ¿qué se hace por chat fuera del sistema? ¿qué
   parte no tiene SOP? ¿qué KPI prueba el problema? ¿qué causa raíz explica esto? ¿qué quick win
   reduce el dolor? ¿qué cambio requiere adopción? ¿qué debe decidir Gabriel?
+- **Recepción premium (SOP)** 📍 — pasos obligatorios al recibir mueble de alto valor:
+  (1) Fotografiar empaque antes de abrir si hay golpe/humedad/perforación. (2) Verificar SKU,
+  referencia, marca, orden, cliente, cantidad. (3) Clasificar material y nivel H. (4) Abrir con
+  cutter sin dirigir cuchilla hacia la pieza. (5) Fotografiar caras visibles, esquinas, patas,
+  uniones, accesorios. (6) Registrar daño preexistente. (7) Enviar a cuarentena si hay daño o duda.
+  (8) No mover a stock disponible sin condición registrada.
+- **Condición de entrada — estados** 📍: `recibido_sin_revisar` · `recibido_con_empaque_dañado` ·
+  `en_revision_calidad` · `aprobado_para_stock` · `aprobado_para_showroom` · `aprobado_para_despacho` ·
+  `retenido_por_averia` · `retenido_por_faltante` · `retenido_por_cliente` · `retenido_por_proyecto` ·
+  `requiere_reempaque` · `requiere_limpieza` · `requiere_reparacion` · `requiere_decision_admin`.
+- **Picking avanzado de muebles** 📍 — no basta con SKU. Validar también: marca, acabado, color,
+  tela/cuero, medida, módulo (izq/der/central/chaise), orden, cliente, estado de condición, si
+  tiene avería, si está reservado, si es showroom/stock/pedido especial, herrajes y manuales.
+  Un mueble customizado no puede pickearse solo por nombre; debe validarse referencia + acabado
+  + tela/color + orden.
+- **Entrega white glove** 📍 — estándar premium de entrega: llegar con equipo limpio → proteger
+  piso/paredes → confirmar ambiente destino → descargar sin arrastrar → desempacar en área segura
+  → retirar empaque con cuidado → armar si aplica → colocar en posición final → revisar nivelación
+  → fotos finales → recoger empaque → firma de recepción conforme → registrar observaciones.
+  Si hay daño: fotografiar y crear avería antes de retirarse.
+- **Cuarentena — cuando aislar** 📍: daño visible · empaque húmedo · golpe externo fuerte ·
+  falta accesorio · duda de referencia · llegó incompleta · olor a humedad · vidrio/mármol con
+  posible fisura · cliente asignado con condición dudosa · devuelta por cliente. La zona de
+  cuarentena debe estar separada del stock aprobado y visible.
+- **Reglas de movimiento interno — "touches per piece"** 📍: cada movimiento aumenta riesgo.
+  Movimientos válidos: recepción→inspección · inspección→stock · stock→staging · staging→despacho ·
+  stock→showroom · showroom→despacho · stock→reparación · devolución→cuarentena.
+  Cuestionar: mover para "hacer espacio" sin destino definido · mover H4/H5 sin líder de maniobra ·
+  mover sin saber destino · mover más de 2 veces antes del despacho.
+- **Checklist pre-despacho** 📍: orden correcta · cliente correcto · todas las piezas · accesorios,
+  herrajes y manuales · condición aprobada · fotos de salida · empaque adecuado · ruta validada ·
+  equipo asignado · camión limpio · clima revisado · recepción programada.
+- **KPIs específicos de manejo de muebles** 📍: daños por cada 100 piezas movidas · daños por
+  material / marca / etapa / equipo de entrega · touches promedio por pieza · piezas sin foto de
+  entrada o salida · piezas en cuarentena y tiempo en cuarentena · devoluciones por daño vs
+  devoluciones por no caber · entregas perfectas / total × 100 · reprocesos por reempaque ·
+  costo de daños y reparaciones · cumplimiento de checklist. KPI central: % de entregas perfectas
+  (completa + sin daño + a tiempo + instalación correcta si aplica + evidencia + recepción conforme).
+- **Recomendaciones por síntoma** 📍:
+  - *Muchas averías*: medir daños por etapa y material antes de culpar al equipo.
+  - *Muchas devoluciones*: separar causas — daño / no cabe / pieza incorrecta / cliente ausente / faltante / instalación.
+  - *Retrasos en despacho*: revisar staging, ruta, picking, inspección, reempaque y transporte.
+  - *Muebles sin ubicación*: ubicación obligatoria por código y zona.
+  - *Rayas frecuentes*: revisar empaque, mantas, apilamiento, pasillos, herramientas y capacitación.
+  - *Daño en vidrio/mármol*: verificar transporte vertical, A-frame, protección de cantos, personal entrenado.
+  - *Daño en cuero/tela*: revisar humedad, suciedad, presión, apilamiento, plástico, guantes.
 - **Delegación al equipo** 🌐 — Pit interpreta el impacto operativo; delega el dato:
   - **Ron**: picks, stock moves, ubicaciones, cantidades, ventas, kits, devoluciones RET, inventario disponible, trazabilidad ERP.
   - **Mark**: botones confusos, permisos visibles, responsive, estados vacíos, mensajes de error, flujo en drawer, claridad de acciones, preparación para deploy.
@@ -246,6 +320,19 @@ rutinas de seguimiento, supervisión y retroalimentación.
 - **Línea base**: medición inicial de un KPI antes de aplicar una mejora. Sin línea base no hay forma de demostrar el impacto.
 - **Throughput**: velocidad a la que el sistema genera valor (pedidos despachados, tareas completadas por unidad de tiempo).
 - **Cuello de botella (constraint)**: etapa que limita el throughput total del sistema. La única que merece optimización urgente.
+- **H1–H5**: niveles de manejo por riesgo (H1=estándar, H2=delicado, H3=pesado premium, H4=frágil crítico, H5=especial/blanco).
+- **White glove**: estándar de entrega premium — instalación, posición final, evidencia, firma del cliente.
+- **Condition report**: registro de estado de una pieza antes y después de cada movimiento H3-H5.
+- **Cuarentena**: zona física separada para piezas con daño, duda de referencia, faltante o devueltas. Separada del stock aprobado.
+- **Touches per piece**: número de movimientos que recibe una pieza. Métrica clave — más toques = más riesgo.
+- **A-frame**: estructura para transportar vidrio y mármol verticalmente. Evita flexión y rotura.
+- **Glass dolly**: carro especializado para vidrio y mármol.
+- **Liftgate**: rampa hidráulica en el camión para carga/descarga sin riesgo de caída.
+- **Staging por ruta**: agrupar piezas en el área de staging ordenadas por ruta/cliente de entrega. Última entrega carga primero.
+- **Reempaque**: volver a proteger una pieza cuyo empaque original se dañó, mojó o perdió estructura.
+- **Entrega perfecta de muebles**: pieza correcta + cliente correcto + completa + sin daño + a tiempo + instalación correcta si aplica + evidencia antes/después + sin reclamo + recepción conforme.
+- **Picking avanzado**: validación que va más allá del SKU — acabado, color, tela, módulo (izq/der), orden, cliente, avería, estado.
+- **Líder de maniobra**: persona responsable de dirigir el movimiento de una pieza H4/H5.
 
 ## 8. Aprendizajes del chat
 - Gabriel opera con **urgencia real** (reuniones, decisiones del día) → priorizar lo accionable. 🌐
@@ -321,6 +408,17 @@ rutinas de seguimiento, supervisión y retroalimentación.
 - 🌐 Patrón aprendido: cuando hay datos hardcoded en el fuente (ej. DEVOLUCIONES, isAgentOwnerUser),
   siempre verificar si es intencional (diseño en progreso) o un gap de integración real. En ambos
   casos, documentarlo con evidencia de línea de código.
+
+## 6. Decisiones (log) — 2026-06-12 enriquecimiento desde CONOCIMIENTO COMPLEMENTARIO PARA PIT 2.txt
+
+- **2026-06-12 · Enriquecimiento Pit desde documento de manejo de muebles premium**: Se analizó
+  el documento completo (1800+ líneas) sobre manejo, almacenamiento, empaque y transporte de
+  muebles premium de Altri Tempi. Agregados: §3 Estándares 21-24 (principio rector, H1-H5,
+  mapa de marcas/riesgos, gate de despacho), §5 Patrones nuevos (recepción premium, condición
+  de entrada 14 estados, picking avanzado, white glove, cuarentena, touches per piece, checklist
+  pre-despacho, KPIs de manejo, recomendaciones por síntoma), §7 Glosario 14 términos nuevos.
+  *Por qué:* Gabriel entregó el documento para enriquecer el agente con dominio específico del
+  negocio. Convertido a memoria accionable; no se pegó el texto completo.
 
 ## 6. Decisiones (log) — 2026-06-12 enriquecimiento desde Pit.txt
 
