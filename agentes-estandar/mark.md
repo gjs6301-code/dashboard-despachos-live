@@ -405,3 +405,5 @@ Aplicacion:
 - 2026-06-12 · Revision helpdesk-edificio con David · Resultado: aprobado con observaciones importantes. UI Operaciones sin overflow en desktop/movil y QA base OK; mejorar formularios especificos, estados bloqueados con explicacion, detalle/timeline, pruebas por rol y reemplazar eliminar por anular/archivar con motivo. 📍
 
 - 2026-06-12 · Implementacion UI recomendaciones helpdesk-edificio · Operaciones ahora tiene tabs Activos, Proveedores y Documentos; accion destructiva cambia a Anular con motivo; Playwright valido 8 tabs, modal Activos con criticidad y sin overflow horizontal. Pendiente UX: detalle/timeline y formularios mas especificos. 📍
+
+- 2026-06-12 · QA usuarios reales helpdesk-edificio · Pruebas admin/supervisor/inquilino: permisos correctos, sin overflow horizontal. Mark recomienda data-testid estables, mensajes claros para comunicaciones pendientes y vista detalle/timeline en Operaciones. 📍

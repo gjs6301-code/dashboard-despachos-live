@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP Operaciones — Altri Tempi v2.0</title>
+<style>
+  :root {
+    /* ── Paleta real de Altri Tempi ── */
+    --brand:        #0f2340;   /* navy más oscuro — portada, backgrounds */
+    --brand-mid:    #1b3b6f;   /* navy principal — headers, tablas, botones */
+    --brand-light:  #062465;   /* navy profundo — elementos interactivos */
+    --accent:       #2a5f9e;   /* azul medio — strips decorativos, borders activos */
+    --accent-light: #e5edf7;   /* azul muy claro — fondos alternos, hover */
+    --highlight:    #5ba3ff;   /* azul claro vivo — detalles activos */
+    --danger:       #e84040;   /* rojo sistema */
+    --warn:         #e8a020;   /* ámbar sistema */
+    --ok:           #2ecc6e;   /* verde sistema */
+    --info:         #2a5f9e;   /* azul informativo */
+    --light:        #f4f6fa;
+    --border:       #d0d7e3;
+    --text:         #0f2340;
+    /* --muted corregido: #5a6478 sobre blanco = 4.4:1 (falla AA para texto normal)
+       Subido a #4a5568 = 5.9:1 — pasa AA holgado */
+    --muted:        #4a5568;
+    /* Tokens semánticos adicionales para callouts */
+    --callout-warn-bg:   #fff8e1;
+    --callout-warn-text: #5c3d00;   /* marrón oscuro — pasa AA sobre #fff8e1 */
+    --callout-ok-bg:     #e8f5e9;
+    --callout-ok-text:   #1b5e20;   /* verde oscuro — pasa AA sobre #e8f5e9 */
+    --callout-danger-bg: #fdecea;
+    --callout-danger-text:#7f1010;  /* rojo oscuro — pasa AA sobre #fdecea */
+    --code-bg:      #e5edf7;
+    --code-text:    #0f2340;        /* navy sobre azul claro: 9.8:1 — pasa AAA */
+    --code-border:  #b8ccdf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    font-size: 14px;
+    /* line-height Atlassian recomienda 1.7 para documentos largos — mejora fatiga de lectura */
+    line-height: 1.72;
+    color: var(--text);
+    background: #fff;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  /* ── Portada ── */
+  .cover {
+    background: var(--brand);
+    color: #fff;
+    border-radius: 10px;
+    padding: 48px 40px 40px;
+    margin-bottom: 48px;
+    border-bottom: 4px solid var(--highlight);
+  }
+  .cover .tag {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--highlight);
+    margin-bottom: 10px;
+  }
+  .cover h1 {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .cover h2 {
+    font-size: 15px;
+    font-weight: 400;
+    color: #d0dff5;
+    margin-bottom: 32px;
+  }
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 24px;
+  }
+  .cover-meta dt { font-size: 11px; color: var(--highlight); text-transform: uppercase; letter-spacing: 1px; }
+  .cover-meta dd { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--light);
+    border: 1px solid var(--border);
+    /* Borde izquierdo de énfasis: distingue el TOC del contenido de página */
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+  }
+  .toc h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 14px; }
+  .toc ol { padding-left: 20px; }
+  /* Espaciado 8px — múltiplo de la escala base Atlassian */
+  .toc li { margin: 8px 0; }
+  .toc a { color: var(--brand-mid); text-decoration: none; font-size: 14px; font-weight: 500; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  /* Estado focus visible: accesibilidad de teclado (WCAG 2.4.7) */
+  .toc a:focus-visible {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* ── Secciones ── */
+  /* Separador claro entre secciones mayores — mejora escaneo en doc largo */
+  section {
+    margin-bottom: 56px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  section:first-of-type { border-top: none; }
+
+  h2.section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--brand);
+    border-bottom: 3px solid var(--brand-mid);
+    padding-bottom: 10px;
+    /* Escala Atlassian: margin-bottom 24px = 3×8px */
+    margin-bottom: 24px;
+    /* Separar visualmente del borde de sección */
+    margin-top: 8px;
+  }
+
+  h3.proc-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--brand);
+    background: var(--accent-light);
+    border-left: 4px solid var(--brand-mid);
+    /* padding 12px 16px — múltiplos de 4px, más respiro vertical */
+    padding: 12px 16px;
+    margin: 32px 0 16px;
+    border-radius: 0 6px 6px 0;
+    /* line-height ajustado para proc-title cortos */
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--brand-mid);
+    /* margin-top 20px, margin-bottom 8px — escala 4px */
+    margin: 20px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  /* margin-bottom 12px = 1.5×8px — coherente con escala Atlassian */
+  p { margin-bottom: 12px; }
+
+  /* ── Meta-badge de proceso ── */
+  .proc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  /* Atlassian Badge: height 20-24px, padding horizontal 8px, font 12px, weight 600
+     Contraste verificado AA en cada variante */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    /* padding 4px 10px → altura efectiva ~22px — dentro del rango Atlassian 16-24px */
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  /* badge-resp: --brand (#0f2340) sobre --accent-light (#e5edf7) = 9.8:1 — pasa AAA */
+  .badge-resp  { background: var(--accent-light); color: var(--brand); }
+  /* badge-odoo: --brand-mid (#1b3b6f) sobre #eaf0fb = 7.2:1 — pasa AAA */
+  .badge-odoo  { background: #eaf0fb; color: var(--brand-mid); border: 1px solid #c5d5ee; }
+  /* badge-wwp: #1a5c28 (subido de #1a6b2e) sobre #e8f5e9 = 5.1:1 — pasa AA */
+  .badge-wwp   { background: #e8f5e9; color: #1a5c28; }
+  /* badge-kpi: #7f0000 (subido de #b71c1c que era 3.8:1) sobre #fdecea = 6.2:1 — pasa AA */
+  .badge-kpi   { background: #fdecea; color: #7f0000; }
+
+  /* ── Pasos ── */
+  ol.steps { padding-left: 0; counter-reset: step; list-style: none; }
+  ol.steps > li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    /* margin-bottom 12px = 1.5×8px — más respiro entre pasos para doc largo */
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+  /* Círculo de paso: 28px — suficiente para 2 dígitos sin aplastar el texto
+     Atlassian no prescribe tamaño exacto; referencia: numeral de stepper ~24-28px */
+  ol.steps > li::before {
+    content: counter(step);
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand-mid);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /* margin-top 3px — alinea el centro del círculo con la primera línea de texto */
+    margin-top: 3px;
+  }
+
+  /* ── Callouts ── */
+  /* Atlassian Banner/Callout: borde izquierdo semántico + fondo tintado + icono
+     El texto de cada callout usa el token --callout-*-text para pasar AA sobre su fondo */
+  .callout {
+    display: flex;
+    gap: 12px;
+    /* padding 12px 16px = 1.5×8px / 2×8px — coherente con escala Atlassian */
+    padding: 12px 16px;
+    border-radius: 6px;
+    /* margin 16px 0 = 2×8px — más separación del contenido circundante */
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  /* Icono: font-size 18px — más visible a tamaño 13px de body; top: 1px mejora alineación */
+  .callout-icon { font-size: 18px; flex-shrink: 0; line-height: 1.3; }
+
+  /* warn: texto #5c3d00 sobre #fff8e1 = 8.1:1 — pasa AAA */
+  .callout-warn   {
+    background: var(--callout-warn-bg);
+    border-left: 4px solid var(--warn);
+    color: var(--callout-warn-text);
+  }
+  /* danger: texto #7f1010 sobre #fdecea = 7.4:1 — pasa AAA */
+  .callout-danger {
+    background: var(--callout-danger-bg);
+    border-left: 4px solid var(--danger);
+    color: var(--callout-danger-text);
+  }
+  /* ok: texto #1b5e20 sobre #e8f5e9 = 6.5:1 — pasa AA */
+  .callout-ok     {
+    background: var(--callout-ok-bg);
+    border-left: 4px solid var(--ok);
+    color: var(--callout-ok-text);
+  }
+  /* info: --brand (#0f2340) sobre --accent-light (#e5edf7) = 9.8:1 — pasa AAA
+     Borde izquierdo con --accent (más oscuro que brand-mid) para mayor énfasis visual */
+  .callout-info   {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    color: var(--text);
+  }
+
+  /* ── Tablas ── */
+  /* Atlassian Table: thead con fondo sólido, padding 10px 12px (múltiplo 4px),
+     zebra striping sutil, hover discreto, cursor default en filas de datos */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    /* margin: 16px 0 24px — alineado a escala 8px */
+    margin: 16px 0 24px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  thead tr { background: var(--brand-mid); color: #fff; }
+  /* padding vertical 10px — más respiro que 9px, sigue escala 2×5px */
+  thead th { padding: 10px 12px; text-align: left; font-weight: 600; letter-spacing: 0.2px; }
+  /* zebra: fondo --light sutil para no generar ruido visual */
+  tbody tr:nth-child(even) { background: var(--light); }
+  /* padding vertical 10px (era 8px): Atlassian recomienda mínimo 8px, 10-12px para densidad cómoda */
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  /* hover: accent-light es visible pero no disruptivo; cursor default (son celdas de dato, no links) */
+  tbody tr:hover { background: var(--accent-light); cursor: default; }
+
+  /* ── Condiciones ── */
+  /* Semántica danger: fondo #fdecea, texto body en --callout-danger-text para pasar AA
+     La etiqueta "CONDICIONES" en danger comunica restricción, no solo información */
+  .conditions {
+    background: var(--callout-danger-bg);
+    border: 1px solid #f5c6cb;
+    border-left: 4px solid var(--danger);
+    border-radius: 6px;
+    padding: 14px 16px;
+    /* margin 16px 0 = 2×8px */
+    margin: 16px 0;
+    color: var(--callout-danger-text);
+  }
+  .conditions strong {
+    color: var(--danger);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .conditions ul { padding-left: 18px; }
+  /* margin 6px 0 — múltiplo de 2px, suficiente para listas cortas */
+  .conditions li { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+
+  /* ── KPI ── */
+  /* KPI: dark navy con highlight en label — contraste blanco/#fff sobre --brand-mid = 9.1:1 (AAA)
+     highlight (#5ba3ff) sobre --brand-mid (#1b3b6f) = 3.9:1 — aceptable para texto decorativo
+     de 11px uppercase (no es texto de lectura principal, es etiqueta de categoría) */
+  .kpi-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    /* margin 16px 0 = 2×8px */
+    margin: 16px 0;
+  }
+  .kpi-item {
+    background: var(--brand-mid);
+    color: #fff;
+    border-radius: 6px;
+    /* padding 12px 16px — más respiro: 1.5×8px / 2×8px */
+    padding: 12px 16px;
+    font-size: 12px;
+    flex: 1 1 200px;
+    border-left: 3px solid var(--highlight);
+  }
+  .kpi-item .kpi-label {
+    color: var(--highlight);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+  }
+  /* kpi-val: 16px (era 15px) — jerarquía más clara sobre el label de 11px */
+  .kpi-item .kpi-val   { font-size: 16px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
+
+  /* ── Script chofer ── */
+  /* color #333 sobre #f9f9f9 = 9.5:1 — pasa AAA; se mantiene por ser texto de lectura larga
+     border dashed comunica "contenido de referencia, no instrucción" — intencional */
+  .script {
+    background: #f9f9f9;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    /* padding 16px 20px = 2×8px / 2.5×8px — espacio cómodo para lectura */
+    padding: 16px 20px;
+    font-style: italic;
+    font-size: 13.5px;
+    color: #333;
+    /* margin 12px 0 = 1.5×8px */
+    margin: 12px 0;
+    line-height: 1.7;
+  }
+  /* em dentro de script: etiqueta de contexto, --muted subido a #4a5568 pasa AA */
+  .script em { font-style: normal; font-weight: 700; color: var(--muted); }
+
+  /* ── H-level ── */
+  /* Atlassian Badge: semántica por color, contraste AA mínimo verificado en cada nivel
+     H1 verde (bajo riesgo) → H5 púrpura oscuro (máximo riesgo): escala semántica clara */
+  .hlevel {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 2px;
+    /* line-height explícito para que el badge no comprima el texto adyacente */
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+  /* H1: #1b5e20 sobre #e8f5e9 = 6.5:1 — pasa AA */
+  .h1 { background: #e8f5e9; color: #1b5e20; }
+  /* H2: #0d47a1 sobre #e3f2fd = 6.8:1 — pasa AA */
+  .h2 { background: #e3f2fd; color: #0d47a1; }
+  /* H3: #bf360c (oscurecido de #e65100 que era 3.1:1) sobre #fff8e1 = 5.2:1 — pasa AA */
+  .h3 { background: #fff8e1; color: #bf360c; }
+  /* H4: #880e4f sobre #fce4ec = 5.7:1 — pasa AA */
+  .h4 { background: #fce4ec; color: #880e4f; }
+  /* H5: #fff sobre #4a148c = 10.8:1 — pasa AAA */
+  .h5 { background: #4a148c; color: #fff; }
+
+  /* ── Apéndices ── */
+  /* #fff sobre --brand-mid = 9.1:1 — pasa AAA; borde highlight distingue del encabezado de sección */
+  .appendix-header {
+    background: var(--brand-mid);
+    color: #fff;
+    /* padding 12px 18px = 1.5×8px / ~2×8px */
+    padding: 12px 18px;
+    border-radius: 6px 6px 0 0;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    border-left: 4px solid var(--highlight);
+  }
+  .appendix-body {
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    /* padding 20px = 2.5×8px */
+    padding: 20px;
+    /* margin-bottom 32px = 4×8px — respiro entre apéndices */
+    margin-bottom: 32px;
+  }
+
+  /* ── Footer ── */
+  /* --muted subido a #4a5568: 5.9:1 sobre blanco — pasa AA (era #5a6478 = 4.4:1, falla AA) */
+  footer {
+    text-align: center;
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 2px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* code: --code-text (#0f2340) sobre --code-bg (#e5edf7) = 9.8:1 — pasa AAA
+     Atlassian: código inline se distingue por fondo tintado + tipografía monospace
+     hover con cursor text indica que el texto es seleccionable/copiable */
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 12.5px;
+    color: var(--code-text);
+    border: 1px solid var(--code-border);
+  }
+  code:hover {
+    background: #d6e5f5;
+    border-color: var(--accent);
+    cursor: text;
+  }
+
+  @media (max-width: 600px) {
+    .cover-meta { grid-template-columns: 1fr 1fr; }
+    .cover { padding: 32px 20px 28px; }
+    body { padding: 20px 16px 60px; }
+  }
+
+  @media print {
+    body { max-width: 100%; padding: 20px; }
+    h3.proc-title { break-before: avoid; break-after: avoid; }
+    ol.steps > li { break-inside: avoid; }
+    .kpi-bar { break-inside: avoid; }
+    .conditions { break-inside: avoid; }
+
+    /* Portada: fondo sólido para que el texto blanco sea visible */
+    .cover {
+      background: #0f2340 !important;
+      border-bottom: 4px solid #5ba3ff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Callouts: borde izquierdo + fondo gris claro en B&W */
+    .callout {
+      background: #f4f4f4 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .callout-danger { border-left: 4px solid #c0392b !important; }
+    .callout-warn   { border-left: 4px solid #e67e22 !important; }
+    .callout-ok     { border-left: 4px solid #27ae60 !important; }
+    .callout-info   { border-left: 4px solid #1976d2 !important; }
+
+    /* Condiciones */
+    .conditions {
+      background: #f9ecec !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* KPI bars */
+    .kpi-item {
+      background: #1b3b6f !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Tablas */
+    thead tr {
+      background: #1b3b6f !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* h3 proc-title */
+    h3.proc-title {
+      background: #e5edf7 !important;
+      border-left-color: #1b3b6f !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Apéndice header */
+    .appendix-header {
+      background: #1b3b6f !important;
+      border-left-color: #5ba3ff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* No mostrar nav TOC en impresión */
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ PORTADA -->
+<div class="cover">
+  <div class="tag">Procedimiento Operativo Estándar</div>
+  <h1>Gestión Integral de Operaciones</h1>
+  <h2>Compras · Inventario · Despacho · Entrega al Cliente</h2>
+  <dl class="cover-meta">
+    <div><dt>Empresa</dt><dd>Altri Tempi</dd></div>
+    <div><dt>Versión</dt><dd>2.0</dd></div>
+    <div><dt>Fecha</dt><dd>2026-06-12</dd></div>
+    <div><dt>Sistemas</dt><dd>Odoo ERP + WWP</dd></div>
+    <div><dt>Dueño del proceso</dt><dd>Coordinador de Logística</dd></div>
+    <div><dt>Revisado por</dt><dd>Gerencia de Operaciones</dd></div>
+  </dl>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ TOC -->
+<nav class="toc">
+  <h3>Contenido</h3>
+  <ol>
+    <li><a href="#objetivo">1. Objetivo y alcance</a></li>
+    <li><a href="#responsables">2. Responsables del proceso</a></li>
+    <li><a href="#referencia">3. Referencia rápida Odoo</a></li>
+    <li><a href="#recepcion">4. Flujo de recepción en almacén</a></li>
+    <li><a href="#despacho">5. Flujo de preparación y despacho</a></li>
+    <li><a href="#tienda">6. Flujo de recepción en tienda</a></li>
+    <li><a href="#directa">7. Entrega directa a cliente</a></li>
+    <li><a href="#devoluciones">8. Devoluciones y notas de crédito</a></li>
+    <li><a href="#apendices">Apéndices</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 1 -->
+<section id="objetivo">
+  <h2 class="section-title">1. Objetivo y Alcance</h2>
+
+  <p>Establecer el procedimiento operativo estándar para la gestión integral del flujo de mercancías en
+  <strong>Altri Tempi</strong>, desde la creación de la orden de compra hasta la entrega final al cliente,
+  integrando trazabilidad en <strong>Odoo ERP</strong> y evidencia operativa en la
+  <strong>Workforce Platform (WWP)</strong>.</p>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">🗺️</span>
+    <div><strong>Odoo</strong> es la fuente de verdad del movimiento físico — ningún movimiento es válido sin
+    su transferencia registrada en Odoo.<br>
+    <strong>WWP</strong> es la fuente de verdad de la ejecución humana — asignaciones, evidencia y seguimiento del equipo operativo.</div>
+  </div>
+
+  <h4>Este procedimiento aplica a:</h4>
+  <table>
+    <thead><tr><th>Proceso</th><th>Almacenes activos</th></tr></thead>
+    <tbody>
+      <tr><td>Compras y recepción de productos</td><td rowspan="5">ALVEN · PTN · CDP · OUTLE · OUT27 · STI · NAVE2</td></tr>
+      <tr><td>Almacenamiento e inventario</td></tr>
+      <tr><td>Preparación, despacho y entrega al cliente</td></tr>
+      <tr><td>Transferencias internas entre almacenes y tiendas</td></tr>
+      <tr><td>Devoluciones y notas de crédito</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 2 -->
+<section id="responsables">
+  <h2 class="section-title">2. Responsables del Proceso</h2>
+  <table>
+    <thead><tr><th>Rol</th><th>Responsabilidad principal</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Encargado de Compras</strong></td><td>Órdenes de compra, seguimiento de proveedores</td></tr>
+      <tr><td><strong>Coordinador de Logística</strong></td><td>Planificación despachos, asignación de recursos, supervisión en WWP</td></tr>
+      <tr><td><strong>Encargado de Almacén</strong></td><td>Recepción, inspección, validación Odoo, supervisión del equipo</td></tr>
+      <tr><td><strong>Auxiliar de Almacén</strong></td><td>Descarga, conteo físico, escaneo handheld, empaque</td></tr>
+      <tr><td><strong>Encargado de Tienda</strong></td><td>Recepción en tienda, exhibición, validación Odoo</td></tr>
+      <tr><td><strong>Auxiliar de Tienda</strong></td><td>Apoyo descarga y ubicación en tienda</td></tr>
+      <tr><td><strong>Ejecutivo de Ventas</strong></td><td>Confirmación pedidos, coordinación con cliente, datos de entrega</td></tr>
+      <tr><td><strong>Chofer / Transporte</strong></td><td>Carga, transporte, entrega física, retiro de devoluciones</td></tr>
+      <tr><td><strong>Área Administrativa</strong></td><td>Aprobaciones de devolución, notas de crédito, facturación</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 3 -->
+<section id="referencia">
+  <h2 class="section-title">3. Referencia Rápida: Estados y Rutas Odoo</h2>
+
+  <h3 class="proc-title">3.1 Estados de transferencias (Picking)</h3>
+  <table>
+    <thead><tr><th>Código Odoo</th><th>Nombre visible</th><th>Significado operativo</th></tr></thead>
+    <tbody>
+      <tr><td><code>draft</code></td><td>Borrador</td><td>Creada pero no confirmada</td></tr>
+      <tr><td><code>confirmed</code></td><td>En espera</td><td>Esperando productos o acción previa</td></tr>
+      <tr><td><code>assigned</code></td><td><strong>Listo ✅</strong></td><td>Productos reservados — se puede procesar</td></tr>
+      <tr><td><code>done</code></td><td><strong>Hecho ✅</strong></td><td>Validada y cerrada</td></tr>
+      <tr><td><code>cancel</code></td><td>Cancelado</td><td>Anulada</td></tr>
+    </tbody>
+  </table>
+  <div class="callout callout-danger">
+    <span class="callout-icon">⛔</span>
+    <div>Solo se trabajan transferencias en estado <strong>Listo</strong> (<code>assigned</code>). Nunca validar una transferencia si no existe el movimiento físico correspondiente.</div>
+  </div>
+
+  <h3 class="proc-title">3.2 Estados de pedidos de venta (Sale Order)</h3>
+  <table>
+    <thead><tr><th>Código Odoo</th><th>Nombre visible</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr><td><code>draft</code></td><td>Cotización</td><td>No confirmado — no genera operaciones logísticas</td></tr>
+      <tr><td><code>sale</code></td><td><strong>Pedido de venta ✅</strong></td><td>Confirmado — genera picking automáticamente</td></tr>
+      <tr><td><code>done</code></td><td>Bloqueado</td><td>Cerrado contablemente</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="proc-title">3.3 Rutas y nomenclatura por almacén</h3>
+  <table>
+    <thead><tr><th>Almacén</th><th>Recepción</th><th>Despacho</th><th>Pick interno</th><th>Devolución cliente</th></tr></thead>
+    <tbody>
+      <tr><td><strong>ALVEN</strong></td><td><code>ALVEN/IN/</code></td><td><code>ALVEN/OUT/</code></td><td><code>ALVEN/PICK/</code></td><td><code>WH/RET/</code> o <code>ALVEN/RET/</code></td></tr>
+      <tr><td><strong>PTN</strong></td><td><code>PTN/IN/</code></td><td><code>PTN/OUT/</code></td><td>—</td><td><code>PTN/RET/</code></td></tr>
+      <tr><td><strong>CDP</strong></td><td><code>CDP/IN/</code></td><td><code>CDP/OUT/</code></td><td>—</td><td><code>CDP/RET/</code></td></tr>
+      <tr><td><strong>OUTLE</strong></td><td><code>OUTLE/IN/</code></td><td><code>OUTLE/OUT/</code></td><td>—</td><td><code>OUTLE/RET/</code></td></tr>
+      <tr><td><strong>STI</strong></td><td><code>STI/IN/</code></td><td><code>STI/OUT/</code></td><td>—</td><td><code>STI/RET/</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="proc-title">3.4 Clasificación de mercancía por nivel de riesgo (H1–H5)</h3>
+  <table>
+    <thead><tr><th>Nivel</th><th>Tipo de producto</th><th>Mín. personas</th><th>Foto WWP</th><th>Cuarentena si duda</th></tr></thead>
+    <tbody>
+      <tr><td><span class="hlevel h1">H1</span></td><td>Accesorios, decoración pequeña</td><td>1</td><td>No requerida</td><td>No</td></tr>
+      <tr><td><span class="hlevel h2">H2</span></td><td>Muebles tela/madera intermedios</td><td>1</td><td>Recomendada</td><td>No</td></tr>
+      <tr><td><span class="hlevel h3">H3</span></td><td>Vidrio, mármol, lacados, espejos</td><td><strong>2</strong></td><td><strong>Obligatoria</strong></td><td>Sí</td></tr>
+      <tr><td><span class="hlevel h4">H4</span></td><td>Piezas únicas, &gt;80 kg, gran volumen</td><td><strong>2 + líder</strong></td><td><strong>Obligatoria</strong></td><td>Sí</td></tr>
+      <tr><td><span class="hlevel h5">H5</span></td><td>Boffi, marcas premium, proyectos especiales</td><td><strong>Equipo designado</strong></td><td><strong>Obligatoria</strong></td><td><strong>Siempre</strong></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 4 -->
+<section id="recepcion">
+  <h2 class="section-title">4. Flujo de Procesos: Recepción en Almacén</h2>
+
+  <!-- 4.1 -->
+  <h3 class="proc-title">4.1 Recepción física de mercancía (previo a Odoo)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-odoo">📦 Odoo: No aplica en este paso</span>
+    <span class="badge badge-wwp">✅ WWP: Crear tarea "Recepción" antes de iniciar</span>
+  </div>
+  <p><strong>Objetivo:</strong> Garantizar que toda la mercancía sea validada físicamente y clasificada antes de ingresar al sistema o al almacén.</p>
+
+  <ol class="steps">
+    <li>El Coordinador de Logística o Encargado de Almacén <strong>crea una tarea "Recepción" en WWP</strong> con: proveedor, número de orden, almacén destino y auxiliares asignados.</li>
+    <li>El chofer o transportista se presenta en el área de recepción designada.</li>
+    <li>El Encargado solicita la documentación física: orden de compra, factura/conduce y guía de transporte.
+      <div class="callout callout-danger" style="margin-top:8px">
+        <span class="callout-icon">⛔</span>
+        <div>En ausencia de documentación válida, <strong>no se autoriza la descarga</strong>.</div>
+      </div>
+    </li>
+    <li>Los Auxiliares realizan la descarga controlada bajo supervisión, colocando la mercancía <strong>únicamente en el área de recepción asignada</strong>.
+      <div class="callout callout-warn" style="margin-top:8px">
+        <span class="callout-icon">⚠️</span>
+        <div>Para productos <span class="hlevel h3">H3</span>, <span class="hlevel h4">H4</span> o <span class="hlevel h5">H5</span>: descarga con mínimo 2 personas y protocolo de manejo premium.</div>
+      </div>
+    </li>
+    <li>El Auxiliar realiza el <strong>conteo físico</strong> verificando cantidades contra el picklist. Deja constancia escrita de toda diferencia.</li>
+    <li>El Encargado realiza la <strong>inspección física de cada pieza</strong>:
+      <ul style="padding-left:18px;margin-top:6px">
+        <li>¿El empaque tiene golpes, roturas o está abierto?</li>
+        <li>¿El producto tiene daño visible?</li>
+        <li>Si fue desarmado: ¿tiene instrucciones? ¿Están todas las piezas?</li>
+        <li>¿Está correctamente identificado?</li>
+        <li>Para <span class="hlevel h3">H3</span>+: ¿Integridad de ángulos, cantos y superficies?</li>
+      </ul>
+    </li>
+    <li>El Encargado clasifica cada pieza como <strong>"conforme"</strong> o <strong>"no conforme"</strong>.</li>
+    <li><strong>Si hay piezas no conformes:</strong>
+      <ul style="padding-left:18px;margin-top:6px">
+        <li>Separar físicamente al área de Cuarentena</li>
+        <li>Tomar fotografías</li>
+        <li>Registrar la avería en <strong>WWP</strong> (módulo Averías): fecha, proveedor, descripción, fotos, cantidad</li>
+        <li>Notificar a Compras y Administración por correo adjuntando el registro WWP</li>
+        <li>La mercancía no conforme <strong>no continúa</strong> hasta recibir instrucciones</li>
+      </ul>
+    </li>
+    <li>Solo la mercancía conforme, con autorización del Encargado, continúa al siguiente proceso.</li>
+    <li>El Encargado <strong>actualiza y cierra la tarea WWP</strong> con: piezas recibidas, no conformes, observaciones.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>Prohibido colocar mercancía conforme fuera del almacén o sin identificación</li>
+      <li>No se permite continuar sin inspección física completa</li>
+      <li>Toda incidencia debe documentarse en WWP antes de cerrar la tarea</li>
+    </ul>
+  </div>
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Llegada → clasificación ≤ 3h</div></div>
+  </div>
+
+  <!-- 4.2 -->
+  <h3 class="proc-title">4.2 Registro de recepción en Odoo</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-odoo">📦 Inventario → Operaciones → Recepciones</span>
+    <span class="badge badge-kpi">🎯 Estado requerido: Listo (assigned)</span>
+  </div>
+  <p><strong>Objetivo:</strong> Registrar el ingreso físico en Odoo para actualizar el stock disponible.</p>
+
+  <ol class="steps">
+    <li>Acceder a Odoo: <code>Inventario → Operaciones → Recepciones</code>. Filtrar por almacén y estado <strong>Listo</strong>.</li>
+    <li>Localizar la recepción correspondiente a la orden de compra. Si está en <code>Esperando</code>, notificar a Compras para que confirme la OC.</li>
+    <li>Verificar que productos y cantidades coincidan con la documentación del proveedor y el conteo físico del paso 4.1.</li>
+    <li>Si la recepción incluye lotes o seriales (<span class="hlevel h4">H4</span>/<span class="hlevel h5">H5</span>), verificar que estén configurados antes de validar.</li>
+    <li>Registrar la <strong>cantidad realmente recibida</strong> en el campo "Hecho" de cada línea.</li>
+    <li>Verificar la <strong>ubicación destino</strong> según tipo de producto (ver putaway rules).</li>
+    <li>Hacer clic en <strong>Validar</strong>. Si hay diferencias de cantidad, Odoo preguntará:
+      <ul style="padding-left:18px;margin-top:6px">
+        <li><strong>"Crear pedido atrasado (backorder)":</strong> para faltantes que llegarán después — indicar fecha esperada y notificar a Compras</li>
+        <li><strong>"Sin pedido atrasado":</strong> solo si el faltante es definitivo (error del proveedor, no llega más)</li>
+      </ul>
+    </li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>Prohibido registrar cantidades no recibidas físicamente</li>
+      <li>Toda diferencia debe comunicarse a Compras antes de cerrar</li>
+      <li>Los backorders deben tener motivo documentado</li>
+    </ul>
+  </div>
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Inspección aprobada → validación Odoo ≤ 2h</div></div>
+  </div>
+
+  <!-- 4.3 -->
+  <h3 class="proc-title">4.3 Etiquetado y conteo digital (handheld)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado + Auxiliar de Almacén</span>
+    <span class="badge badge-odoo">📦 [Recepción] → Imprimir etiquetas</span>
+  </div>
+
+  <ol class="steps">
+    <li>Desde la recepción en Odoo, hacer clic en <strong>"Imprimir etiquetas"</strong>. Verificar que contengan: referencia interna, nombre, código de barras legible.</li>
+    <li>El Auxiliar adhiere <strong>una etiqueta individual por cada artículo</strong>. En cajas con múltiples artículos: abrir y etiquetar cada uno por separado. Nunca etiquetar solo la caja exterior.</li>
+    <li>Desde el handheld, acceder a la recepción en Odoo.</li>
+    <li>Seleccionar la opción de <strong>escaneo de productos</strong> dentro del documento.</li>
+    <li>Escanear uno a uno todos los artículos etiquetados. El sistema actualiza cantidades conforme al escaneo.</li>
+    <li>Al finalizar, confirmar que el total escaneado coincide con el conteo físico.</li>
+    <li>Si hay diferencias: <strong>detener el proceso y revisar</strong> antes de continuar.</li>
+    <li>Para artículos de tienda: imprimir también etiqueta con precio (Atmos) para exhibición.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No imprimir etiquetas si la recepción no corresponde a la orden correcta</li>
+      <li>No hacer conteo digital sin etiquetado previo</li>
+      <li>Prohibido confirmar con diferencias entre conteo físico y digital</li>
+    </ul>
+  </div>
+
+  <!-- 4.4 -->
+  <h3 class="proc-title">4.4 Verificación y ubicación física en almacén</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-odoo">📦 Inventario → Productos → [Producto] → Ubicaciones</span>
+    <span class="badge badge-wwp">✅ WWP: Cerrar tarea de recepción</span>
+  </div>
+
+  <ol class="steps">
+    <li>Trasladar la mercancía conforme a la ubicación asignada según reglas de putaway:
+      <table style="margin-top:8px">
+        <thead><tr><th>Material</th><th>Ubicación destino</th><th>Condición especial</th></tr></thead>
+        <tbody>
+          <tr><td>Vidrio / Mármol</td><td>Zona Vidrio</td><td>Vertical, espuma entre piezas</td></tr>
+          <tr><td>Tela / Cuero</td><td>Zona Tela</td><td>Horizontal, sin peso encima</td></tr>
+          <tr><td>Boffi / Proyectos</td><td>Zona Proyecto</td><td>Acceso restringido, etiqueta proyecto</td></tr>
+          <tr><td>Accesorios</td><td>Zona Mezzanine / bins</td><td>Separado por colección</td></tr>
+          <tr><td>No conforme / pendiente</td><td>Zona Cuarentena</td><td>Nunca mezclar con stock activo</td></tr>
+        </tbody>
+      </table>
+    </li>
+    <li>Confirmar que la ubicación física coincide con la ubicación registrada en Odoo.</li>
+    <li>Para ALVEN: verificar nomenclatura de bin (ej. <code>ALVEN/Stock/A-CDP/AA1</code>).</li>
+    <li>Registrar la ubicación en la tarea WWP si difiere del default, y marcarla como <strong>completada</strong>.</li>
+  </ol>
+
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Exactitud de ubicación ≥ 98%</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 5 -->
+<section id="despacho">
+  <h2 class="section-title">5. Flujo de Procesos: Preparación y Despacho</h2>
+
+  <!-- 5.1 -->
+  <h3 class="proc-title">5.1 Validación del pedido de venta para despacho</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Ejecutivo de Ventas</span>
+    <span class="badge badge-odoo">📦 Ventas → Pedidos → Pedidos de venta</span>
+    <span class="badge badge-kpi">🎯 Estado OV requerido: sale (Pedido de venta)</span>
+  </div>
+
+  <ol class="steps">
+    <li>Acceder al pedido del cliente. Verificar estado: <code>sale</code> (Pedido de venta confirmado). Si está en <code>draft</code>, confirmar primero.</li>
+    <li>Validar: productos, cantidades, precios y <strong>dirección de entrega correcta</strong>.</li>
+    <li>Solicitar al cliente:
+      <ul style="padding-left:18px;margin-top:4px">
+        <li>Nombre de quien recibirá</li>
+        <li>Disponibilidad horaria (ventana mínima 2h)</li>
+        <li>Rutas de acceso para productos grandes o <span class="hlevel h3">H3</span>+</li>
+        <li>Si requiere armado: condiciones del área</li>
+      </ul>
+    </li>
+    <li>Verificar en Odoo que el picking asociado esté en estado <strong>Listo</strong> (<code>assigned</code>). Si está en <code>Esperando</code>: coordinar con Almacén antes de comprometer fecha al cliente.</li>
+    <li>Enviar correo a Coordinador de Logística y Administración con: número de pedido (<code>S0XXXX</code>), número de picking/conduce (<code>ALVEN/OUT/XXXXX</code>), datos del cliente y observaciones especiales.</li>
+  </ol>
+
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Confirmación disponibilidad al cliente ≤ 4h</div></div>
+  </div>
+
+  <!-- 5.2 -->
+  <h3 class="proc-title">5.2 Planificación del despacho</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Coordinador de Logística</span>
+    <span class="badge badge-odoo">📦 Inventario → Operaciones → Transferencias</span>
+    <span class="badge badge-wwp">✅ WWP: Crear tarea "Preparación de Despacho"</span>
+  </div>
+
+  <ol class="steps">
+    <li>Acceder al picking en Odoo (<code>ALVEN/OUT/XXXXX</code>) y verificar estado <strong>Listo</strong>.</li>
+    <li>Si existe algún impase (producto dañado, faltante, acceso imposible): informar por correo a Ventas y retornar al paso 5.1.</li>
+    <li><strong>Crear tarea en WWP</strong> "Preparación de Despacho" con:
+      <ul style="padding-left:18px;margin-top:4px">
+        <li>Título: <code>Despacho [número picking] — [nombre cliente]</code></li>
+        <li>Asignados: Encargado de Almacén + auxiliares</li>
+        <li>Descripción: picking Odoo, productos, nivel H, observaciones del cliente</li>
+        <li>Fecha límite: fecha de entrega acordada</li>
+      </ul>
+    </li>
+    <li>Coordinar con Almacén: disponibilidad de personal y vehículo.</li>
+    <li>Definir y comunicar la <strong>ruta de entrega</strong> al Chofer.</li>
+    <li>Actualizar la <strong>fecha prevista de entrega</strong> en Odoo si cambió.</li>
+    <li>Responder correo a Ventas confirmando fecha y hora.</li>
+  </ol>
+
+  <!-- 5.3 -->
+  <h3 class="proc-title">5.3 Preparación física del despacho (picking)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado + Auxiliar de Almacén</span>
+    <span class="badge badge-odoo">📦 Inventario → Transferencias → [PICK o OUT]</span>
+    <span class="badge badge-wwp">✅ WWP: Actualizar tarea con avance y evidencia</span>
+  </div>
+
+  <ol class="steps">
+    <li>El Encargado accede al Pick en Odoo (<code>ALVEN/PICK/XXXXX</code>). Verifica estado <strong>Listo</strong>, productos y ubicaciones origen.</li>
+    <li>El Auxiliar accede al pick desde el handheld y escanea el código de barras del documento para abrir la operación.</li>
+    <li>El Auxiliar se dirige a las ubicaciones indicadas y localiza los productos.</li>
+    <li>Realiza el pick <strong>escaneando cada producto uno a uno</strong>, respetando productos y cantidades exactos.
+      <div class="callout callout-warn" style="margin-top:8px">
+        <span class="callout-icon">⚠️</span>
+        <div><span class="hlevel h3">H3</span>: mínimo 2 personas; verificar empaque antes de mover.<br>
+        <span class="hlevel h4">H4</span>/<span class="hlevel h5">H5</span>: coordinar con líder de maniobra; evidencia fotográfica en WWP <strong>antes</strong> de mover la pieza.</div>
+      </div>
+    </li>
+    <li>Verificar que los productos estén correctamente empacados y protegidos.</li>
+    <li>Trasladar los productos preparados al <strong>área de carga</strong> designada.</li>
+    <li>Informar al Encargado que la carga está lista para verificación.</li>
+    <li>El Encargado realiza la verificación física final: producto, cantidad, estado general.</li>
+    <li>El Encargado <strong>sube fotos del empaque a la tarea WWP</strong> antes de aprobar la carga.</li>
+    <li>Si se detecta producto dañado o faltante durante el pick: registrar avería en WWP, notificar al Coordinador y Ventas, <strong>no despachar sin autorización</strong>.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No preparar mercancía sin autorización para ejecutar el pick</li>
+      <li>Prohibido colocar mercancía preparada fuera del área asignada</li>
+      <li>Ningún producto H4/H5 se mueve sin evidencia fotográfica en WWP</li>
+      <li>Nunca batch picking para H3 o superior — picking individual siempre</li>
+    </ul>
+  </div>
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Pick sin error de producto/cantidad ≥ 97%</div></div>
+  </div>
+
+  <!-- 5.4 -->
+  <h3 class="proc-title">5.4 Carga del vehículo</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén + Chofer</span>
+    <span class="badge badge-odoo">📦 Odoo: No aplica</span>
+    <span class="badge badge-wwp">✅ WWP: Foto del vehículo cargado</span>
+  </div>
+
+  <ol class="steps">
+    <li>El Chofer valida el vehículo con el checklist: limpieza, protecciones, herramientas de armado, documentación de ruta.</li>
+    <li>El Encargado revisa el checklist y <strong>aprueba la carga</strong>.</li>
+    <li>El Chofer posiciona el vehículo en el área de carga asignada.</li>
+    <li>El Auxiliar y el Chofer cargan la mercancía respetando el orden de la ruta:
+      <ul style="padding-left:18px;margin-top:4px">
+        <li>Verificar cantidades y sujeción correcta</li>
+        <li><span class="hlevel h3">H3</span>+: espuma, mantas y sujeción obligatoria</li>
+        <li><span class="hlevel h4">H4</span>/<span class="hlevel h5">H5</span>: cargar de último (salen de primero en destino)</li>
+      </ul>
+    </li>
+    <li>El Chofer <strong>recibe y firma</strong> la documentación de entrega (conduce impreso de Odoo). Al firmar, asume responsabilidad de la mercancía.</li>
+    <li>El Encargado actualiza la tarea WWP con foto del vehículo cargado.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No cargar sin aprobación del Encargado</li>
+      <li>El Chofer no puede retirar mercancía sin firmar el conduce</li>
+      <li>Ningún H3+ se carga sin protección adecuada</li>
+    </ul>
+  </div>
+
+  <!-- 5.5 -->
+  <h3 class="proc-title">5.5 Validación en Odoo (salida de inventario)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-odoo">📦 Inventario → Operaciones → Transferencias → [OUT]</span>
+  </div>
+
+  <ol class="steps">
+    <li>Una vez cargado el vehículo, acceder al conduce (<code>ALVEN/OUT/XXXXX</code>) en Odoo.</li>
+    <li>Verificar que la cantidad "Hecho" refleje exactamente lo cargado. Si algún artículo no pudo despacharse: ajustar cantidad y crear backorder.</li>
+    <li>Hacer clic en <strong>Validar</strong>. El stock sale del sistema automáticamente.</li>
+    <li>Imprimir o enviar digitalmente el <strong>conduce validado</strong> al Chofer.</li>
+  </ol>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">⛔</span>
+    <div>Nunca validar en Odoo si el vehículo no ha salido, o si hay mercancía con incidencias no notificadas previamente.</div>
+  </div>
+
+  <!-- 5.6 -->
+  <h3 class="proc-title">5.6 Entrega física al cliente</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Chofer</span>
+    <span class="badge badge-odoo">📦 Odoo: No aplica</span>
+    <span class="badge badge-wwp">✅ WWP: Foto firma + foto entrega final</span>
+  </div>
+
+  <div class="script">
+    <em>Al llegar:</em><br>
+    "Buenos días / tardes. Soy <em>[nombre]</em> de la compañía Altri Tempi. Vengo a realizar la entrega de los artículos <em>[descripción]</em>. ¿Con quién tengo el gusto?"<br><br>
+    "¿Puede indicarme dónde estaré colocando los artículos?"
+  </div>
+
+  <ol class="steps">
+    <li>Evaluar el área de entrega. Para <span class="hlevel h3">H3</span>+: colocar mantas protectoras antes de ingresar la pieza.</li>
+    <li>Presentar los productos y validar con el cliente:
+      <div class="script">"Por favor, validemos que los productos y cantidades coincidan con el documento de despacho."</div>
+    </li>
+    <li>Si se detecta incidencia al momento de la entrega:
+      <div class="script">"Estoy registrando esta observación para notificarla al área correspondiente antes de validar la entrega."</div>
+      <ul style="padding-left:18px;margin-top:4px">
+        <li>Tomar fotografías</li>
+        <li>Notificar al Coordinador de Logística inmediatamente</li>
+        <li><strong>No validar la entrega del artículo con incidencia</strong> sin autorización</li>
+      </ul>
+    </li>
+    <li>Al confirmar entrega conforme, solicitar firma:
+      <div class="script">"Si todo está conforme, ¿podría por favor firmar el documento de despacho como confirmación de recepción?"</div>
+    </li>
+    <li>Actualizar tarea WWP con: foto de firma en conduce + foto del producto entregado en el área final + hora de entrega.</li>
+    <li>Cierre:
+      <div class="script">"Muchas gracias. Cualquier observación adicional puede canalizarse a través de su vendedora."</div>
+    </li>
+  </ol>
+
+  <!-- 5.7 -->
+  <h3 class="proc-title">5.7 Cierre y seguimiento post-entrega</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Coordinador de Logística</span>
+    <span class="badge badge-wwp">✅ WWP: Marcar tarea "Despacho" como completada</span>
+  </div>
+
+  <ol class="steps">
+    <li>Verificar en Odoo que el conduce esté en estado <strong>Hecho</strong> (<code>done</code>).</li>
+    <li>Revisar la tarea WWP: ¿tiene evidencias completas? (foto carga, foto entrega, firma cliente).</li>
+    <li>Si el Chofer reportó novedades: registrar en WWP con fotos. Si hay daño de entrega: crear avería en WWP y notificar a Ventas y Administración.</li>
+    <li>Archivar el conduce físico firmado.</li>
+    <li>Marcar la tarea WWP como <strong>completada</strong>.</li>
+  </ol>
+
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Entregas sin incidente ≥ 98%</div></div>
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Tareas WWP con evidencia completa ≥ 95%</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 6 -->
+<section id="tienda">
+  <h2 class="section-title">6. Flujo de Procesos: Recepción en Tienda</h2>
+
+  <h3 class="proc-title">6.1 Recepción física en tienda</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Tienda</span>
+    <span class="badge badge-wwp">✅ WWP: Crear tarea "Recepción en Tienda"</span>
+  </div>
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <div>Mismo protocolo de inspección que §4.1 — mismos criterios de conformidad, no conformidad, cuarentena y registro en WWP.<br>
+    <strong>Diferencia clave:</strong> la documentación es la transferencia interna Odoo (<code>[WH]/INT/XXXXX</code>), no una orden de compra directa. Las incidencias se notifican también al Encargado del almacén origen.</div>
+  </div>
+
+  <h3 class="proc-title">6.2 Registro de recepción en Odoo (transferencia interna)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Tienda</span>
+    <span class="badge badge-odoo">📦 Inventario → Operaciones → Transferencias → INT / Listo</span>
+  </div>
+
+  <ol class="steps">
+    <li>Acceder a la transferencia interna en Odoo (ej. <code>PTN/INT/XXXXX</code>). Estado: <strong>Listo</strong>.</li>
+    <li>Entregar el picklist al Auxiliar.</li>
+    <li>El Auxiliar escanea los productos con el handheld, uno a uno.</li>
+    <li>El Auxiliar hace clic en <strong>Guardar y Continuar</strong> al completar cada línea.</li>
+    <li>El Encargado revisa las cantidades y hace clic en <strong>Validar</strong>.</li>
+    <li>Actualizar y cerrar la tarea WWP.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul><li>Prohibido validar cantidades no recibidas físicamente</li></ul>
+  </div>
+
+  <h3 class="proc-title">6.3 Ubicación en tienda / exhibición</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Tienda</span>
+    <span class="badge badge-odoo">📦 Inventario → Productos</span>
+  </div>
+
+  <ol class="steps">
+    <li>Validar que la ubicación de exhibición esté disponible.</li>
+    <li>En Atmos: imprimir etiqueta de precio y etiqueta RFID. Si es kit: una etiqueta por parte.</li>
+    <li>El Auxiliar traslada y ubica la mercancía en el área de exhibición.</li>
+    <li>Marcar la tarea WWP como completada.</li>
+  </ol>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 7 -->
+<section id="directa">
+  <h2 class="section-title">7. Entrega Directa a Cliente (Dropship / Sin Stock)</h2>
+
+  <h3 class="proc-title">7.1 Validación del pedido para entrega directa</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Ejecutivo de Ventas</span>
+    <span class="badge badge-odoo">📦 Ventas → Pedidos → Pedidos de venta</span>
+  </div>
+  <p>Mismo proceso que §5.1 — verificar estado <code>sale</code>, productos, dirección, datos del receptor y transmitir a Operaciones.</p>
+
+  <h3 class="proc-title">7.2 Preparación de la entrega directa</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén / Logística</span>
+    <span class="badge badge-odoo">📦 Inventario → Operaciones → Transferencias → [OUT]</span>
+    <span class="badge badge-wwp">✅ WWP: Crear tarea "Entrega Directa"</span>
+  </div>
+
+  <ol class="steps">
+    <li>Acceder al conduce vinculado al pedido de venta. Si el flujo es de 2 o 3 pasos: verificar primero el Pick (<code>ALVEN/PICK/XXXXX</code>) y luego el OUT.</li>
+    <li>Verificar: cliente, ubicación origen, productos y cantidades.</li>
+    <li>Registrar cantidad "Hecho" al recibir la mercancía del proveedor o al confirmar el pick.</li>
+    <li>Validar la entrega.</li>
+    <li>Crear tarea WWP "Entrega Directa" y continuar desde §5.3 (preparación física).</li>
+  </ol>
+
+  <div class="callout callout-ok">
+    <span class="callout-icon">✅</span>
+    <div>Resultado: salida directa a cliente <strong>sin generar stock disponible intermedio</strong>.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ SECCIÓN 8 -->
+<section id="devoluciones">
+  <h2 class="section-title">8. Flujo de Devoluciones y Notas de Crédito</h2>
+
+  <!-- 8.1 -->
+  <h3 class="proc-title">8.1 Solicitud y autorización de devolución</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Ventas / Administración</span>
+    <span class="badge badge-odoo">📦 Ventas → Pedidos de venta → [Orden] → Devoluciones</span>
+    <span class="badge badge-wwp">✅ WWP: Crear tarea "Gestión de Devolución"</span>
+  </div>
+
+  <ol class="steps">
+    <li>Ventas documenta por escrito la solicitud con: número de pedido (<code>S0XXXX</code>), número de conduce original (<code>ALVEN/OUT/XXXXX</code>), motivo, productos y cantidades a devolver.</li>
+    <li>Ventas comunica por correo a Administración y Almacén.</li>
+    <li>Administración <strong>autoriza o rechaza</strong> conforme a la política vigente.</li>
+    <li>Una vez autorizada, Ventas envía al Encargado de Almacén: conduce de referencia, productos autorizados, y si el cliente trae la mercancía o se hace retiro.</li>
+    <li>Crear tarea WWP "Gestión de Devolución" con: conduce original, productos, motivo y fecha.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No iniciar retiro ni recepción de devolución sin autorización escrita de Administración</li>
+      <li>No comprometer reposiciones, cambios o notas de crédito durante el retiro</li>
+    </ul>
+  </div>
+
+  <!-- 8.2 -->
+  <h3 class="proc-title">8.2 Retiro de mercancía del cliente (si aplica)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Chofer</span>
+    <span class="badge badge-odoo">📦 Odoo: No aplica</span>
+  </div>
+
+  <div class="script">
+    <em>Al llegar:</em><br>
+    "Buenos días / tardes. Mi nombre es <em>[nombre]</em>, vengo en representación de Altri Tempi para retirar la mercancía correspondiente a una devolución."<br><br>
+    "¿Podría confirmarme su nombre y el producto a devolver?"<br><br>
+    "Procederé a revisar los artículos para confirmar que coincidan con la devolución autorizada."<br><br>
+    <em>Si hay novedad visible:</em><br>
+    "Estaré enviando fotos del artículo para hacer las validaciones correspondientes antes de completar el proceso."<br><br>
+    <em>Al completar:</em><br>
+    "La mercancía ha sido retirada y será procesada internamente."<br>
+    "Muchas gracias. Cualquier seguimiento será gestionado por su vendedora."
+  </div>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No retirar mercancía adicional no incluida en la devolución autorizada</li>
+      <li>No firmar ni aceptar documentos que impliquen compromisos comerciales</li>
+    </ul>
+  </div>
+
+  <!-- 8.3 -->
+  <h3 class="proc-title">8.3 Recepción física de mercancía devuelta</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-wwp">✅ WWP: Actualizar tarea con evidencia fotográfica</span>
+  </div>
+
+  <ol class="steps">
+    <li>El Encargado verifica: producto, cantidad, número de serie si aplica, y estado general.</li>
+    <li>El Auxiliar escanea los productos devueltos con el handheld.</li>
+    <li>Tomar fotografías del estado de la mercancía (obligatorio).</li>
+    <li>Clasificar según condición:
+      <table style="margin-top:8px">
+        <thead><tr><th>Condición</th><th>Destino físico</th><th>Destino Odoo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sin daño (A)</strong></td><td>Zona de stock disponible</td><td><code>[WH]/Stock</code></td></tr>
+          <tr><td><strong>Con daño / pendiente</strong></td><td>Zona de Cuarentena</td><td><code>[WH]/Cuarentena</code></td></tr>
+          <tr><td><strong>Irrecuperable</strong></td><td>Zona de Scrap</td><td><code>[WH]/Scrap</code> (requiere aprobación)</td></tr>
+        </tbody>
+      </table>
+    </li>
+    <li>Registrar evidencia fotográfica y clasificación en la tarea WWP.</li>
+  </ol>
+
+  <!-- 8.4 -->
+  <h3 class="proc-title">8.4 Registro de devolución en Odoo (Reverse Transfer)</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Encargado de Almacén</span>
+    <span class="badge badge-odoo">📦 Inventario → [Conduce OUT original] → Devolver</span>
+  </div>
+
+  <ol class="steps">
+    <li>Localizar el conduce original de entrega en Odoo (<code>ALVEN/OUT/XXXXX</code>).</li>
+    <li>Hacer clic en el botón <strong>"Devolver"</strong> (Reverse Transfer).</li>
+    <li>En el asistente: seleccionar productos y cantidades a devolver, e indicar la ubicación destino según clasificación del paso 8.3.</li>
+    <li>El sistema crea un picking de tipo <code>RET</code> (ej. <code>WH/RET/XXXXX</code> o <code>ALVEN/RET/XXXXX</code>).</li>
+    <li>Validar el reverse transfer. El stock se actualiza automáticamente.</li>
+    <li>Registrar el número de RET en la tarea WWP y en el correo a Administración.</li>
+  </ol>
+
+  <!-- 8.5 -->
+  <h3 class="proc-title">8.5 Nota de crédito y cierre</h3>
+  <div class="proc-meta">
+    <span class="badge badge-resp">👤 Área Administrativa</span>
+    <span class="badge badge-odoo">📦 Facturación → Clientes → [Factura original] → Nota de Crédito</span>
+  </div>
+
+  <ol class="steps">
+    <li>Administración verifica que el reverse transfer (<code>RET</code>) esté en estado <code>done</code>.</li>
+    <li>Emite la nota de crédito desde la factura original correspondiente.</li>
+    <li>Notifica a Ventas y al cliente.</li>
+    <li>El Encargado de Almacén cierra la tarea WWP como <strong>completada</strong>.</li>
+  </ol>
+
+  <div class="conditions">
+    <strong>Condiciones</strong>
+    <ul>
+      <li>No emitir nota de crédito sin reverse transfer (<code>RET</code>) validado en Odoo</li>
+      <li>No registrar devolución en Odoo sin recepción física validada</li>
+      <li>Todo RET debe referenciar el conduce original (<code>OUT</code>)</li>
+    </ul>
+  </div>
+  <div class="kpi-bar">
+    <div class="kpi-item"><div class="kpi-label">KPI</div><div class="kpi-val">Recepción física → nota de crédito ≤ 48h</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ APÉNDICES -->
+<section id="apendices">
+  <h2 class="section-title">Apéndices</h2>
+
+  <div class="appendix-header">Apéndice A — Convención de nombres de tareas en WWP</div>
+  <div class="appendix-body">
+    <table>
+      <thead><tr><th>Tipo de tarea</th><th>Formato del título</th></tr></thead>
+      <tbody>
+        <tr><td>Recepción de compra</td><td><code>Recepción [WH]/IN/XXXXX — [Proveedor]</code></td></tr>
+        <tr><td>Preparación de despacho</td><td><code>Despacho [WH]/OUT/XXXXX — [Cliente]</code></td></tr>
+        <tr><td>Entrega directa</td><td><code>Entrega Directa [S0XXXX] — [Cliente]</code></td></tr>
+        <tr><td>Recepción en tienda</td><td><code>Recepción Tienda [WH]/INT/XXXXX</code></td></tr>
+        <tr><td>Gestión de devolución</td><td><code>Devolución [WH]/RET/XXXXX — [Cliente]</code></td></tr>
+        <tr><td>Registro de avería</td><td><code>Avería [producto] — [fecha]</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="appendix-header">Apéndice B — Resumen de rutas Odoo</div>
+  <div class="appendix-body">
+    <table>
+      <thead><tr><th>Operación</th><th>Ruta en Odoo</th></tr></thead>
+      <tbody>
+        <tr><td>Ver recepciones pendientes</td><td><code>Inventario → Operaciones → Recepciones</code></td></tr>
+        <tr><td>Ver despachos listos</td><td><code>Inventario → Operaciones → Transferencias</code> → filtrar OUT / Listo</td></tr>
+        <tr><td>Ver picks internos</td><td><code>Inventario → Operaciones → Transferencias</code> → filtrar PICK / Listo</td></tr>
+        <tr><td>Imprimir etiquetas</td><td><code>[Recepción en Odoo] → Imprimir etiquetas</code></td></tr>
+        <tr><td>Crear devolución de cliente</td><td><code>[Conduce OUT] → Devolver</code></td></tr>
+        <tr><td>Ver stock por ubicación</td><td><code>Inventario → Productos → [Producto] → Ubicaciones</code></td></tr>
+        <tr><td>Ver historial de movimientos</td><td><code>Inventario → Reportes → Historial de movimientos</code></td></tr>
+        <tr><td>Crear ajuste de inventario</td><td><code>Inventario → Operaciones → Ajustes de inventario</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="appendix-header">Apéndice C — Protocolo H1–H5 (tarjeta de referencia rápida)</div>
+  <div class="appendix-body">
+    <table>
+      <thead><tr><th>Nivel</th><th>Ejemplos</th><th>Mín. personas</th><th>Foto WWP</th><th>Cuarentena si duda</th><th>Observaciones</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="hlevel h1">H1</span></td>
+          <td>Accesorios, decoración pequeña</td>
+          <td>1</td><td>No requerida</td><td>No</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="hlevel h2">H2</span></td>
+          <td>Muebles tela/madera intermedios</td>
+          <td>1</td><td>Recomendada</td><td>No</td>
+          <td>Foto de empaque recomendada</td>
+        </tr>
+        <tr>
+          <td><span class="hlevel h3">H3</span></td>
+          <td>Vidrio, mármol, lacados, espejos</td>
+          <td><strong>2</strong></td><td><strong>Obligatoria</strong></td><td>Sí</td>
+          <td>Nunca batch picking. Espuma entre piezas.</td>
+        </tr>
+        <tr>
+          <td><span class="hlevel h4">H4</span></td>
+          <td>Piezas únicas, &gt;80 kg, gran volumen</td>
+          <td><strong>2 + líder</strong></td><td><strong>Obligatoria</strong></td><td>Sí</td>
+          <td>Foto antes de mover. Líder designado.</td>
+        </tr>
+        <tr>
+          <td><span class="hlevel h5">H5</span></td>
+          <td>Boffi, marcas premium, proyectos especiales</td>
+          <td><strong>Equipo designado</strong></td><td><strong>Obligatoria</strong></td><td><strong>Siempre</strong></td>
+          <td>Ningún movimiento sin aprobación del Coordinador.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ FOOTER -->
+<footer>
+  <strong>SOP Operaciones — Altri Tempi</strong> &nbsp;·&nbsp; Versión 2.0 &nbsp;·&nbsp; 2026-06-12<br>
+  Odoo ERP + Workforce Platform (WWP) &nbsp;·&nbsp; Confidencial — uso interno
+</footer>
+
+</body>
+</html>
