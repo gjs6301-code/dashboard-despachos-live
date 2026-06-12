@@ -306,6 +306,9 @@ Evitar botones largos que rompan móvil o mezclen acción con explicación.
   propia del dashboard (header marrón, navy). *Por qué:* dependen del contexto; consolidarlos a
   ciegas arriesga romper lógica o el look intencional. Pendiente revisarlos uno a uno.
 
+- **2026-06-12 · S1 Puente Averías↔WWP** (`proxy.js` ~L7757-7800): al marcar `condition=damaged` en ítems de una tarea, se crea automáticamente un registro en `averias.json` con deduplicación por `wwpTaskId+wwpItemId` (no crea duplicados si ya existe). Incluye campos de trazabilidad: `wwpTaskId`, `wwpItemId`, `wwpTaskType`, `wwpOdooRef`. El fallo en averías no rompe la respuesta del endpoint de condición (wrapped en try/catch). *Por qué:* artículos dañados quedaban registrados solo en WWP sin crear avería en el módulo correspondiente — silos sin puente.
+- **2026-06-12 · S3 Notificación liberación de auxiliar** (`proxy.js` ~L5505-5535): cuando `auxiliaryAssignees` pierde UIDs en un PATCH de tarea, se calcula el delta de liberados y se notifica al `managerId` con mensaje legible (nombre del auxiliar + título de tarea). Wrapped en try/catch. *Por qué:* el encargado no sabía que había perdido un recurso asignado.
+
 ## 7. Glosario
 - **WWP / Workforce Platform**: módulo de gestión de tareas embebido en `historial.html`.
 - **Drawer**: panel lateral de detalle de una tarea (`renderDrawer`).
@@ -322,6 +325,35 @@ Evitar botones largos que rompan móvil o mezclen acción con explicación.
 - Cuando pide "implementa todo", igual aplica el criterio de seguridad: lo de bajo riesgo se hace
   completo; lo que cambia comportamiento/colores de forma sensible se marca explícito para que él
   lo revise. 🌐
+## Protocolo para agregar memoria desde texto
 
+Cuando Gabriel indique **"agrega a memoria de [nombre del agente]"** o una instruccion equivalente y pegue texto, articulo, fragmento de libro, nota, conversacion o documento:
 
+1. Leer el texto completo disponible.
+2. No pegar articulos/libros largos completos en el expediente del agente.
+3. Convertir la informacion en memoria util: resumen, aprendizajes, reglas practicas, decisiones y forma de aplicarlo.
+4. Guardar el aprendizaje en el expediente canonico del agente correspondiente dentro de `agentes-estandar/`.
+5. Usar fecha, fuente y alcance: global, proyecto especifico o tema especifico.
+6. Si el texto es muy largo, conservar solo citas breves imprescindibles y priorizar resumen accionable.
+7. Si la informacion aplica a varios agentes, registrar en cada expediente solo lo que ese agente debe recordar y usar.
+
+Formato recomendado:
+
+```md
+### YYYY-MM-DD - [Tema]
+
+Fuente:
+- [Articulo, libro, conversacion, documento, enlace o nota]
+
+Resumen:
+- [Idea principal]
+- [Idea principal]
+
+Aprendizajes para [Agente]:
+- [Regla o criterio que debe recordar]
+- [Como debe aplicarlo]
+
+Aplicacion:
+- [Proyecto, area o alcance]
+```
 

@@ -125,6 +125,15 @@ rutinas de seguimiento, supervisión y retroalimentación.
   tablero KPI). *Por qué:* Gabriel pidió un gerente de operaciones experimentado, no solo un
   reportero de estado. Se mantiene la regla de solo lectura: Pit diseña y supervisa, no ejecuta.
 
+- **2026-06-12 · Barrido completo WWP + 5 decisiones de Gabriel**:
+  - D1 ✅ Devoluciones → Odoo (`stock.picking` RET). Ron diseña la consulta, Mark implementa.
+  - D2 ⏳ OpsAgent configurable: Gabriel pidió descripción operativa antes de decidir. Pit explicó sin tecnicismos. Pendiente respuesta.
+  - D3 ✅ S1 Puente Averías↔WWP (`notifyDamage`). Mark implementó en `proxy.js` ~L7757-7800.
+  - D4 ✅ S3 Notificación liberación auxiliar en Staffing. Mark implementó en `proxy.js` ~L5505-5535.
+  - D5 ✅ Reposición persistente con aprobación. Diseño operativo (Pit) y desarrollo (Mark) aprobados.
+  *Por qué:* Gabriel revisó el barrido completo de 13 flujos/secciones y aprobó las mejoras de mayor impacto.
+- **2026-06-12 · Diseño flujo de Reposición (D5)** — Estados: `borrador → pendiente_aprobacion → aprobada → en_proceso → completada / rechazada`. Quién solicita: encargado/manager. Captura: artículo/ref, cantidad, ubicación destino, urgencia (baja/media/alta), motivo. Quién aprueba: admin. Al aprobar: se puede convertir en tarea WWP (tipo `pack_store` o `free`) vía botón. Notificaciones: al solicitar → admin; al aprobar/rechazar → solicitante; al crear tarea → encargado asignado. Persistencia: nueva tabla en JSON del proxy (`reposiciones.json`). Endpoints mínimos: `GET /api/reposicion`, `POST /api/reposicion`, `PATCH /api/reposicion/:id` (estado + comentario aprobador). *Por qué:* solicitudes efímeras actuales no dejan trazabilidad ni proceso de aprobación.
+
 ## 7. Glosario
 - **Encargado / manager**: responsable de la tarea (`managerId`).
 - **Auxiliar**: ejecutor asignado (`auxiliaryAssignees`).
@@ -178,3 +187,93 @@ rutinas de seguimiento, supervisión y retroalimentación.
   de arranque vs el gate de pick (cuello aguas arriba).
 - 📍 Asume que puede NO haber credenciales de producción en la sesión; quiere que marque qué KPI/línea
   base habría que medir con datos vivos en vez de rellenar.
+- **2026-06-12 · VSM completo orden→empaque→despacho y auditoría H1**: confirmado que `empEnrichTaskItems` (L20513 de `historial.html`) NO tiene filtro de rol — se ejecuta para cualquier usuario que abra el drawer. El problema de H1 es de CONFIGURACIÓN (falta el `odoo_categ_id` en los ítems y/o reglas en `/api/empaque/reglas`), no de código. La tab `empaque` en el dashboard solo la ven admins (`can('dashboard')` hardcoded en L5403). Avería (`condition: damaged`): el PATCH `/api/wwp/tasks/:id/items/:itemId/condition` guarda el dato pero NO llama `createNotification` ni `notifyMany` → gap H4 confirmado. `sectionPerms` se maneja por rol (no por usuario individual): admin=todo, manager=5 claves wwp.*, assistant=solo GPS. Para un usuario de prueba tipo Mark, el rol más apropiado es `manager` con `wwp.dashboard:true` añadido si necesita ver empaque. Multi-encargado en empaque: el wizard soporta array `packers[]` (L10802-10816) pero la asignación es manual, sin lógica de balanceo automático. *Por qué:* Gabriel amplió el scope al flujo completo y aprobó H1.
+- **2026-06-12 · Patrón aprendido — H1 como gap de config no de código**: ante revelaciones de "X ya está implementado", verificar en código el flujo completo antes de confirmar. `empEnrichTaskItems` existe y se llama, pero depende de datos que puede que no estén poblados en prod (`odoo_categ_id` en ítems, reglas en la BD). La solución técnica no resuelve el problema si la configuración operativa no se ha hecho. El diagnóstico siempre debe separar: ¿existe el código? ¿están los datos de configuración? ¿funciona de extremo a extremo?
+
+## 9 (append) — Cómo trabaja Gabriel — aprendido 2026-06-12 (iteración 2)
+- 📍 Cuando da "revelaciones" sobre el código ("X ya está implementado"), espera que Pit LO VERIFIQUE en código antes de aceptarlo como hecho — no asumir que la revelación es completa. Aquí H1 estaba implementado en código pero el gap es de configuración/datos, distinción que Gabriel valorará.
+- 🌐 Alcances aprobados por Gabriel se registran explícitamente ("Gabriel aprobó ampliar el scope…") → señal de que toma decisiones de scope de forma declarativa. Pit debe registrar cada aprobación como decisión.
+- 🌐 Prefiere equipos de agentes con roles claros (Pit=operaciones, Ron=Odoo, Mark=UI) y que cada uno sepa cuándo derivar.
+- 🌐 Toma decisiones de scope con respuestas cortas y directas (5 preguntas → 5 respuestas en 1 mensaje). No necesita ver el plan técnico detallado para aprobar cuando confía en el equipo.
+- 🌐 Cuando un agente no puede completar su trabajo (límite de sesión, permiso denegado), espera que el coordinador (Claude) lo cubra sin que Gabriel tenga que intervenir.
+- 📍 Pide que cada agente aprenda su parte y actualice su expediente después de cada iteración. El conocimiento acumulado en `agentes-estandar/` es más valioso que cualquier entrega individual.
+
+## 6. Decisiones (log) — 2026-06-12 barrido completo de flujos WWP
+
+- **2026-06-12 · Barrido completo de los 7 flujos restantes de WWP + secciones historial**:
+  Los cinco tipos de gap (A-Config, B-Código, C-UX, D-Hardcoded, E-Operativo) son suficientes para
+  clasificar todos los hallazgos nuevos más dos tipos adicionales: Gap F (Estructura: `free` como
+  válvula de escape sin límites) y Gap G (Integración: devoluciones hardcoded sin conexión real,
+  averías y WWP como silos). El hallazgo más crítico nuevo: el módulo de Averías y WWP son dos
+  sistemas de seguimiento de daños que NO se comunican — un artículo averiado en uno no crea registro
+  ni notificación en el otro. La liberación de auxiliares en staffing hace PATCH sin notificar al
+  encargado original. `isAgentOwnerUser` hardcoded por email limita OpsAgent a 2 personas.
+  `var DEVOLUCIONES` es datos de demo estáticos en el fuente — las devoluciones reales no están
+  integradas. *Por qué:* Gabriel aprobó barrido completo para estandarizar soluciones.
+
+- **2026-06-12 · Patrones de solución estandarizables identificados (S1-S5)**:
+  S1=notifyDamage centralizado, S2=botón "Crear tarea WWP" desde reportes, S3=badge bloqueado en
+  subtareas, S4=slaColor reutilizable, S5=endpoint real para devoluciones Odoo. Estos patrones
+  aplican a 2+ flujos cada uno y deben implementarse una sola vez para eliminar la brecha en todos
+  los flujos simultáneamente.
+
+## 9 (append) — Cómo trabaja Gabriel — aprendido 2026-06-12 (iteración 3 — barrido completo)
+
+- 📍 Cuando el scope es exhaustivo ("TODOS los flujos"), Gabriel espera clasificación cruzada contra
+  hallazgos previos, no una lista nueva. El valor está en ver el patrón transversal, no en
+  repetir la descripción técnica de cada instancia.
+- 📍 Hallazgo de arquitectura: hay dos sistemas de seguimiento de daños (Averías + condition:damaged
+  en WWP) que operan como silos. Esta es la brecha de mayor riesgo operativo porque puede resultar
+  en artículos averiados siendo despachados o almacenados sin escalar.
+- 🌐 Patrón aprendido: cuando hay datos hardcoded en el fuente (ej. DEVOLUCIONES, isAgentOwnerUser),
+  siempre verificar si es intencional (diseño en progreso) o un gap de integración real. En ambos
+  casos, documentarlo con evidencia de línea de código.
+
+## 6. Decisiones (log) — 2026-06-12 barrido ejecutado y archivado
+
+- **2026-06-12 · Archivo analisis-flujos-wwp.md creado**: barrido completo ejecutado desde codigo
+  (historial.html 20880L + proxy.js 8586L). 28 hallazgos nuevos clasificados en 10 grupos de brecha (G1-G10),
+  7 patrones de solucion (S1-S7), 5 preguntas criticas para Gabriel, 5 consultas para Ron.
+  Hallazgos nuevos vs. analisis previo: Gap-F (tarea libre sin estandar) y Gap-G (silos de integracion)
+  confirmados con evidencia de linea especifica. *Por que:* Gabriel pidio barrido completo para
+  tener vision integral antes de priorizar desarrollo.
+
+## 9 (append) — Como trabaja Gabriel — aprendido 2026-06-12 (iteracion 4 — barrido archivado)
+
+- 📍 Al pedir barrido exhaustivo con entrega en archivo, Gabriel espera el archivo creado Y confirmacion
+  en la respuesta de que esta listo, con ruta absoluta. No quiere leer el archivo para saber si se hizo.
+- 📍 Patron de escritura de archivos grandes en Windows: usar node - con heredoc (ENDNODE) para bloques
+  de texto; no usar bash heredoc con variables JS (conflicto de comillas). Partir el contenido en bloques
+  de ~100 lineas y usar appendFileSync iterativamente.
+## Protocolo para agregar memoria desde texto
+
+Cuando Gabriel indique **"agrega a memoria de [nombre del agente]"** o una instruccion equivalente y pegue texto, articulo, fragmento de libro, nota, conversacion o documento:
+
+1. Leer el texto completo disponible.
+2. No pegar articulos/libros largos completos en el expediente del agente.
+3. Convertir la informacion en memoria util: resumen, aprendizajes, reglas practicas, decisiones y forma de aplicarlo.
+4. Guardar el aprendizaje en el expediente canonico del agente correspondiente dentro de `agentes-estandar/`.
+5. Usar fecha, fuente y alcance: global, proyecto especifico o tema especifico.
+6. Si el texto es muy largo, conservar solo citas breves imprescindibles y priorizar resumen accionable.
+7. Si la informacion aplica a varios agentes, registrar en cada expediente solo lo que ese agente debe recordar y usar.
+
+Formato recomendado:
+
+```md
+### YYYY-MM-DD - [Tema]
+
+Fuente:
+- [Articulo, libro, conversacion, documento, enlace o nota]
+
+Resumen:
+- [Idea principal]
+- [Idea principal]
+
+Aprendizajes para [Agente]:
+- [Regla o criterio que debe recordar]
+- [Como debe aplicarlo]
+
+Aplicacion:
+- [Proyecto, area o alcance]
+```
+
