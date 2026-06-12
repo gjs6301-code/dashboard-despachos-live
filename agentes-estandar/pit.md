@@ -185,3 +185,51 @@ rutinas de seguimiento, supervisión y retroalimentación.
 - 📍 Cuando da "revelaciones" sobre el código ("X ya está implementado"), espera que Pit LO VERIFIQUE en código antes de aceptarlo como hecho — no asumir que la revelación es completa. Aquí H1 estaba implementado en código pero el gap es de configuración/datos, distinción que Gabriel valorará.
 - 🌐 Alcances aprobados por Gabriel se registran explícitamente ("Gabriel aprobó ampliar el scope…") → señal de que toma decisiones de scope de forma declarativa. Pit debe registrar cada aprobación como decisión.
 - 🌐 Prefiere equipos de agentes con roles claros (Pit=operaciones, Ron=Odoo, Mark=UI) y que cada uno sepa cuándo derivar.
+
+## 6. Decisiones (log) — 2026-06-12 barrido completo de flujos WWP
+
+- **2026-06-12 · Barrido completo de los 7 flujos restantes de WWP + secciones historial**:
+  Los cinco tipos de gap (A-Config, B-Código, C-UX, D-Hardcoded, E-Operativo) son suficientes para
+  clasificar todos los hallazgos nuevos más dos tipos adicionales: Gap F (Estructura: `free` como
+  válvula de escape sin límites) y Gap G (Integración: devoluciones hardcoded sin conexión real,
+  averías y WWP como silos). El hallazgo más crítico nuevo: el módulo de Averías y WWP son dos
+  sistemas de seguimiento de daños que NO se comunican — un artículo averiado en uno no crea registro
+  ni notificación en el otro. La liberación de auxiliares en staffing hace PATCH sin notificar al
+  encargado original. `isAgentOwnerUser` hardcoded por email limita OpsAgent a 2 personas.
+  `var DEVOLUCIONES` es datos de demo estáticos en el fuente — las devoluciones reales no están
+  integradas. *Por qué:* Gabriel aprobó barrido completo para estandarizar soluciones.
+
+- **2026-06-12 · Patrones de solución estandarizables identificados (S1-S5)**:
+  S1=notifyDamage centralizado, S2=botón "Crear tarea WWP" desde reportes, S3=badge bloqueado en
+  subtareas, S4=slaColor reutilizable, S5=endpoint real para devoluciones Odoo. Estos patrones
+  aplican a 2+ flujos cada uno y deben implementarse una sola vez para eliminar la brecha en todos
+  los flujos simultáneamente.
+
+## 9 (append) — Cómo trabaja Gabriel — aprendido 2026-06-12 (iteración 3 — barrido completo)
+
+- 📍 Cuando el scope es exhaustivo ("TODOS los flujos"), Gabriel espera clasificación cruzada contra
+  hallazgos previos, no una lista nueva. El valor está en ver el patrón transversal, no en
+  repetir la descripción técnica de cada instancia.
+- 📍 Hallazgo de arquitectura: hay dos sistemas de seguimiento de daños (Averías + condition:damaged
+  en WWP) que operan como silos. Esta es la brecha de mayor riesgo operativo porque puede resultar
+  en artículos averiados siendo despachados o almacenados sin escalar.
+- 🌐 Patrón aprendido: cuando hay datos hardcoded en el fuente (ej. DEVOLUCIONES, isAgentOwnerUser),
+  siempre verificar si es intencional (diseño en progreso) o un gap de integración real. En ambos
+  casos, documentarlo con evidencia de línea de código.
+
+## 6. Decisiones (log) — 2026-06-12 barrido ejecutado y archivado
+
+- **2026-06-12 · Archivo analisis-flujos-wwp.md creado**: barrido completo ejecutado desde codigo
+  (historial.html 20880L + proxy.js 8586L). 28 hallazgos nuevos clasificados en 10 grupos de brecha (G1-G10),
+  7 patrones de solucion (S1-S7), 5 preguntas criticas para Gabriel, 5 consultas para Ron.
+  Hallazgos nuevos vs. analisis previo: Gap-F (tarea libre sin estandar) y Gap-G (silos de integracion)
+  confirmados con evidencia de linea especifica. *Por que:* Gabriel pidio barrido completo para
+  tener vision integral antes de priorizar desarrollo.
+
+## 9 (append) — Como trabaja Gabriel — aprendido 2026-06-12 (iteracion 4 — barrido archivado)
+
+- 📍 Al pedir barrido exhaustivo con entrega en archivo, Gabriel espera el archivo creado Y confirmacion
+  en la respuesta de que esta listo, con ruta absoluta. No quiere leer el archivo para saber si se hizo.
+- 📍 Patron de escritura de archivos grandes en Windows: usar node - con heredoc (ENDNODE) para bloques
+  de texto; no usar bash heredoc con variables JS (conflicto de comillas). Partir el contenido en bloques
+  de ~100 lineas y usar appendFileSync iterativamente.
