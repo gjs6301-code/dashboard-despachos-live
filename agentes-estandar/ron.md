@@ -116,8 +116,16 @@ sale.order  →  stock.picking (/OUT/)  →  stock.move.line
   | Estado | `stock.picking.state` |
   | Artículos | `stock.move.line` (producto + qty) |
   | Monto (opcional) | `account.move` credit_note cruzado por origin |
-- **Trampa importante**: los RET del almacén de Altri Tempi pueden tener nombre `ALVEN/RET/...`; verificar el prefijo real con una consulta de muestra antes de asumir el formato.
+- **Trampa de prefijos CONFIRMADA 2026-06-12**: Altri Tempi usa MÚLTIPLES prefijos de almacén para RET. Prefijos reales observados: `ALVEN/RET/` (principal), `WH/RET/` (primeros registros históricos), `STI/RET/`, `OUTLE/RET/`, `OUT27/RET/`. Usar siempre `name ilike '/RET/'` sin prefijo fijo — nunca hardcodear `ALVEN/RET/`.
 - **Decisión aprobada 2026-06-12**: Gabriel aprobó conectar el módulo de Devoluciones a datos reales de Odoo. Reemplaza `var DEVOLUCIONES` hardcoded en `historial.html` L12905.
+
+## Baseline RET 2026-06-12
+- **Consulta ejecutada**: `stock.picking` con `name ilike '/RET/'` y `date_done >= 2026-03-14` (90 días).
+- **Fecha de consulta**: 2026-06-12.
+- **Total devoluciones**: **134** (todas en estado `done`).
+- **Prefijos encontrados**: `ALVEN/RET/` (mayoría), `WH/RET/` (4 primeros, históricos), `STI/RET/` (2), `OUTLE/RET/` (1), `OUT27/RET/` (1).
+- **Clientes con más devoluciones**: MELBA SEGURA DE GRULLON (12+), CINTY ACOSTA (10+), ERIC HACHE (8+), VLADIMIR LENDOF (3+).
+- **Conclusión**: Los 9 registros hardcoded en `historial.html` `var DEVOLUCIONES` son datos de DEMO. La realidad tiene 134 devoluciones en 90 días.
 
 ## 5. Patrones reutilizables
 - **Script de consulta** 🌐 — node `/tmp/consulta.mjs`: login → token → `fetch` a `/api/odoo` con
@@ -140,6 +148,7 @@ sale.order  →  stock.picking (/OUT/)  →  stock.move.line
   trampas de modelos y regla de kits. *Por qué:* Gabriel quiere un "empleado" Odoo con nombre y
   expediente propio, portable a otros desarrollos.
 - **2026-06-12 · Devoluciones aprobadas desde Odoo**: Gabriel aprobó conectar el módulo de Devoluciones a `stock.picking` tipo RET en Odoo, reemplazando los 9 registros hardcoded en `historial.html`. Se agrega mapeo de campos y trampa del prefijo `ALVEN/RET/`. Opcional: cruzar con `account.move` credit_note para montos.
+- **2026-06-12 · Baseline RET consultado**: 134 devoluciones en 90 días (2026-03-14 a 2026-06-12). Todos en estado `done`. Prefijos: `ALVEN/RET/` (mayoría), `WH/RET/`, `STI/RET/`, `OUTLE/RET/`, `OUT27/RET/`. Los 9 registros hardcoded en `historial.html` son datos de demo. Trampa confirmada: nunca usar prefijo fijo.
 - **2026-06-12 · Enriquecimiento para flujo orden→despacho**: se agregan modelos
   `product.category`, `product.template`, `product.product`, `sale.order`, `sale.order.line`,
   conexión Odoo↔WWP, patrones de KPI lead time y auditoría de cobertura de familias de empaque.
