@@ -1,0 +1,51 @@
+[
+  {
+    "timestamp": "2026-05-29T13:25:07.623Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-05-29T13:25:13.677Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-05-29T13:25:19.798Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-05-29T13:26:33.745Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-05-29T13:26:36.287Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-05-29T13:27:05.889Z",
+    "event": "login_blocked",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "rate_limit"
+  },
+  {
+    "timestamp": "2026-05-29T13:28:45.444Z",
+    "event": "login_blocked",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "rate_limit"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "userId": "au_gsanchez",
+    "subscription": {
+      "endpoint": "https://fcm.googleapis.com/fcm/send/ePS0h4owav0:APA91bG-bPLjyZHkyLwqyhaQZGCVUMmjm0pd5WI1IWMRKdrNecdSbKfcqkk2tTmf5LkHjK_DW-mcEmu8VU1ZpCqkoFBkePqpMcoAukdGN3ekgePVT3bNaB6QkOD4x6xmlITBS2GepoH1",
+      "expirationTime": null,
+      "keys": {
+        "p256dh": "BMfEQVY_j5m6AmvlwuvN8v1PcNXbMNwECfCa7H2FMz7W10blO-qAfaZ30a5ulPGwndstaJi5OFfcjXK64f5xtx4",
+        "auth": "NN6l21I7vekNE7Xk_h0Uzg"
+      }
+    },
+    "createdAt": "2026-06-21T12:49:22.461Z"
+  }
+]

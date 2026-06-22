@@ -1,0 +1,282 @@
+[
+  {
+    "id": "sess_mp4f628uxbf7",
+    "userId": "au_fcandelario",
+    "refreshToken": "9655b0b895518c39b35f1336724f0c2610d52cdffe82e7822f3b470f3b9e14ef",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T18:55:10.303Z",
+    "expiresAt": "2026-06-12T18:55:10.303Z"
+  },
+  {
+    "id": "sess_mp4fd7h3v01t",
+    "userId": "au_fcandelario",
+    "refreshToken": "4f9bfbbe3d3d4656ce1870285f39d03de68becf7dd1b14e82f31ca9982c8aa68",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:00:43.672Z",
+    "expiresAt": "2026-06-12T19:00:43.672Z"
+  },
+  {
+    "id": "sess_mp4fhhqgemg1",
+    "userId": "au_fcandelario",
+    "refreshToken": "638db1a0d0ab715667a12faf42123af4238e199cf6827d38662856167a364593",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:04:03.593Z",
+    "expiresAt": "2026-06-12T19:04:03.593Z"
+  },
+  {
+    "id": "sess_mp4foavtsp0b",
+    "userId": "au_fcandelario",
+    "refreshToken": "3c49c6d23da2901d726b4cfbb0616c98b4e65d7a6509d689a864798ee33555c1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:09:21.305Z",
+    "expiresAt": "2026-06-12T19:09:21.305Z"
+  },
+  {
+    "id": "sess_mp4fqx0nw1ro",
+    "userId": "au_fcandelario",
+    "refreshToken": "9a5a94afa23389a523edf38486ada41df975f9b6cbe142ffb1203a5fe1f74bf6",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:11:23.303Z",
+    "expiresAt": "2026-06-12T19:11:23.303Z"
+  },
+  {
+    "id": "sess_mp4fxhd6ded2",
+    "userId": "au_fcandelario",
+    "refreshToken": "1588c737ab1768e30479e98790fd6576c8c1e3f7427d01449bed85d63e669386",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:16:29.611Z",
+    "expiresAt": "2026-06-12T19:16:29.611Z"
+  },
+  {
+    "id": "sess_mp4fyuenx9nz",
+    "userId": "au_fcandelario",
+    "refreshToken": "f4c90c509a7c16e8fd674190e0b58f0889e45dcaf853773c346cf7fbaa0a286a",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:17:33.168Z",
+    "expiresAt": "2026-06-12T19:17:33.168Z"
+  },
+  {
+    "id": "sess_mp4g29i9rs4z",
+    "userId": "au_hcheco",
+    "refreshToken": "66ad965d6812b0ba47aa5f3d67bdd5ae5607936c783c204400bf2821a3de188b",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+    "lastActivity": "2026-05-13T19:20:12.705Z",
+    "expiresAt": "2026-06-12T19:20:12.705Z"
+  },
+  {
+    "id": "sess_mp4gjgsmd8ng",
+    "userId": "au_fcandelario",
+    "refreshToken": "298d9a94a83f6e2ea2138aad9a41c721e03865bf45f460dcfb2064e5c0aab7cc",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T19:33:35.303Z",
+    "expiresAt": "2026-06-12T19:33:35.303Z"
+  },
+  {
+    "id": "sess_mp4nfk7p1e9h",
+    "userId": "au_fcandelario",
+    "refreshToken": "d9080bab2fa47527f00db2cad66c3fd9cc84c8a5c6e3039f65a0ab9ed29faecb",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-13T22:46:30.423Z",
+    "expiresAt": "2026-06-12T22:46:30.423Z"
+  },
+  {
+    "id": "sess_mp4tb9l2qjc0",
+    "userId": "au_fcandelario",
+    "refreshToken": "c0cc02604a818b6ab75564f59c8bd5739df3ac312b2d649705be1153d9ee326c",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T01:31:07.718Z",
+    "expiresAt": "2026-06-13T01:31:07.718Z"
+  },
+  {
+    "id": "sess_mp4tlc415own",
+    "userId": "au_fcandelario",
+    "refreshToken": "34f6c0c0a60c9f024e461407a4d23fd973da1bc43378301075a9ed03175ef274",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T01:38:57.553Z",
+    "expiresAt": "2026-06-13T01:38:57.553Z"
+  },
+  {
+    "id": "sess_mp4tlv37j6w1",
+    "userId": "au_fcandelario",
+    "refreshToken": "bf21c93f6d537571a94b17cf3875a2e547f1b988c8985ff46ee323d4c849b438",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T01:39:22.148Z",
+    "expiresAt": "2026-06-13T01:39:22.148Z"
+  },
+  {
+    "id": "sess_mp4tnjubytty",
+    "userId": "au_fcandelario",
+    "refreshToken": "f3a8a535db8831702244e6ab3bbcd9cd2157a8bea1f38f80f3523b1ea9bb8d26",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T01:40:40.883Z",
+    "expiresAt": "2026-06-13T01:40:40.883Z"
+  },
+  {
+    "id": "sess_mp55bpif1kml",
+    "userId": "au_fcandelario",
+    "refreshToken": "ba4e1bbd3726aeb6b1dca3e187e95b1f5c41470b3d0a928a64bc5e5991c61251",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T07:07:23.752Z",
+    "expiresAt": "2026-06-13T07:07:23.752Z"
+  },
+  {
+    "id": "sess_mp55cxa3mxxi",
+    "userId": "au_fcandelario",
+    "refreshToken": "368ce1af58c83184c1a85f5ef08b1cb5926beabcd4af5d3bb30bd715a1dd257e",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T07:08:20.476Z",
+    "expiresAt": "2026-06-13T07:08:20.476Z"
+  },
+  {
+    "id": "sess_mp5jhi98kf1q",
+    "userId": "au_fcandelario",
+    "refreshToken": "22aa5464ac0f901dd4dc4179b7a41a0ed0c3a7c763224541f3278e9a0a77a2d1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T13:43:48.909Z",
+    "expiresAt": "2026-06-13T13:43:48.909Z"
+  },
+  {
+    "id": "sess_mp5tifmkoqno",
+    "userId": "au_gsanchez",
+    "refreshToken": "5aa7446c3e8fe9c004de064f5413b57181b68a7f7ebdfe2b309dd52c71e8fac7",
+    "device": "node",
+    "lastActivity": "2026-05-14T18:24:28.317Z",
+    "expiresAt": "2026-06-13T18:24:28.317Z"
+  },
+  {
+    "id": "sess_mp5u4y0kp34a",
+    "userId": "au_gsanchez",
+    "refreshToken": "086acd7f125b2ea1607245c4e9ddf2f3d65a7763c072ad9f91e55c6e73c447ff",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:41:58.581Z",
+    "expiresAt": "2026-06-13T18:41:58.581Z"
+  },
+  {
+    "id": "sess_mp5u77sj3gsp",
+    "userId": "au_fcandelario",
+    "refreshToken": "fbcf528c4ab62f58edd0115d6b648bfbda12203d7c6011e78c86566926bfd160",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:43:44.563Z",
+    "expiresAt": "2026-06-13T18:43:44.563Z"
+  },
+  {
+    "id": "sess_mp5u9852c7fy",
+    "userId": "au_gsanchez",
+    "refreshToken": "1182f09765d429451f31a6990ff22efafd786aacba7303849f8cbd6a85b48093",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-14T18:45:18.326Z",
+    "expiresAt": "2026-06-13T18:45:18.327Z"
+  },
+  {
+    "id": "sess_mp5ueq00fgct",
+    "userId": "au_fcandelario",
+    "refreshToken": "32fb6e2e0e4ab6643f0bfa39538c4213eec98f81f8a0c9458317c608263d4e1e",
+    "device": "node",
+    "lastActivity": "2026-05-14T18:49:34.753Z",
+    "expiresAt": "2026-06-13T18:49:34.753Z"
+  },
+  {
+    "id": "sess_mp5ufkfv2byd",
+    "userId": "au_fcandelario",
+    "refreshToken": "fc339ee702670924613f954a7e66435d82991fbe2049ac61a41ab98eeec18da1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:50:14.204Z",
+    "expiresAt": "2026-06-13T18:50:14.204Z"
+  },
+  {
+    "id": "sess_mp5ug9kus5ws",
+    "userId": "au_fcandelario",
+    "refreshToken": "9899bb5b07382ecb66603ee20a44004a4ae5cc5591b2fe9fe892008c84d162b6",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:50:46.783Z",
+    "expiresAt": "2026-06-13T18:50:46.783Z"
+  },
+  {
+    "id": "sess_mp5ugworitj7",
+    "userId": "au_fcandelario",
+    "refreshToken": "d8825ac919cc4c5ed025b0582ad708ed2b732c09fc404e5ccf70f8f86b28ea41",
+    "device": "node",
+    "lastActivity": "2026-05-14T18:51:16.732Z",
+    "expiresAt": "2026-06-13T18:51:16.732Z"
+  },
+  {
+    "id": "sess_mp5uhpk310wz",
+    "userId": "au_fcandelario",
+    "refreshToken": "929f915bb9247cf6b8df431de2fa7207ca9afe4993aea341c176a2cf274b179f",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:51:54.148Z",
+    "expiresAt": "2026-06-13T18:51:54.148Z"
+  },
+  {
+    "id": "sess_mp5ui9omr3xi",
+    "userId": "au_fcandelario",
+    "refreshToken": "26272bfea7e8ddf4492f05b5a6bda4de9a20a6c8de5e4aafce9190cb26340273",
+    "device": "node",
+    "lastActivity": "2026-05-14T18:52:20.230Z",
+    "expiresAt": "2026-06-13T18:52:20.230Z"
+  },
+  {
+    "id": "sess_mp5ujblw2qw3",
+    "userId": "au_fcandelario",
+    "refreshToken": "108fc69c4c8c7e4c0462b6f28fa2c0d610c90423b8407328fcf0bb9185babf96",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:53:09.380Z",
+    "expiresAt": "2026-06-13T18:53:09.380Z"
+  },
+  {
+    "id": "sess_mp5uno65axh0",
+    "userId": "au_fcandelario",
+    "refreshToken": "63e3543ff70f7054bbcef31a90744e691e7d060a1160d046bdfc625e5f34a13f",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:56:32.285Z",
+    "expiresAt": "2026-06-13T18:56:32.285Z"
+  },
+  {
+    "id": "sess_mp5uok6xiyku",
+    "userId": "au_gsanchez",
+    "refreshToken": "667d6900ef020da69d84d72446a79ebfffce5cafcd337729faf4cecf19233e9b",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-14T18:57:13.785Z",
+    "expiresAt": "2026-06-13T18:57:13.785Z"
+  },
+  {
+    "id": "sess_mpbjlei1dk5t",
+    "userId": "au_gsanchez",
+    "refreshToken": "8ebe3beababbecb2d628e805db9dd14adb50441982871e592cfa0067e61a63f4",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "lastActivity": "2026-05-19T19:09:44.101Z",
+    "expiresAt": "2026-06-17T18:33:27.722Z"
+  },
+  {
+    "id": "sess_mpbjt50h3jfl",
+    "userId": "au_gsanchez",
+    "refreshToken": "6f65c370a4cb9908ebc342497b9a103379d621de3b16e4c2378badb507c253b5",
+    "device": "",
+    "lastActivity": "2026-05-18T18:39:28.674Z",
+    "expiresAt": "2026-06-17T18:39:28.674Z"
+  },
+  {
+    "id": "sess_mpbnld50a4zm",
+    "userId": "au_gsanchez",
+    "refreshToken": "37b174da966e312b3fbea0266291449f1b5c329ab3974400e7b40cc39559a08c",
+    "device": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.22621.6133",
+    "lastActivity": "2026-05-18T20:25:24.420Z",
+    "expiresAt": "2026-06-17T20:25:24.421Z"
+  },
+  {
+    "id": "sess_mpbnlmbtcdb3",
+    "userId": "au_gsanchez",
+    "refreshToken": "21f64bb20ef028134644974c1aebc70d0ad94a9c371baa5a098e81d655a85b7b",
+    "device": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.22621.6133",
+    "lastActivity": "2026-05-18T20:25:36.329Z",
+    "expiresAt": "2026-06-17T20:25:36.329Z"
+  },
+  {
+    "id": "sess_mpcu34ei7yyn",
+    "userId": "au_gsanchez",
+    "refreshToken": "f1adcd2ce236f5ac4cf65fde496bb2ccc84b09404057c8e6220db961580d2200",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.",
+    "lastActivity": "2026-05-19T16:14:56.779Z",
+    "expiresAt": "2026-06-18T16:14:56.779Z"
+  }
+]

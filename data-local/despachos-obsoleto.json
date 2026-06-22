@@ -1,0 +1,52 @@
+[
+  {
+    "id": "mqgpcilrbrcl",
+    "seq": 1,
+    "folio": "CO-0001",
+    "estado": "borrador",
+    "receptor": {
+      "nombre": "",
+      "cedula": "",
+      "empresa": "",
+      "telefono": ""
+    },
+    "transportista": "",
+    "vehiculo": "",
+    "nota": "",
+    "lineas": [
+      {
+        "lineId": "mqgpdlwfewa2",
+        "productId": 35887,
+        "ref": "AA-NST4B",
+        "name": "3 Mirrored Side Tables Set",
+        "barcode": "AA-NST4B",
+        "image": null,
+        "location": "Obsoleto/KB5",
+        "qty": 2,
+        "condicion": "",
+        "nota": "",
+        "fotos": [
+          {
+            "url": "/desp-fotos/mqgpcilrbrcl_mqgpdlwfewa2_1781618034985_0.jpg",
+            "caption": "",
+            "date": "2026-06-16T13:53:54.989Z"
+          }
+        ],
+        "aprobacion": "pendiente",
+        "motivoRechazo": "",
+        "aprobadoPor": null,
+        "aprobadoAt": null,
+        "addedAt": "2026-06-16T13:53:54.975Z"
+      }
+    ],
+    "creadoPor": {
+      "id": "au_gsanchez",
+      "nombre": "Gabriel Joaquín Sánchez Ramírez"
+    },
+    "entregadoAt": null,
+    "version": 5,
+    "createdAt": "2026-06-16T13:53:04.047Z",
+    "updatedAt": "2026-06-16T19:27:18.665Z",
+    "transferLink": ""
+  }
+]

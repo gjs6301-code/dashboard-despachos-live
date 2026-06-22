@@ -1,0 +1,279 @@
+[
+  {
+    "id": "er_1781388270149",
+    "categ_id": 57,
+    "categ_nombre": "Muebles / Sala / Sofas y Seccionales",
+    "materiales": [
+      {
+        "materialId": "em_1781388270058",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270065",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270058",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 5
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270157",
+    "categ_id": 63,
+    "categ_nombre": "Muebles / Sala / Sillones / Butacas y Reposapies",
+    "materiales": [
+      {
+        "materialId": "em_1781388270058",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270065",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270058",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 5
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270162",
+    "categ_id": 85,
+    "categ_nombre": "Muebles / Comedor / Sillas",
+    "materiales": [
+      {
+        "materialId": "em_1781388270058",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 4
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270166",
+    "categ_id": 64,
+    "categ_nombre": "Muebles / Sala / Mesas de Centro",
+    "materiales": [
+      {
+        "materialId": "em_1781388270044",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270106",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270088",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 5
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 6
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270170",
+    "categ_id": 98,
+    "categ_nombre": "Muebles / Decoracion / Cojines",
+    "materiales": [
+      {
+        "materialId": "em_1781388270128",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 3
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270179",
+    "categ_id": 82,
+    "categ_nombre": "Muebles / Iluminacion / Lamparas de Techo",
+    "materiales": [
+      {
+        "materialId": "em_1781388270080",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 4
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270183",
+    "categ_id": 93,
+    "categ_nombre": "Muebles / Decoracion / Libros",
+    "materiales": [
+      {
+        "materialId": "em_1781388270058",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 3
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270188",
+    "categ_id": 175,
+    "categ_nombre": "Muebles / Alfombras / Rectangulares / 300 X 400 cm",
+    "materiales": [
+      {
+        "materialId": "em_1781388270058",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270128",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 4
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270192",
+    "categ_id": 92,
+    "categ_nombre": "Muebles / Decoracion / Floreros y Jarrones",
+    "materiales": [
+      {
+        "materialId": "em_1781388270044",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 5
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270203",
+    "categ_id": 95,
+    "categ_nombre": "Muebles / Decoracion / Velas, Difusores y Fragancias del Hogar",
+    "materiales": [
+      {
+        "materialId": "em_1781388270080",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270128",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270100",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 5
+      }
+    ]
+  },
+  {
+    "id": "er_1781388270208",
+    "categ_id": 91,
+    "categ_nombre": "Muebles / Decoracion / Espejos",
+    "materiales": [
+      {
+        "materialId": "em_1781388270044",
+        "orden": 1
+      },
+      {
+        "materialId": "em_1781388270080",
+        "orden": 2
+      },
+      {
+        "materialId": "em_1781388270106",
+        "orden": 3
+      },
+      {
+        "materialId": "em_1781388270088",
+        "orden": 4
+      },
+      {
+        "materialId": "em_1781388270034",
+        "orden": 5
+      },
+      {
+        "materialId": "em_1781388270123",
+        "orden": 6
+      }
+    ]
+  }
+]

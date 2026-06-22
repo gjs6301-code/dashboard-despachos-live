@@ -1,0 +1,62 @@
+[
+  {
+    "id": "em_1781388270034",
+    "nombre": "Cinta de embalaje",
+    "descripcion": "Para sellar cajas y fijar el empaque durante el transporte.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270044",
+    "nombre": "Papel Foam",
+    "descripcion": "Evita rayaduras y maltrato en superficies delicadas.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270058",
+    "nombre": "Stretch film",
+    "descripcion": "Envuelve y sujeta la pieza; fija mantas y partes sueltas.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270065",
+    "nombre": "Manta de mudanza",
+    "descripcion": "Acolchado grueso para muebles grandes; va sobre el film.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270080",
+    "nombre": "Plástico de burbuja",
+    "descripcion": "Acolchado para piezas frágiles; 2+ vueltas en lo delicado.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270088",
+    "nombre": "Cartón corrugado",
+    "descripcion": "Forma una pared rígida alrededor de la pieza.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270100",
+    "nombre": "Caja de cartón doble pared",
+    "descripcion": "Caja resistente para productos medianos y pesados.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270106",
+    "nombre": "Esquinero / cantonera de cartón",
+    "descripcion": "Protege esquinas y aristas de golpes.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270123",
+    "nombre": "Etiqueta FRÁGIL / este lado arriba",
+    "descripcion": "Señaliza manejo cuidadoso y orientación de la pieza.",
+    "foto_url": null
+  },
+  {
+    "id": "em_1781388270128",
+    "nombre": "Bolsa / funda plástica",
+    "descripcion": "Cubre contra polvo, agua y humedad.",
+    "foto_url": null
+  }
+]

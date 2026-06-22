@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Dashboard Despachos</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="/chart.min.js"></script>
 <style>
 :root{color-scheme:light}
 *{box-sizing:border-box}
@@ -481,7 +481,10 @@ async function loadViaCowork() {
 // ── Mode B: Browser direct — fetch() → Google Sheets published CSV ────────────
 async function loadViaCSV() {
   setStatus('Conectando a Google Sheets…', 'loading');
-  const resp = await fetch(SHEET_CSV_URL + '&_t=' + Date.now(), {cache:'no-cache', mode:'cors'});
+  const inIframe = window.self !== window.top;
+  const csvUrl = inIframe ? '/api/sheets-csv-index' : (SHEET_CSV_URL + '&_t=' + Date.now());
+  const fetchOpts = inIframe ? {} : {cache:'no-cache', mode:'cors'};
+  const resp = await fetch(csvUrl, fetchOpts);
   if (!resp.ok) throw new Error('HTTP ' + resp.status + ' al descargar el CSV.');
   const text = await resp.text();
   if (!text || text.length < 10) throw new Error('CSV vacío.');

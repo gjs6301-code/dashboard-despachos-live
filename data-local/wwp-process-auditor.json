@@ -1,0 +1,310 @@
+{
+  "recommendations": {},
+  "chat": [],
+  "opsChats": {
+    "manager": [
+      {
+        "id": "opschat_mq9e5syndliw",
+        "role": "user",
+        "text": "hola",
+        "by": "Gabriel Joaquín Sánchez Ramírez",
+        "createdAt": "2026-06-11T11:05:31.871Z"
+      },
+      {
+        "id": "opschat_mq9e5synuz61",
+        "role": "assistant",
+        "text": "Gerente de Operaciones: IA no disponible. Foto operativa actual: 6 activas, 3 vencidas, 1 sin avance, 1 por validar. Solicitud recibida: hola",
+        "by": "Gerente de Operaciones",
+        "ai": false,
+        "createdAt": "2026-06-11T11:05:31.871Z"
+      }
+    ],
+    "assistant": []
+  },
+  "agentGroup": {
+    "agents": [
+      {
+        "id": "coordinator",
+        "avatar": "🧭",
+        "name": "Coordinador de Agentes",
+        "specialty": "Moderacion, delegacion y respuesta final",
+        "description": "Discierne que agente debe participar, divide la solicitud y entrega la respuesta terminada."
+      },
+      {
+        "id": "ops_manager",
+        "avatar": "🏛️",
+        "name": "Gerente de Operaciones",
+        "specialty": "Decisiones operativas, prioridades, riesgos y avance",
+        "description": "Analiza tareas, atrasos, carga de trabajo, evidencias, validaciones y escalamiento."
+      },
+      {
+        "id": "ops_assistant",
+        "avatar": "✦",
+        "name": "Asistente de Operaciones",
+        "specialty": "Seguimiento humano y comunicacion con responsables",
+        "description": "Redacta mensajes conversacionales, pide updates y ayuda a destrabar actividades."
+      },
+      {
+        "id": "process_auditor",
+        "avatar": "⚖️",
+        "name": "Auditor Codex de Procesos",
+        "specialty": "Auditoria, manuales, flujos y mejoras de plataforma",
+        "description": "Crea documentos terminados, audita pantallas, botones, permisos, evidencias y cambios."
+      },
+      {
+        "id": "warehouse_specialist",
+        "avatar": "◈",
+        "name": "Especialista de Almacen y Empaque",
+        "specialty": "Almacenamiento, empaque, ubicaciones y evidencias",
+        "description": "Se enfoca en condicion de articulos, fotos, ubicacion destino, materiales y cierre correcto."
+      },
+      {
+        "id": "odoo_analyst",
+        "avatar": "🛰️",
+        "name": "Analista Odoo / Historial",
+        "specialty": "Contexto de ordenes, picks, inventario y trazabilidad",
+        "description": "Usa Odoo en solo lectura para explicar contexto empresarial y relacionarlo con Workforce Platform."
+      },
+      {
+        "id": "documenter",
+        "avatar": "📜",
+        "name": "Documentador de Plataforma",
+        "specialty": "Documentos acabados, puestos, RACI, KPIs y entrenamiento",
+        "description": "Convierte hallazgos en manuales, procedimientos, matrices y documentos listos para usuarios reales."
+      }
+    ],
+    "chat": [
+      {
+        "id": "grpchat_mq9e53zcnvkn",
+        "role": "user",
+        "by": "Gabriel Joaquín Sánchez Ramírez",
+        "text": "De ahora en adelante, cuando me saludes responde corto y llámame Gabo. Recuerda esto.",
+        "createdAt": "2026-06-11T11:04:59.496Z"
+      },
+      {
+        "id": "grpchat_mq9e53zid3fh",
+        "role": "assistant",
+        "by": "Coordinador de Agentes",
+        "agentId": "coordinator",
+        "participantIds": [
+          "coordinator",
+          "ops_manager"
+        ],
+        "consultations": [
+          {
+            "agentId": "ops_manager",
+            "message": "Foto operativa: 6 activas, 3 vencidas, 1 sin avance y 1 por validar."
+          }
+        ],
+        "newAgents": [],
+        "text": "Recibi tu solicitud y la mesa queda coordinada.\n\nRespuesta final base:\n- Me enfocare solo en lo que pediste.\n- Si requiere Odoo, consultare Odoo en solo lectura y si falta un campo te dire exactamente cual falta.\n- Si requiere documento, lo entregare en formato terminado.\n- No agregare estado de tareas, dashboard ni recomendaciones operativas salvo que lo pidas.\n\nSolicitud: De ahora en adelante, cuando me saludes responde corto y llámame Gabo. Recuerda esto.",
+        "format": "executive",
+        "quality": {
+          "passed": false,
+          "score": 80,
+          "issues": [
+            "Incluye informacion operativa no solicitada."
+          ],
+          "format": "executive",
+          "suggestedActions": [
+            "copy_answer"
+          ]
+        },
+        "ai": false,
+        "learned": 0,
+        "createdAt": "2026-06-11T11:04:59.502Z"
+      }
+    ],
+    "learnings": [],
+    "preferences": [
+      "Responder 100% la solicitud exacta de Gabriel.",
+      "No agregar dashboard, tareas vencidas, auditoria ni recomendaciones operativas si no fueron solicitadas.",
+      "Si falta un dato, consultar la fuente disponible o pedir solo la limitante exacta.",
+      "Entregar el resultado final listo para usar, sin mostrar instrucciones internas de delegacion.",
+      "Presentar datos como informacion de negocio, no como base de datos cruda: usar tablas limpias, resumen ejecutivo, totales, agrupaciones y formatos listos para copiar a Excel, CSV, WhatsApp o correo.",
+      "Cuando el usuario pida reportes para ventas, gerencia u operaciones, entregar primero una version presentable y sencilla; solo incluir detalle tecnico si lo pide."
+    ],
+    "knowledgePack": {
+      "name": "Paquete operativo para respuestas excelentes",
+      "version": "2026-06-10",
+      "purpose": "Alinear a todos los agentes para responder con enfoque, contexto empresarial y formatos profesionales.",
+      "rules": [
+        "Responder exactamente la solicitud de Gabriel.",
+        "Elegir la fuente correcta: Odoo, Workforce, Historial/Sheets o documentos.",
+        "Convertir datos en reportes presentables.",
+        "Separar hechos, inferencias y limitantes.",
+        "Pedir solo el dato faltante si no se puede completar.",
+        "Mantener Odoo en solo lectura.",
+        "No asignar rutinas/tareas periodicas hasta que Gabriel lo apruebe."
+      ],
+      "outputFormats": [
+        "Resumen ejecutivo",
+        "Tabla tipo Excel",
+        "CSV cuando se pida exportable",
+        "Detalle por articulo/orden/responsable",
+        "Agrupacion por familia/categoria/estado",
+        "Texto corto listo para ventas/correo/WhatsApp",
+        "Documento operativo completo"
+      ],
+      "templateLibrary": [
+        {
+          "id": "sales_report",
+          "name": "Reporte para ventas",
+          "sections": [
+            "Titulo claro",
+            "Resumen ejecutivo",
+            "Tabla resumen",
+            "Detalle para Excel",
+            "Texto corto para enviar"
+          ],
+          "bestFor": [
+            "ventas",
+            "inventario comercial",
+            "obsoletos",
+            "liquidacion",
+            "disponibilidad"
+          ]
+        },
+        {
+          "id": "excel_table",
+          "name": "Tabla tipo Excel",
+          "sections": [
+            "Encabezados limpios",
+            "filas ordenadas",
+            "totales",
+            "notas al final"
+          ],
+          "bestFor": [
+            "listados",
+            "cantidades",
+            "productos",
+            "ubicaciones",
+            "familias"
+          ]
+        },
+        {
+          "id": "executive_brief",
+          "name": "Resumen gerencial",
+          "sections": [
+            "Situacion",
+            "hallazgos",
+            "impacto",
+            "decision recomendada",
+            "proximos pasos"
+          ],
+          "bestFor": [
+            "gerencia",
+            "operaciones",
+            "riesgos",
+            "prioridades"
+          ]
+        },
+        {
+          "id": "process_document",
+          "name": "Documento operativo completo",
+          "sections": [
+            "Objetivo",
+            "alcance",
+            "roles",
+            "prerequisitos",
+            "paso a paso",
+            "excepciones",
+            "evidencias",
+            "criterios de cierre",
+            "KPIs"
+          ],
+          "bestFor": [
+            "manuales",
+            "flujos",
+            "entrenamiento",
+            "puestos"
+          ]
+        },
+        {
+          "id": "follow_up_message",
+          "name": "Mensaje de seguimiento",
+          "sections": [
+            "Saludo",
+            "motivo",
+            "dato solicitado",
+            "ETA",
+            "cierre amable"
+          ],
+          "bestFor": [
+            "chat de tareas",
+            "actualizaciones",
+            "bloqueos"
+          ]
+        }
+      ]
+    },
+    "dailyAssignments": [],
+    "routines": [
+      {
+        "id": "daily_ops_brief",
+        "name": "Parte diario de operaciones",
+        "agentId": "ops_manager",
+        "avatar": "🏛️",
+        "enabled": false,
+        "schedule": {
+          "type": "daily",
+          "time": "08:00"
+        },
+        "prompt": "Prepara un parte diario de operaciones con tareas activas, vencidas, sin avance, evidencias pendientes, decisiones urgentes y proximas acciones.",
+        "outputFormat": "Resumen gerencial",
+        "lastRunAt": null,
+        "nextRunAt": null,
+        "lastStatus": "pendiente"
+      },
+      {
+        "id": "overdue_followup",
+        "name": "Seguimiento a tareas vencidas",
+        "agentId": "ops_assistant",
+        "avatar": "✦",
+        "enabled": false,
+        "schedule": {
+          "type": "interval",
+          "minutes": 60
+        },
+        "prompt": "Revisa tareas vencidas o sin avance y prepara mensajes humanos de seguimiento para responsables. No envies mensajes automaticamente; deja recomendacion lista.",
+        "outputFormat": "Mensaje de seguimiento",
+        "lastRunAt": null,
+        "nextRunAt": null,
+        "lastStatus": "pendiente"
+      },
+      {
+        "id": "weekly_obsolete_stock",
+        "name": "Reporte semanal de obsoletos para ventas",
+        "agentId": "odoo_analyst",
+        "avatar": "🛰️",
+        "enabled": false,
+        "schedule": {
+          "type": "weekly",
+          "weekday": 1,
+          "time": "08:30"
+        },
+        "prompt": "Consulta en Odoo los articulos en ubicacion obsoleto, agrupados por familia, cantidades disponibles y formato listo para ventas.",
+        "outputFormat": "Reporte para ventas",
+        "lastRunAt": null,
+        "nextRunAt": null,
+        "lastStatus": "pendiente"
+      },
+      {
+        "id": "nightly_process_review",
+        "name": "Revision nocturna de procesos",
+        "agentId": "process_auditor",
+        "avatar": "⚖️",
+        "enabled": false,
+        "schedule": {
+          "type": "daily",
+          "time": "19:00"
+        },
+        "prompt": "Revisa cambios, brechas de procesos, documentos pendientes y mejoras recomendadas. Entrega solo hallazgos accionables.",
+        "outputFormat": "Reporte gerencial",
+        "lastRunAt": null,
+        "nextRunAt": null,
+        "lastStatus": "pendiente"
+      }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ventas",
+    "name": "Ventas",
+    "isBuiltin": true,
+    "sectionPerms": {
+      "sdv-portal": true,
+      "sdv-bandeja": true
+    }
+  },
+  {
+    "id": "admin",
+    "name": "Admin",
+    "isBuiltin": true,
+    "sectionPerms": null
+  },
+  {
+    "id": "manager",
+    "name": "Encargado",
+    "isBuiltin": true,
+    "sectionPerms": {
+      "wwp.dashboard": true,
+      "wwp.usuarios": true,
+      "wwp.crear_tarea": true,
+      "wwp.editar_tarea": true,
+      "wwp.eliminar_tarea": true
+    }
+  },
+  {
+    "id": "assistant",
+    "name": "Auxiliar",
+    "isBuiltin": true,
+    "sectionPerms": {
+      "wwp": true
+    }
+  }
+]

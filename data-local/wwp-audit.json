@@ -1,0 +1,1769 @@
+[
+  {
+    "timestamp": "2026-05-29T13:31:55.413Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:06.466Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:07.002Z",
+    "event": "login_ok",
+    "userId": "au_fcandelario",
+    "email": "fcandelario@altritempi.com.do",
+    "role": "manager",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:07.898Z",
+    "event": "login_ok",
+    "userId": "au_albert",
+    "email": "adelacruz@altritempi.com.do",
+    "role": "assistant",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:09.056Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:43.073Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:43.450Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:43.817Z",
+    "event": "login_ok",
+    "userId": "au_fcandelario",
+    "email": "fcandelario@altritempi.com.do",
+    "role": "manager",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:44.158Z",
+    "event": "login_ok",
+    "userId": "au_albert",
+    "email": "adelacruz@altritempi.com.do",
+    "role": "assistant",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:44.590Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:44.636Z",
+    "event": "login_fail",
+    "email": "noexiste@test.com",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:56.449Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:56.859Z",
+    "event": "login_ok",
+    "userId": "au_fcandelario",
+    "email": "fcandelario@altritempi.com.do",
+    "role": "manager",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:17:57.225Z",
+    "event": "login_ok",
+    "userId": "au_albert",
+    "email": "adelacruz@altritempi.com.do",
+    "role": "assistant",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T14:20:25.214Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpwq5bs3cbdl",
+    "taskTitle": "TEST_AUDIT_Tarea_Admin",
+    "prevStatus": "assigned",
+    "newStatus": "validated",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-02T14:21:13.148Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpwq6sid4uai",
+    "taskTitle": "TEST_CICLO_COMPLETO",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_albert",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-02T14:21:13.580Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpwq6sid4uai",
+    "taskTitle": "TEST_CICLO_COMPLETO",
+    "prevStatus": "completed",
+    "newStatus": "validated",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-02T14:21:13.837Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpwq6syqu5af",
+    "taskTitle": "TEST_VALIDATE_MGR",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_albert",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-02T14:21:41.641Z",
+    "event": "login_ok",
+    "userId": "au_fcandelario",
+    "email": "fcandelario@altritempi.com.do",
+    "role": "manager",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T19:17:26.521Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-02T20:21:59.291Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T13:52:27.768Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T13:52:53.878Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T13:55:12.810Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:04:00.308Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:12:10.919Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:31:23.806Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:33:56.397Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:45:01.363Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:46:26.820Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T20:59:58.905Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T21:38:12.377Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-03T21:38:12.495Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpyl8m6pvpdk",
+    "taskTitle": "Empaque",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-03T21:38:12.514Z",
+    "event": "task_status_change",
+    "taskId": "wt_mpyl8m6z6beb",
+    "taskTitle": "Despacho",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-03T22:03:54.437Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:26:08.922Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:26:31.997Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:27:21.123Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:27:49.835Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:51:09.204Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T13:56:57.583Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:16:58.922Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:43:47.028Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:44:18.605Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:44:56.136Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:45:19.416Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:45:46.973Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:49:41.528Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:50:27.633Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T14:51:08.755Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T15:02:42.340Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T15:08:16.935Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T15:08:17.064Z",
+    "event": "task_status_change",
+    "taskId": "wt_mq126vgj0ltw",
+    "taskTitle": "KIT",
+    "prevStatus": "completed",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-05T16:27:48.260Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T18:37:19.828Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T19:55:48.769Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T19:56:42.661Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T19:58:37.180Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T20:06:25.228Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T20:14:17.636Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T20:49:21.985Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T20:49:49.985Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T20:55:14.031Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T21:02:45.956Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T21:02:47.028Z",
+    "event": "task_status_change",
+    "taskId": "wt_mq1euqr01k71",
+    "taskTitle": "C",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-05T21:06:27.824Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T21:56:10.645Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-05T21:56:11.562Z",
+    "event": "task_status_change",
+    "taskId": "wt_mq1grfi1i3wl",
+    "taskTitle": "A",
+    "prevStatus": "assigned",
+    "newStatus": "cancelled",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-08T14:45:18.191Z",
+    "event": "login_fail",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-08T20:29:51.452Z",
+    "event": "impersonate_start",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "targetId": "au_albert",
+    "targetName": "Albert Josue De La Cruz Ysabel",
+    "role": "assistant"
+  },
+  {
+    "timestamp": "2026-06-08T20:29:53.217Z",
+    "event": "impersonate_stop",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "fromUserId": "au_albert"
+  },
+  {
+    "timestamp": "2026-06-08T21:19:27.247Z",
+    "event": "impersonate_start",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "targetId": "au_albert",
+    "targetName": "Albert Josue De La Cruz Ysabel",
+    "role": "assistant"
+  },
+  {
+    "timestamp": "2026-06-08T21:19:28.225Z",
+    "event": "impersonate_stop",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "fromUserId": "au_albert"
+  },
+  {
+    "timestamp": "2026-06-08T21:30:54.581Z",
+    "event": "impersonate_start",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-08T21:31:10.239Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-10T14:27:22.271Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-10T14:58:24.963Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-11T11:02:44.862Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-11T11:03:06.836Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:11:09.179Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:11:13.574Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:11:16.804Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:11:25.989Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:12:20.006Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:12:45.720Z",
+    "event": "login_fail",
+    "email": "jbencini@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-13T10:13:15.545Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T10:26:54.791Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T22:26:09.610Z",
+    "event": "impersonate_start",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-13T22:52:47.950Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T22:55:03.201Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T22:55:03.263Z",
+    "event": "impersonate_start",
+    "adminId": "au_jbencini",
+    "adminName": "Jacopo Bencini Tesi Checo",
+    "targetId": "au_albert",
+    "targetName": "Albert Josue De La Cruz Ysabel",
+    "role": "assistant"
+  },
+  {
+    "timestamp": "2026-06-13T22:55:03.269Z",
+    "event": "impersonate_start",
+    "adminId": "au_jbencini",
+    "adminName": "Jacopo Bencini Tesi Checo",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-13T22:57:00.762Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T22:57:00.809Z",
+    "event": "impersonate_start",
+    "adminId": "au_jbencini",
+    "adminName": "Jacopo Bencini Tesi Checo",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-13T22:57:50.085Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-13T22:57:50.151Z",
+    "event": "impersonate_start",
+    "adminId": "au_jbencini",
+    "adminName": "Jacopo Bencini Tesi Checo",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-13T22:57:51.005Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqcyhje4ej49",
+    "taskTitle": "__QA_GATES__",
+    "prevStatus": "assigned",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-13T22:58:06.955Z",
+    "event": "impersonate_stop",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "fromUserId": "au_fcandelario"
+  },
+  {
+    "timestamp": "2026-06-13T22:58:38.029Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-14T04:14:01.180Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqd9r9okhja1",
+    "taskTitle": "[QA] e2e packaging",
+    "prevStatus": "completed",
+    "newStatus": "validated",
+    "by": "au_gsanchez",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-14T12:53:29.601Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-16T00:57:50.666Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-16T13:52:40.209Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-17T10:29:19.703Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-17T10:29:32.816Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-17T10:29:41.139Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-17T10:29:43.478Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:28:03.449Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:28:28.485Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:28:37.548Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:28:50.595Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:29:02.820Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:29:22.865Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:29:24.551Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqixy5pupf7b",
+    "taskTitle": "[QA] Validated Test",
+    "prevStatus": "completed",
+    "newStatus": "validated",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-18T03:29:53.412Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T03:31:46.940Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T10:48:37.433Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T10:48:43.807Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T10:48:57.688Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T10:49:22.668Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:06.908Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:08.401Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:09.413Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:10.728Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:19.527Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:24.511Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:45:36.629Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:46:00.658Z",
+    "event": "login_ok",
+    "userId": "au_test_admin",
+    "email": "test@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T15:49:41.000Z",
+    "event": "login_ok",
+    "userId": "au_test_admin",
+    "email": "test@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T15:49:58.571Z",
+    "event": "login_ok",
+    "userId": "au_test_admin",
+    "email": "test@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T15:50:06.500Z",
+    "event": "login_ok",
+    "userId": "au_test_admin",
+    "email": "test@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-18T15:57:29.236Z",
+    "event": "login_fail",
+    "email": "GSANCHEZ@ALTRITEMPI.COM.DO",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-18T15:57:36.664Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "GSANCHEZ@ALTRITEMPI.COM.DO",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-19T09:26:18.925Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T12:34:37.729Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:24:39.269Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:24:46.415Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:26:37.789Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:27:00.482Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:29:25.264Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T14:30:09.217Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:54:12.431Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:55:09.679Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:55:10.243Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjgxs2hpwn",
+    "taskTitle": "QA_1781970909696",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:55:11.816Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjgz6cd6gq",
+    "taskTitle": "QA_Cancel_1781970911509",
+    "prevStatus": "pending",
+    "newStatus": "cancelled",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:57:37.002Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:57:37.320Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjk3gds65t",
+    "taskTitle": "QA_1781971057018",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:58:40.620Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:58:40.992Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjlgjnoaje",
+    "taskTitle": "QA_1781971120636",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:58:42.321Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjlhln5ig2",
+    "taskTitle": "QA_Cancel_1781971122009",
+    "prevStatus": "pending",
+    "newStatus": "cancelled",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:58:42.449Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjlhln5ig2",
+    "taskTitle": "QA_Cancel_1781971122009",
+    "prevStatus": "cancelled",
+    "newStatus": "pending",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:59:02.992Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T15:59:03.335Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjlxt0r4z4",
+    "taskTitle": "QA_1781971143003",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T15:59:28.412Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:04:28.118Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:04:28.471Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjswocixky",
+    "taskTitle": "QA_1781971468134",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:04:29.802Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjswocixky",
+    "taskTitle": "QA_1781971468134",
+    "prevStatus": "completed",
+    "newStatus": "validated",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:04:30.210Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjsy1grcgo",
+    "taskTitle": "QA_Cancel_1781971469906",
+    "prevStatus": "pending",
+    "newStatus": "cancelled",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:04:30.334Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjsy1grcgo",
+    "taskTitle": "QA_Cancel_1781971469906",
+    "prevStatus": "cancelled",
+    "newStatus": "pending",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:05:33.009Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:05:33.367Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmjuaqvsug9",
+    "taskTitle": "RBAC_Test_1781971533025",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:58:42.832Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:59:15.058Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:59:15.553Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmlrcwcc6qu",
+    "taskTitle": "Test Despacho B1",
+    "prevStatus": "pending",
+    "newStatus": "in_progress",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:59:36.131Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T16:59:36.892Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmlrt5xajgm",
+    "taskTitle": "Test General para RBAC",
+    "prevStatus": "completed",
+    "newStatus": "validated",
+    "by": "au_jbencini",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T16:59:37.249Z",
+    "event": "impersonate_start",
+    "adminId": "au_jbencini",
+    "adminName": "Jacopo Bencini Tesi Checo",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-20T16:59:37.410Z",
+    "event": "task_status_change",
+    "taskId": "wt_mqmlrt5xajgm",
+    "taskTitle": "Test General para RBAC",
+    "prevStatus": "completed",
+    "newStatus": "in_progress",
+    "by": "au_fcandelario",
+    "note": ""
+  },
+  {
+    "timestamp": "2026-06-20T17:20:15.213Z",
+    "event": "impersonate_start",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "targetId": "au_fcandelario",
+    "targetName": "Franklin Antonio De Jesus Candelario",
+    "role": "manager"
+  },
+  {
+    "timestamp": "2026-06-20T17:22:10.503Z",
+    "event": "impersonate_stop",
+    "adminId": "au_gsanchez",
+    "adminName": "Gabriel Joaquín Sánchez Ramírez",
+    "fromUserId": "au_fcandelario"
+  },
+  {
+    "timestamp": "2026-06-20T23:34:19.240Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-20T23:34:19.402Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T23:34:57.448Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T23:35:20.481Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T23:35:59.053Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-20T23:36:17.970Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:37:34.973Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:39:58.067Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:41:09.777Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:42:10.992Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:44:35.526Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:47:12.319Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:47:23.173Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T00:47:42.689Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:15:18.622Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:15:56.652Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:16:16.585Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:16:50.632Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:17:16.858Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:17:49.032Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:17:58.248Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:18:04.165Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:18:09.197Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T04:18:59.551Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:36:52.669Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:38:34.667Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:38:42.005Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:38:50.353Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:39:59.256Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:44:36.405Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:44:40.671Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T15:45:59.972Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:29:51.637Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:30:18.304Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:30:28.548Z",
+    "event": "login_fail",
+    "email": "gsanchez@altritempi.com.do",
+    "ip": "::1",
+    "reason": "bad_credentials"
+  },
+  {
+    "timestamp": "2026-06-21T16:31:34.494Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:31:52.949Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:32:42.424Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:33:09.403Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:33:55.004Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:34:04.436Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:34:48.265Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:35:16.478Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:35:51.686Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:36:26.689Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T16:37:12.617Z",
+    "event": "login_ok",
+    "userId": "au_jbencini",
+    "email": "jbencini@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  },
+  {
+    "timestamp": "2026-06-21T17:12:53.929Z",
+    "event": "login_ok",
+    "userId": "au_gsanchez",
+    "email": "gsanchez@altritempi.com.do",
+    "role": "admin",
+    "ip": "::1"
+  }
+]
